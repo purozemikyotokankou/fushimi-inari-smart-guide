@@ -1,0 +1,158 @@
+[
+    {
+        "id": 1,
+        "name": "千本鳥居",
+        "category": "景観",
+        "lat": 34.967016,
+        "lng": 135.774702,
+        "description": "伏見稲荷を代表する朱色の鳥居が連なる人気スポットです。写真撮影にもおすすめです。",
+        "time": "30分",
+        "image": "torii.jpg"
+    },
+
+    {
+        "id": 2,
+        "name": "伏見稲荷大社 本殿",
+        "category": "神社",
+        "lat": 34.967112,
+        "lng": 135.772725,
+        "description": "伏見稲荷大社の中心となる場所です。参拝の際はまず訪れることをおすすめします。",
+        "time": "15分",
+        "image": "honden.jpg"
+    },
+
+    {
+        "id": 3,
+        "name": "奥社奉拝所（奥の院）",
+        "category": "神社",
+        "lat": 34.96656052,
+        "lng": 135.7756342,
+        "description": "千本鳥居を抜けた先にある重要な参拝場所です。おもかる石でも有名です。",
+        "time": "20分",
+        "image": "okusha.jpg"
+    },
+
+    {
+        "id": 4,
+        "name": "四ツ辻",
+        "category": "展望",
+        "lat": 34.969046,
+        "lng": 135.781564,
+        "description": "京都市街を見渡せる展望スポットです。休憩場所としても利用できます。",
+        "time": "30分",
+        "image": "yotsutsuji.jpg"
+    },
+
+    {
+        "id": 5,
+        "name": "稲荷山 山頂（一ノ峰）",
+        "category": "登山",
+        "lat": 34.966973,
+        "lng": 135.785501,
+        "description": "稲荷山の頂上にある神聖な場所です。山歩きコースの終点になります。",
+        "time": "60分",
+        "image": "summit.jpg"
+    },
+
+    {
+        "id": 6,
+        "name": "トイレ",
+        "category": "トイレ",
+        "lat": 34.96716256811112,
+        "lng": 135.77232141941374,
+        "description": "車いす対応トイレあり",
+        "time": "5分",
+        "image": "toire.jpg"
+    },
+
+    {
+        "id": 7,
+        "name": "京阪電車伏見稲荷駅",
+        "category": "交通",
+        "lat": 34.96830989655719,
+        "lng": 135.76925579075007,
+        "description": "京阪電車の最寄り駅です。伏見稲荷観光のスタート地点として便利です。",
+        "time": "-",
+        "image": "station.jpg"
+    },
+
+    {
+        "id": 8,
+        "name": "JR西日本奈良線稲荷駅",
+        "category": "交通",
+        "lat": 34.96681916919137,
+        "lng": 135.77092063330713,
+        "description": "JR奈良線の最寄り駅です。京都駅からアクセスできます。",
+        "time": "-",
+        "image": "inari_station.jpg"
+    },
+
+    {
+        "id": 9,
+        "name": "伏見稲荷入口",
+        "category": "案内",
+        "lat": 34.967038,
+        "lng": 135.770947,
+        "description": "伏見稲荷大社へ向かう参道入口です。ここから楼門・本殿方面へ進みます。",
+        "time": "5分",
+        "image": "entrance.jpg"
+    },
+
+    {
+        "id": 10,
+        "name": "Vermillion-cafe",
+        "category": "飲食店",
+        "lat": 34.968415,
+        "lng": 135.774154,
+        "description": "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。",
+        "time": "5分",
+        "image": "Vermillion.jpg",
+        "url": "https://www.vermillioncafe.com/"
+    },
+
+    {
+        "id": 11,
+        "name": "ちいかわ本舗",
+        "category": "飲食店",
+        "lat": 34.968005,
+        "lng": 135.771089,
+        "description": "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。",
+        "time": "5分",
+        "image": "Vermillion.jpg",
+        "url": ""
+    },
+
+    {
+        "id": 12,
+        "name": "eight",
+        "category": "飲食店",
+        "lat": 34.968508,
+        "lng": 135.769422,
+        "description": "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。",
+        "time": "5分",
+        "image": "Vermillion.jpg",
+        "url": ""
+    },
+
+    {
+        "id": 13,
+        "name": "トイレ②",
+        "category": "トイレ",
+        "lat": 34.96746464968559,
+        "lng": 135.77312967670164,
+        "description": "伏見稲荷周辺のトイレです。",
+        "time": "5分",
+        "image": "toire.jpg"
+    },
+
+    {
+        "id": 14,
+        "name": "トイレ③",
+        "category": "トイレ",
+        "lat": 34.967942654728546,
+        "lng": 135.77641661059354,
+        "description": "伏見稲荷のお山側にあるトイレです。",
+        "time": "5分",
+        "image": "toire.jpg"
+    }
+]

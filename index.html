@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Fushimi Inari Smart Guide</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        /* =========================================================
+           Liquid Glass language screen
+           ========================================================= */
+
+        :root {
+            --lg-red: #c40018;
+            --lg-red-soft: rgba(196, 0, 24, 0.22);
+            --lg-white: rgba(255, 255, 255, 0.72);
+            --lg-white-soft: rgba(255, 255, 255, 0.18);
+            --lg-border: rgba(255, 255, 255, 0.42);
+            --lg-text: #19191b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body.language-page {
+            min-height: 100vh;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            position: relative;
+
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "SF Pro Display",
+                "SF Pro Text",
+                "Helvetica Neue",
+                Arial,
+                sans-serif;
+
+            color: var(--lg-text);
+            background:
+                radial-gradient(circle at 16% 18%, rgba(255, 86, 109, 0.34), transparent 25%),
+                radial-gradient(circle at 83% 14%, rgba(255, 179, 194, 0.42), transparent 27%),
+                radial-gradient(circle at 76% 83%, rgba(154, 38, 55, 0.24), transparent 28%),
+                linear-gradient(135deg, #f7f7f4 0%, #ececea 52%, #e4e4e1 100%);
+        }
+
+        /* Soft blurred light blobs behind the glass */
+        body.language-page::before,
+        body.language-page::after {
+            content: "";
+            position: fixed;
+            pointer-events: none;
+            border-radius: 999px;
+            filter: blur(18px);
+            mix-blend-mode: screen;
+        }
+
+        body.language-page::before {
+            width: 40vw;
+            height: 40vw;
+            min-width: 260px;
+            min-height: 260px;
+            left: -10vw;
+            top: 45%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0));
+            animation: floatLeft 11s ease-in-out infinite alternate;
+        }
+
+        body.language-page::after {
+            width: 34vw;
+            height: 34vw;
+            min-width: 240px;
+            min-height: 240px;
+            right: -8vw;
+            bottom: -8vw;
+            background: radial-gradient(circle, var(--lg-red-soft), rgba(255, 255, 255, 0));
+            animation: floatRight 13s ease-in-out infinite alternate;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+
+            background:
+                linear-gradient(
+                    115deg,
+                    rgba(255,255,255,0.48) 0%,
+                    rgba(255,255,255,0.10) 35%,
+                    rgba(255,255,255,0.30) 65%,
+                    rgba(255,255,255,0.10) 100%
+                );
+
+            backdrop-filter: blur(10px) saturate(1.08);
+            -webkit-backdrop-filter: blur(10px) saturate(1.08);
+        }
+
+        .language-box {
+            width: min(520px, 100%);
+            padding: 52px 42px 38px;
+            position: relative;
+            isolation: isolate;
+
+            border: 1px solid var(--lg-border);
+            border-radius: 34px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.66),
+                    rgba(255,255,255,0.28) 46%,
+                    rgba(255,255,255,0.40)
+                );
+
+            box-shadow:
+                0 35px 80px rgba(31, 31, 33, 0.16),
+                inset 0 1px 0 rgba(255,255,255,0.80),
+                inset 0 -1px 0 rgba(255,255,255,0.18);
+
+            backdrop-filter: blur(30px) saturate(1.35);
+            -webkit-backdrop-filter: blur(30px) saturate(1.35);
+
+            text-align: center;
+
+            animation:
+                glassIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+                glassFloat 7s ease-in-out 1.1s infinite;
+        }
+
+        /* Glass reflection */
+        .language-box::before {
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: 33px;
+            pointer-events: none;
+            z-index: -1;
+
+            background:
+                linear-gradient(
+                    155deg,
+                    rgba(255,255,255,0.58),
+                    rgba(255,255,255,0.00) 34%
+                );
+        }
+
+        .language-box::after {
+            content: "";
+            position: absolute;
+            left: 14%;
+            top: 12px;
+            width: 72%;
+            height: 1px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.78);
+            filter: blur(0.2px);
+            pointer-events: none;
+        }
+
+        .language-box h1 {
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 22px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.68);
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.72),
+                    rgba(255,255,255,0.22)
+                );
+
+            box-shadow:
+                0 15px 28px rgba(196, 0, 24, 0.13),
+                inset 0 1px 0 rgba(255,255,255,0.86);
+
+            color: var(--lg-red);
+            font-size: 34px;
+            line-height: 1;
+            text-shadow: 0 2px 12px rgba(196, 0, 24, 0.13);
+        }
+
+        .language-box h2 {
+            margin: 0 0 14px;
+
+            font-size: clamp(28px, 4vw, 39px);
+            line-height: 1.08;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+        }
+
+        .language-box p {
+            margin: 0;
+            color: rgba(25, 25, 27, 0.68);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .language-box p + p {
+            margin-top: 2px;
+            font-size: 13px;
+            color: rgba(25, 25, 27, 0.48);
+        }
+
+        .language-box button {
+            width: 100%;
+            margin-top: 12px;
+            min-height: 56px;
+            padding: 0 22px;
+
+            border: 1px solid rgba(255,255,255,0.50);
+            border-radius: 18px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255,255,255,0.58),
+                    rgba(255,255,255,0.20)
+                );
+
+            color: #1b1b1d;
+            font: inherit;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.70),
+                0 8px 20px rgba(31,31,33,0.06);
+
+            backdrop-filter: blur(18px) saturate(1.25);
+            -webkit-backdrop-filter: blur(18px) saturate(1.25);
+
+            cursor: pointer;
+            transition:
+                transform 0.22s ease,
+                box-shadow 0.22s ease,
+                background 0.22s ease,
+                border-color 0.22s ease;
+        }
+
+        .language-box button:hover {
+            transform: translateY(-2px) scale(1.012);
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(255,255,255,0.74),
+                    rgba(255,255,255,0.30)
+                );
+
+            border-color: rgba(255,255,255,0.74);
+
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.86),
+                0 14px 28px rgba(31,31,33,0.10);
+        }
+
+        .language-box button:active {
+            transform: translateY(0) scale(0.992);
+        }
+
+        .language-box button:first-of-type:hover {
+            box-shadow:
+                0 14px 28px rgba(196, 0, 24, 0.12),
+                inset 0 1px 0 rgba(255,255,255,0.86);
+        }
+
+        @keyframes glassIn {
+            from {
+                opacity: 0;
+                transform: translateY(22px) scale(0.965);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes glassFloat {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes floatLeft {
+            from {
+                transform: translate3d(0, -4%, 0) scale(1);
+            }
+            to {
+                transform: translate3d(5%, 4%, 0) scale(1.08);
+            }
+        }
+
+        @keyframes floatRight {
+            from {
+                transform: translate3d(0, 2%, 0) scale(1);
+            }
+            to {
+                transform: translate3d(-5%, -5%, 0) scale(1.10);
+            }
+        }
+
+
+        /* =========================================================
+           Liquid Glass Cursor
+           ========================================================= */
+
+        body.language-page,
+        body.language-page button {
+            cursor: none;
+        }
+
+        .liquid-cursor {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+
+            border: 1px solid rgba(255, 255, 255, 0.78);
+
+            background:
+                radial-gradient(
+                    circle at 30% 25%,
+                    rgba(255, 255, 255, 0.92),
+                    rgba(255, 255, 255, 0.26) 38%,
+                    rgba(255, 255, 255, 0.10) 70%,
+                    rgba(196, 0, 24, 0.10) 100%
+                );
+
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.14),
+                0 8px 24px rgba(31, 31, 33, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 0.88);
+
+            backdrop-filter: blur(10px) saturate(1.35);
+            -webkit-backdrop-filter: blur(10px) saturate(1.35);
+
+            transform: translate3d(-50%, -50%, 0) scale(1);
+            opacity: 0;
+            transition:
+                width 0.22s ease,
+                height 0.22s ease,
+                opacity 0.2s ease,
+                box-shadow 0.22s ease,
+                border-color 0.22s ease;
+            will-change: transform, width, height, opacity;
+        }
+
+        .liquid-cursor::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(196, 0, 24, 0.85);
+            box-shadow:
+                0 0 10px rgba(196, 0, 24, 0.38),
+                0 0 22px rgba(196, 0, 24, 0.20);
+        }
+
+        .liquid-cursor::after {
+            content: "";
+            position: absolute;
+            inset: -7px;
+            border-radius: 50%;
+            border: 1px solid rgba(196, 0, 24, 0.20);
+            opacity: 0.7;
+            transform: scale(0.88);
+            transition: transform 0.28s ease, opacity 0.28s ease;
+        }
+
+        .liquid-cursor.is-visible {
+            opacity: 1;
+        }
+
+        .liquid-cursor.is-hover {
+            width: 48px;
+            height: 48px;
+            border-color: rgba(255, 255, 255, 0.92);
+
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.16),
+                0 12px 32px rgba(196, 0, 24, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.94);
+        }
+
+        .liquid-cursor.is-hover::after {
+            transform: scale(1.04);
+            opacity: 1;
+        }
+
+        .liquid-cursor.is-down {
+            width: 27px;
+            height: 27px;
+        }
+
+        .cursor-ripple {
+            position: fixed;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+
+            border: 1px solid rgba(196, 0, 24, 0.50);
+            box-shadow:
+                0 0 18px rgba(196, 0, 24, 0.16),
+                inset 0 0 10px rgba(255, 255, 255, 0.25);
+
+            transform: translate3d(-50%, -50%, 0) scale(1);
+            animation: cursorRipple 0.62s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes cursorRipple {
+            0% {
+                opacity: 0.75;
+                transform: translate3d(-50%, -50%, 0) scale(0.7);
+            }
+            100% {
+                opacity: 0;
+                transform: translate3d(-50%, -50%, 0) scale(4.8);
+            }
+        }
+
+        @media (pointer: coarse), (max-width: 700px) {
+            body.language-page,
+            body.language-page button {
+                cursor: auto;
+            }
+
+            .liquid-cursor,
+            .cursor-ripple {
+                display: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .liquid-cursor,
+            .liquid-cursor::after {
+                transition: none;
+            }
+
+            .cursor-ripple {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            body.language-page {
+                padding: 16px;
+            }
+
+            .language-box {
+                padding: 40px 22px 24px;
+                border-radius: 28px;
+            }
+
+            .language-box::before {
+                border-radius: 27px;
+            }
+
+            .language-box h1 {
+                width: 68px;
+                height: 68px;
+                border-radius: 21px;
+            }
+
+            .language-box h2 {
+                font-size: 29px;
+            }
+
+            .language-box button {
+                min-height: 54px;
+                border-radius: 17px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .language-box,
+            body.language-page::before,
+            body.language-page::after {
+                animation: none;
+            }
+
+            .language-box button {
+                transition: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="language-page">
+
+    <div class="liquid-cursor" aria-hidden="true"></div>
+
+    <div class="overlay"></div>
+
+    <div class="language-box">
+
+        <h1>⛩</h1>
+
+        <h2>Fushimi Inari Smart Guide</h2>
+
+        <p data-i18n="selectLanguage">
+            言語を選択してください
+        </p>
+
+        <p data-i18n="pleaseSelectLanguage">
+            Please Select Your Language
+        </p>
+
+        <button onclick="selectLanguage('ja')">
+            🇯🇵 日本語
+        </button>
+
+        <button onclick="selectLanguage('en')">
+            🇺🇸 English
+        </button>
+
+        <button onclick="selectLanguage('zh')">
+            🇨🇳 中文
+        </button>
+
+        <button onclick="selectLanguage('ko')">
+            🇰🇷 한국어
+        </button>
+
+    </div>
+
+
+    <script>
+        (() => {
+            const cursor = document.querySelector(".liquid-cursor");
+            if (!cursor) return;
+
+            const finePointer = window.matchMedia("(pointer: fine)");
+            if (!finePointer.matches) return;
+
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            let currentX = mouseX;
+            let currentY = mouseY;
+
+            let visible = false;
+
+            function moveCursor(event) {
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+
+                if (!visible) {
+                    currentX = mouseX;
+                    currentY = mouseY;
+                    visible = true;
+                    cursor.classList.add("is-visible");
+                }
+            }
+
+            function animateCursor() {
+                currentX += (mouseX - currentX) * 0.18;
+                currentY += (mouseY - currentY) * 0.18;
+
+                cursor.style.transform =
+                    `translate3d(${currentX}px, ${currentY}px, 0) translate(-50%, -50%)`;
+
+                requestAnimationFrame(animateCursor);
+            }
+
+            function setHover(state) {
+                cursor.classList.toggle("is-hover", state);
+            }
+
+            function createRipple(x, y) {
+                const ripple = document.createElement("span");
+                ripple.className = "cursor-ripple";
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+
+                document.body.appendChild(ripple);
+
+                ripple.addEventListener("animationend", () => {
+                    ripple.remove();
+                }, { once: true });
+            }
+
+            document.addEventListener("mousemove", moveCursor);
+
+            document.addEventListener("mouseover", event => {
+                const interactive = event.target.closest(
+                    "button, a, [role='button'], input, select, textarea"
+                );
+
+                if (interactive) setHover(true);
+            });
+
+            document.addEventListener("mouseout", event => {
+                const interactive = event.target.closest(
+                    "button, a, [role='button'], input, select, textarea"
+                );
+
+                if (interactive) setHover(false);
+            });
+
+            document.addEventListener("mousedown", event => {
+                cursor.classList.add("is-down");
+                createRipple(event.clientX, event.clientY);
+            });
+
+            document.addEventListener("mouseup", () => {
+                cursor.classList.remove("is-down");
+            });
+
+            document.addEventListener("mouseleave", () => {
+                cursor.classList.remove("is-visible");
+                visible = false;
+            });
+
+            document.addEventListener("mouseenter", () => {
+                cursor.classList.add("is-visible");
+                visible = true;
+            });
+
+            animateCursor();
+        })();
+    </script>
+
+    <script src="js/language.js"></script>
+
+</body>
+
+</html>
