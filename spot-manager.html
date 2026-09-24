@@ -813,7 +813,73 @@
                 grid-template-columns: 1fr;
             }
         }
-    </style>
+    
+        .category-select {
+            margin-top: 10px;
+        }
+
+        .json-drop-zone {
+            margin: 0 20px 18px;
+            min-height: 116px;
+            border: 2px dashed rgba(0,0,0,.18);
+            border-radius: 22px;
+            background: rgba(255,255,255,.45);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background .18s ease, border-color .18s ease,
+                        transform .18s ease, box-shadow .18s ease;
+        }
+
+        .json-drop-zone:hover,
+        .json-drop-zone:focus-visible {
+            border-color: #e94709;
+            background: rgba(255,255,255,.66);
+            box-shadow: 0 8px 28px rgba(0,0,0,.08);
+            outline: none;
+        }
+
+        .json-drop-zone.dragover {
+            border-color: #e94709;
+            background: rgba(233,71,9,.09);
+            box-shadow: 0 10px 32px rgba(233,71,9,.16);
+            transform: scale(1.01);
+        }
+
+        .json-drop-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: rgba(233,71,9,.12);
+            color: #e94709;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .json-drop-zone strong {
+            font-size: 15px;
+        }
+
+        .json-drop-zone span {
+            font-size: 12px;
+            opacity: .66;
+        }
+
+        @media (max-width: 700px) {
+            .json-drop-zone {
+                margin-left: 12px;
+                margin-right: 12px;
+            }
+        }
+
+</style>
 </head>
 <body>
 
@@ -834,6 +900,21 @@
             >
                 最新データを読み込む
             </button>
+
+            <button
+                type="button"
+                class="btn btn-small btn-ghost"
+                id="pickJsonBtn"
+            >
+                spots.jsonを選択
+            </button>
+
+            <input
+                type="file"
+                id="jsonFileInput"
+                accept=".json,application/json"
+                hidden
+            >
 
             <button
                 type="button"
@@ -949,6 +1030,20 @@
                             id="spotCategory"
                             value="景観"
                         >
+
+                        <select
+                            id="categorySelect"
+                            class="input category-select"
+                            aria-label="カテゴリーを変更"
+                        >
+                            <option value="景観">景観</option>
+                            <option value="神社">神社</option>
+                            <option value="登山">登山</option>
+                            <option value="飲食店">飲食店</option>
+                            <option value="交通">交通</option>
+                            <option value="トイレ">トイレ</option>
+                            <option value="案内">案内</option>
+                        </select>
 
                         <div
                             id="categoryHint"
@@ -1258,6 +1353,24 @@
 
             </div>
 
+            <div
+                id="jsonDropZone"
+                class="json-drop-zone"
+                tabindex="0"
+                role="button"
+                aria-label="spots.jsonをここにドロップ"
+            >
+                <div class="json-drop-icon">↓</div>
+                <strong>spots.json をここにドロップ</strong>
+                <span>クリックしてファイルを選ぶこともできます</span>
+                <input
+                    type="file"
+                    id="jsonDropInput"
+                    accept=".json,application/json"
+                    hidden
+                >
+            </div>
+
             <div class="export-grid">
 
                 <div class="export-box">
@@ -1406,6 +1519,8 @@
                     $("spotName"),
                 spotCategory:
                     $("spotCategory"),
+                categorySelect:
+                    $("categorySelect"),
                 categoryPills:
                     $("categoryPills"),
                 categoryHint:
@@ -1469,6 +1584,16 @@
 
                 loadBtn:
                     $("loadBtn"),
+                pickJsonBtn:
+                    $("pickJsonBtn"),
+                jsonFileInput:
+                    $("jsonFileInput"),
+                downloadJsonBtn:
+                    $("downloadJsonBtn"),
+                jsonDropZone:
+                    $("jsonDropZone"),
+                jsonDropInput:
+                    $("jsonDropInput"),
 
                 toast:
                     $("toast")
@@ -1667,6 +1792,11 @@
 
                 els.spotCategory.value =
                     normalized;
+
+                if (els.categorySelect) {
+                    els.categorySelect.value =
+                        normalized;
+                }
 
                 els.categoryPills
                     .querySelectorAll(
@@ -3120,34 +3250,11 @@
                     const data =
                         await response.json();
 
-                    if (
-                        !Array.isArray(
-                            data
-                        )
-                    ) {
-                        throw new Error(
-                            "spots.jsonは配列形式ではありません。"
-                        );
-                    }
-
-                    spots =
-                        data
-                            .map(
-                                normalizeSpot
-                            )
-                            .filter(
-                                Boolean
-                            );
-
-                    renderAll();
-
-                    if (
+                    applyLoadedData(
+                        data,
+                        "spots.json",
                         showMessage
-                    ) {
-                        showToast(
-                            `spots.jsonから${spots.length}スポットを読み込みました。`
-                        );
-                    }
+                    );
                 } catch (
                     error
                 ) {
@@ -3187,6 +3294,60 @@
                             "spots.jsonの読み込みに失敗しました。"
                         );
                     }
+                }
+            }
+
+            function applyLoadedData(
+                data,
+                sourceLabel = "spots.json",
+                showToastMessage = true
+            ) {
+                if (!Array.isArray(data)) {
+                    throw new Error(
+                        `${sourceLabel}は配列形式ではありません。`
+                    );
+                }
+
+                spots =
+                    data
+                        .map(normalizeSpot)
+                        .filter(Boolean);
+
+                renderAll();
+                refreshJSONOutput();
+
+                setStatus(
+                    `${sourceLabel}を読み込みました。`,
+                    spots.length
+                );
+
+                if (showToastMessage) {
+                    showToast(
+                        `${sourceLabel}から${spots.length}スポットを読み込みました。`
+                    );
+                }
+            }
+
+            async function loadLocalJSONFile(file) {
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+
+                    applyLoadedData(
+                        data,
+                        file.name || "spots.json",
+                        true
+                    );
+                } catch (error) {
+                    console.error(error);
+
+                    setStatus(
+                        "JSONを読み込めませんでした。配列形式の spots.json か確認してください。"
+                    );
+
+                    showToast(
+                        "JSONの読み込みに失敗しました。"
+                    );
                 }
             }
 
@@ -3333,6 +3494,15 @@
                 );
             }
 
+            els.categorySelect.addEventListener(
+                "change",
+                () => {
+                    setCategory(
+                        els.categorySelect.value
+                    );
+                }
+            );
+
             els.copyJsonBtn.addEventListener(
                 "click",
                 copyJSON
@@ -3358,6 +3528,158 @@
                     downloadText(
                         "spots.json",
                         jsonText()
+                    );
+                }
+            );
+
+            async function handleJSONDrop(
+                file
+            ) {
+                if (!file) {
+                    return;
+                }
+
+                const isJSON =
+                    file.type === "application/json" ||
+                    /\.json$/i.test(
+                        file.name
+                    );
+
+                if (!isJSON) {
+                    showToast(
+                        "JSONファイルをドロップしてください。"
+                    );
+                    return;
+                }
+
+                await loadLocalJSONFile(
+                    file
+                );
+            }
+
+            els.jsonDropZone.addEventListener(
+                "click",
+                () => {
+                    els.jsonDropInput.value = "";
+                    els.jsonDropInput.click();
+                }
+            );
+
+            els.jsonDropZone.addEventListener(
+                "keydown",
+                event => {
+                    if (
+                        event.key === "Enter" ||
+                        event.key === " "
+                    ) {
+                        event.preventDefault();
+                        els.jsonDropInput.value = "";
+                        els.jsonDropInput.click();
+                    }
+                }
+            );
+
+            els.jsonDropInput.addEventListener(
+                "change",
+                event => {
+                    handleJSONDrop(
+                        event.target.files?.[0]
+                    );
+                }
+            );
+
+            els.jsonDropZone.addEventListener(
+                "dragenter",
+                event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    els.jsonDropZone.classList.add(
+                        "dragover"
+                    );
+                }
+            );
+
+            els.jsonDropZone.addEventListener(
+                "dragover",
+                event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    els.jsonDropZone.classList.add(
+                        "dragover"
+                    );
+                }
+            );
+
+            els.jsonDropZone.addEventListener(
+                "dragleave",
+                event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    els.jsonDropZone.classList.remove(
+                        "dragover"
+                    );
+                }
+            );
+
+            els.jsonDropZone.addEventListener(
+                "drop",
+                event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    els.jsonDropZone.classList.remove(
+                        "dragover"
+                    );
+
+                    handleJSONDrop(
+                        event.dataTransfer?.files?.[0]
+                    );
+                }
+            );
+
+            els.pickJsonBtn.addEventListener(
+                "click",
+                () => {
+                    els.jsonFileInput.value = "";
+                    els.jsonFileInput.click();
+                }
+            );
+
+            els.jsonFileInput.addEventListener(
+                "change",
+                event => {
+                    const file =
+                        event.target.files?.[0];
+
+                    if (!file) {
+                        return;
+                    }
+
+                    loadLocalJSONFile(file);
+                }
+            );
+
+            /* Prevent accidental file navigation on page-wide drops. */
+            ["dragover", "drop"].forEach(
+                eventName => {
+                    document.addEventListener(
+                        eventName,
+                        event => {
+                            if (
+                                els.jsonDropZone.contains(
+                                    event.target
+                                )
+                            ) {
+                                return;
+                            }
+
+                            if (
+                                event.dataTransfer &&
+                                event.dataTransfer.files &&
+                                event.dataTransfer.files.length
+                            ) {
+                                event.preventDefault();
+                            }
+                        }
                     );
                 }
             );
@@ -3402,9 +3724,16 @@
             els.sortBtn.textContent =
                 "ID昇順";
 
-            loadData(
-                false
-            );
+            if (
+                window.location.protocol === "file:"
+            ) {
+                setStatus(
+                    "直接開いています。「spots.jsonを選択」から data/spots.json を選べます。"
+                );
+                refreshJSONOutput();
+            } else {
+                loadData(false);
+            }
 
             /*
                 地図サイズを念のため再計算。
