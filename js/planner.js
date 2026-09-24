@@ -324,8 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 overflow: hidden;
                 min-width: 0;
                 border:
-                    1px solid
-                    rgba(255,255,255,.78);
+                    1px solid rgba(255,255,255,.78);
                 border-radius: 24px;
                 background:
                     linear-gradient(
@@ -334,11 +333,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         rgba(255,255,255,.46)
                     );
                 box-shadow:
-                    0 14px 34px
-                    rgba(0,0,0,.055),
-                    inset
-                    0 1px 0
-                    rgba(255,255,255,.92);
+                    0 14px 34px rgba(0,0,0,.055),
+                    inset 0 1px 0 rgba(255,255,255,.92);
                 backdrop-filter:
                     blur(20px)
                     saturate(1.16);
@@ -348,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 cursor: pointer;
                 transition:
                     transform .22s
-                    cubic-bezier(.16,1,.3,1),
+                        cubic-bezier(.16,1,.3,1),
                     box-shadow .22s ease,
                     border-color .22s ease;
             }
@@ -358,11 +354,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 border-color:
                     rgba(255,75,0,.23);
                 box-shadow:
-                    0 20px 40px
-                    rgba(0,0,0,.08),
-                    inset
-                    0 1px 0
-                    rgba(255,255,255,.98);
+                    0 20px 40px rgba(0,0,0,.08),
+                    inset 0 1px 0 rgba(255,255,255,.98);
             }
 
             .planner-spot-card.selected {
@@ -375,13 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         rgba(255,241,235,.65)
                     );
                 box-shadow:
-                    0 18px 40px
-                    rgba(233,71,9,.11),
-                    0 0 0 2px
-                    rgba(255,75,0,.08),
-                    inset
-                    0 1px 0
-                    rgba(255,255,255,.98);
+                    0 18px 40px rgba(233,71,9,.11),
+                    0 0 0 2px rgba(255,75,0,.08),
+                    inset 0 1px 0 rgba(255,255,255,.98);
             }
 
             .planner-spot-photo {
@@ -404,8 +393,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 font-weight: 900;
                 letter-spacing: .22em;
                 border:
-                    1px solid
-                    rgba(255,255,255,.9);
+                    1px solid rgba(255,255,255,.9);
             }
 
             .planner-spot-photo img {
@@ -435,10 +423,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 margin: 0 0 9px;
                 padding: 0 9px;
                 border-radius: 999px;
-                background: rgba(255,75,0,.08);
+                background:
+                    rgba(255,75,0,.08);
                 border:
-                    1px solid
-                    rgba(255,255,255,.76);
+                    1px solid rgba(255,255,255,.76);
                 color: #A9441F;
                 font-size: 11px;
                 font-weight: 850;
@@ -474,8 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 font-size: 11px;
                 font-weight: 900;
                 box-shadow:
-                    0 7px 16px
-                    rgba(255,75,0,.18);
+                    0 7px 16px rgba(255,75,0,.18);
             }
 
             .planner-popup {
@@ -498,7 +485,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 padding: 0 10px;
                 margin: 0 0 9px;
                 border-radius: 999px;
-                background: rgba(255,75,0,.09);
+                background:
+                    rgba(255,75,0,.09);
                 color: #B8491F;
                 font-size: 11px;
                 font-weight: 800;
@@ -515,8 +503,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 width: 100%;
                 min-height: 43px;
                 border:
-                    1px solid
-                    rgba(255,255,255,.88);
+                    1px solid rgba(255,255,255,.88);
                 border-radius: 999px;
                 background:
                     linear-gradient(
@@ -531,11 +518,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 cursor: pointer;
                 touch-action: manipulation;
                 box-shadow:
-                    0 8px 22px
-                    rgba(0,0,0,.08),
-                    inset
-                    0 1px 0
-                    rgba(255,255,255,.98);
+                    0 8px 22px rgba(0,0,0,.08),
+                    inset 0 1px 0 rgba(255,255,255,.98);
             }
 
             .planner-popup-select.selected {
@@ -556,8 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .leaflet-popup-content-wrapper {
                 border-radius: 19px !important;
                 border:
-                    1px solid
-                    rgba(255,255,255,.86);
+                    1px solid rgba(255,255,255,.86);
                 background:
                     linear-gradient(
                         145deg,
@@ -565,15 +548,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         rgba(247,247,249,.92)
                     );
                 box-shadow:
-                    0 18px 45px
-                    rgba(0,0,0,.18),
-                    inset
-                    0 1px 0
-                    rgba(255,255,255,1);
-                backdrop-filter:
-                    blur(16px);
-                -webkit-backdrop-filter:
-                    blur(16px);
+                    0 18px 45px rgba(0,0,0,.18),
+                    inset 0 1px 0 rgba(255,255,255,1);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
             }
 
             .leaflet-popup-tip {
@@ -594,8 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 font-size: 12px;
                 font-weight: 900;
                 box-shadow:
-                    0 7px 18px
-                    rgba(0,0,0,.2);
+                    0 7px 18px rgba(0,0,0,.2);
                 pointer-events: none;
             }
 
@@ -610,8 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     11px solid ${COLOR.route};
                 filter:
                     drop-shadow(
-                        0 2px 4px
-                        rgba(0,0,0,.18)
+                        0 2px 4px rgba(0,0,0,.18)
                     );
                 pointer-events: none;
             }
@@ -632,11 +608,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 background:
                     rgba(255,75,0,.16);
                 border:
-                    1px solid
-                    rgba(255,75,0,.25);
+                    1px solid rgba(255,75,0,.25);
                 animation:
-                    plannerCurrentPulse
-                    2s ease-out infinite;
+                    plannerCurrentPulse 2s
+                    ease-out infinite;
             }
 
             .planner-current-pulse.delay {
@@ -650,8 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 border-radius: 50%;
                 background: ${COLOR.pin};
                 box-shadow:
-                    0 4px 13px
-                    rgba(0,0,0,.24);
+                    0 4px 13px rgba(0,0,0,.24);
             }
 
             @keyframes plannerCurrentPulse {
@@ -683,16 +657,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             .planner-navigation {
-                width:
-                    min(
-                        560px,
-                        calc(100% - 4px)
-                    );
+                width: min(560px,calc(100% - 4px));
                 padding: 15px 16px;
                 border-radius: 23px;
                 border:
-                    1px solid
-                    rgba(255,255,255,.87);
+                    1px solid rgba(255,255,255,.87);
                 background:
                     linear-gradient(
                         145deg,
@@ -700,11 +669,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         rgba(255,255,255,.58)
                     );
                 box-shadow:
-                    0 20px 50px
-                    rgba(0,0,0,.17),
-                    inset
-                    0 1px 0
-                    rgba(255,255,255,.98);
+                    0 20px 50px rgba(0,0,0,.17),
+                    inset 0 1px 0 rgba(255,255,255,.98);
                 backdrop-filter:
                     blur(23px)
                     saturate(1.12);
@@ -715,150 +681,142 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             .planner-navigation.hidden {
-                display: none;
+                display:none;
             }
 
             .planner-nav-kicker {
-                color: #77777d;
-                font-size: 10px;
-                font-weight: 900;
-                letter-spacing: .16em;
+                color:#77777d;
+                font-size:10px;
+                font-weight:900;
+                letter-spacing:.16em;
             }
 
             .planner-nav-status {
-                color: #77777d;
-                font-size: 11px;
-                font-weight: 800;
+                color:#77777d;
+                font-size:11px;
+                font-weight:800;
             }
 
             .planner-nav-title {
-                margin: 4px 0 0;
-                color: #202024;
-                font-size: 21px;
-                line-height: 1.3;
-                font-weight: 900;
+                margin:4px 0 0;
+                color:#202024;
+                font-size:21px;
+                line-height:1.3;
+                font-weight:900;
             }
 
             .planner-nav-meta {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 7px;
-                margin-top: 10px;
+                display:flex;
+                flex-wrap:wrap;
+                gap:7px;
+                margin-top:10px;
             }
 
             .planner-nav-chip {
-                display: inline-flex;
-                align-items: center;
-                min-height: 29px;
-                padding: 0 10px;
-                border-radius: 999px;
+                display:inline-flex;
+                align-items:center;
+                min-height:29px;
+                padding:0 10px;
+                border-radius:999px;
                 border:
-                    1px solid
-                    rgba(255,255,255,.78);
-                background:
-                    rgba(255,255,255,.60);
-                color: #48484d;
-                font-size: 11px;
-                font-weight: 800;
+                    1px solid rgba(255,255,255,.78);
+                background:rgba(255,255,255,.60);
+                color:#48484d;
+                font-size:11px;
+                font-weight:800;
             }
 
             .planner-nav-progress {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                overflow-x: auto;
-                margin-top: 10px;
-                padding: 7px;
-                border-radius: 16px;
+                display:flex;
+                align-items:center;
+                gap:5px;
+                overflow-x:auto;
+                margin-top:10px;
+                padding:7px;
+                border-radius:16px;
                 border:
-                    1px solid
-                    rgba(255,255,255,.72);
-                background:
-                    rgba(255,255,255,.46);
+                    1px solid rgba(255,255,255,.72);
+                background:rgba(255,255,255,.46);
             }
 
             .planner-nav-step {
-                flex: 0 0 auto;
-                min-height: 27px;
-                display: inline-flex;
-                align-items: center;
-                padding: 0 8px;
-                border-radius: 999px;
-                background:
-                    rgba(255,255,255,.42);
-                color: #8A8A8E;
-                font-size: 11px;
-                font-weight: 850;
+                flex:0 0 auto;
+                min-height:27px;
+                display:inline-flex;
+                align-items:center;
+                padding:0 8px;
+                border-radius:999px;
+                background:rgba(255,255,255,.42);
+                color:#8A8A8E;
+                font-size:11px;
+                font-weight:850;
             }
 
             .planner-nav-step.current {
-                background: ${COLOR.route};
-                color: #fff;
+                background:${COLOR.route};
+                color:#fff;
             }
 
             .planner-nav-step.done {
-                background:
-                    rgba(0,0,0,.06);
-                color: #7d7d82;
+                background:rgba(0,0,0,.06);
+                color:#7d7d82;
             }
 
             .planner-nav-actions {
-                display: flex;
-                gap: 8px;
-                margin-top: 10px;
+                display:flex;
+                gap:8px;
+                margin-top:10px;
             }
 
             .planner-nav-button {
-                flex: 1;
-                min-height: 42px;
+                flex:1;
+                min-height:42px;
                 border:
-                    1px solid
-                    rgba(255,255,255,.86);
-                border-radius: 999px;
+                    1px solid rgba(255,255,255,.86);
+                border-radius:999px;
                 background:
                     linear-gradient(
                         145deg,
                         rgba(255,255,255,.93),
                         rgba(255,255,255,.56)
                     );
-                color: #222225;
-                font: inherit;
-                font-size: 12px;
-                font-weight: 850;
-                cursor: pointer;
+                color:#222225;
+                font:inherit;
+                font-size:12px;
+                font-weight:850;
+                cursor:pointer;
             }
 
             .planner-nav-button.primary {
-                color: #fff;
+                color:#fff;
                 background:
                     linear-gradient(
                         145deg,
                         ${COLOR.pin},
                         #cc4007
                     );
-                border-color: transparent;
+                border-color:transparent;
             }
 
             .planner-nav-button:disabled {
-                opacity: .45;
-                cursor: not-allowed;
+                opacity:.45;
+                cursor:not-allowed;
             }
 
             .planner-nav-arrival {
-                margin-top: 9px;
-                padding: 11px 12px;
-                border-radius: 15px;
-                background:
-                    rgba(255,255,255,.52);
-                font-size: 12px;
-                line-height: 1.6;
+                margin-top:9px;
+                padding:11px 12px;
+                border-radius:15px;
+                background:rgba(255,255,255,.52);
+                font-size:12px;
+                line-height:1.6;
             }
 
             .planner-nav-arrival strong {
-                display: block;
-                margin-bottom: 2px;
-                font-size: 14px;
-                font-weight: 900;
+                display:block;
+                margin-bottom:2px;
+                font-size:14px;
+                font-weight:900;
             }
 
             @media(max-width:760px){
@@ -886,7 +844,9 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     const navWrap = document.createElement("div");
-    navWrap.className = "planner-navigation-wrap";
+
+    navWrap.className =
+        "planner-navigation-wrap";
 
     navWrap.innerHTML = `
         <div
@@ -930,6 +890,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ></div>
 
             <div class="planner-nav-actions">
+
                 <button
                     id="plannerNavStart"
                     class="planner-nav-button primary"
@@ -945,6 +906,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 >
                     ナビ終了
                 </button>
+
             </div>
 
             <div
@@ -952,6 +914,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 class="planner-nav-arrival"
                 style="display:none;"
             ></div>
+
         </div>
     `;
 
@@ -995,7 +958,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function localized(value) {
         if (value == null) return "";
-        if (typeof value !== "object") return String(value);
+
+        if (typeof value !== "object") {
+            return String(value);
+        }
 
         const l = getLanguage();
 
@@ -1012,97 +978,75 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function safeURL(value) {
         try {
-            const url =
-                new URL(
-                    value,
-                    window.location.href
-                );
-
-            return (
-                ["http:","https:"].includes(
-                    url.protocol
-                )
-                    ? url.href
-                    : ""
+            const url = new URL(
+                value,
+                window.location.href
             );
 
+            return ["http:","https:"]
+                .includes(url.protocol)
+                ? url.href
+                : "";
         } catch (_) {
             return "";
         }
     }
 
     function formatDistance(meters) {
-        const m =
-            Math.max(
-                0,
-                Math.round(
-                    Number(meters) || 0
-                )
-            );
-
-        return (
-            m < 1000
-                ? `${m} m`
-                : `${(m/1000).toFixed(2)} km`
+        const m = Math.max(
+            0,
+            Math.round(Number(meters) || 0)
         );
+
+        return m < 1000
+            ? `${m} m`
+            : `${(m / 1000).toFixed(2)} km`;
     }
 
     function formatMinutes(minutes) {
-        const n =
-            Math.max(
-                0,
-                Math.ceil(
-                    Number(minutes) || 0
-                )
-            );
+        const n = Math.max(
+            0,
+            Math.ceil(Number(minutes) || 0)
+        );
 
         if (n < 60) {
             return `${n}分`;
         }
 
-        const h = Math.floor(n/60);
+        const h = Math.floor(n / 60);
         const m = n % 60;
 
-        return (
-            m
-                ? `${h}時間${m}分`
-                : `${h}時間`
-        );
+        return m
+            ? `${h}時間${m}分`
+            : `${h}時間`;
     }
 
     function stayMinutes(value) {
-        const s =
-            String(value ?? "");
+        const s = String(value ?? "");
 
-        const h =
-            s.match(
-                /(\d+(?:\.\d+)?)\s*(?:時間|hour|hours|시간|小时)/i
-            );
+        const h = s.match(
+            /(\d+(?:\.\d+)?)\s*(?:時間|hour|hours|시간|小时)/i
+        );
 
-        const m =
-            s.match(
-                /(\d+(?:\.\d+)?)\s*(?:分|minutes?|분|分钟)/i
-            );
+        const m = s.match(
+            /(\d+(?:\.\d+)?)\s*(?:分|minutes?|분|分钟)/i
+        );
 
         let total = 0;
 
         if (h) {
-            total +=
-                Number(h[1]) * 60;
+            total += Number(h[1]) * 60;
         }
 
         if (m) {
-            total +=
-                Number(m[1]);
+            total += Number(m[1]);
         }
 
         if (!total) {
-            const n =
-                s.match(/\d+/);
+            const n = s.match(/\d+/);
 
             if (n) {
-                total =
-                    Number(n[0]);
+                total = Number(n[0]);
             }
         }
 
@@ -1119,10 +1063,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function pathDistance(path) {
-        if (
-            !Array.isArray(path) ||
-            path.length < 2
-        ) {
+        if (!Array.isArray(path) || path.length < 2) {
             return 0;
         }
 
@@ -1133,36 +1074,35 @@ document.addEventListener("DOMContentLoaded", () => {
             i < path.length - 1;
             i++
         ) {
-            total +=
-                map.distance(
-                    path[i],
-                    path[i+1]
-                );
+            total += map.distance(
+                path[i],
+                path[i + 1]
+            );
         }
 
         return total;
     }
 
     function mergePath(a,b) {
-        if (!a.length) return b.slice();
-        if (!b.length) return a.slice();
+        if (!a.length) {
+            return b.slice();
+        }
 
-        const out =
-            a.slice();
+        if (!b.length) {
+            return a.slice();
+        }
+
+        const out = a.slice();
 
         if (
             map.distance(
-                out[out.length-1],
+                out[out.length - 1],
                 b[0]
             ) <= 2
         ) {
-            out.push(
-                ...b.slice(1)
-            );
+            out.push(...b.slice(1));
         } else {
-            out.push(
-                ...b
-            );
+            out.push(...b);
         }
 
         return out;
@@ -1179,11 +1119,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 .toLowerCase();
 
         if (
-            [
-                "all",
-                "すべて",
-                "全部"
-            ].includes(v)
+            ["all","すべて","全部"]
+                .includes(v)
         ) {
             return "all";
         }
@@ -1276,43 +1213,23 @@ document.addEventListener("DOMContentLoaded", () => {
             return "guide";
         }
 
-        return (
-            v || "guide"
-        );
+        return v || "guide";
     }
 
     function categoryLabel(value) {
-        return {
-            all:
-                "すべて",
-
-            scenery:
-                "景色・景観・展望",
-
-            restaurant:
-                "グルメ",
-
-            shrine:
-                "神社",
-
-            hiking:
-                "登山・ハイキング",
-
-            transport:
-                "交通",
-
-            toilet:
-                "トイレ",
-
-            guide:
-                "案内"
-
-        }[
-            normalizeCategory(
-                value
-            )
-        ] ||
-        String(value ?? "");
+        return (
+            {
+                all:"すべて",
+                scenery:"景色・景観・展望",
+                restaurant:"グルメ",
+                shrine:"神社",
+                hiking:"登山・ハイキング",
+                transport:"交通",
+                toilet:"トイレ",
+                guide:"案内"
+            }[normalizeCategory(value)] ||
+            String(value ?? "")
+        );
     }
 
     /* ============================================================
@@ -1320,7 +1237,6 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function iconType(spot) {
-
         const raw =
             String(
                 spot.iconType ||
@@ -1332,42 +1248,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .toLowerCase();
 
         const aliases = {
-
-            "景色":
-                "viewpoint",
-
-            "景観":
-                "viewpoint",
-
-            "展望":
-                "viewpoint",
-
-            "神社":
-                "shrine",
-
-            "登山":
-                "hiking",
-
-            "ハイキング":
-                "hiking",
-
-            "飲食店":
-                "restaurant",
-
-            "グルメ":
-                "restaurant",
-
-            "交通":
-                "station-jr",
-
-            "トイレ":
-                "toilet",
-
-            "案内":
-                "guide",
-
-            "駅":
-                "station-jr"
+            "景色":"viewpoint",
+            "景観":"viewpoint",
+            "展望":"viewpoint",
+            "神社":"shrine",
+            "登山":"hiking",
+            "ハイキング":"hiking",
+            "飲食店":"restaurant",
+            "グルメ":"restaurant",
+            "交通":"station-jr",
+            "トイレ":"toilet",
+            "案内":"guide",
+            "駅":"station-jr"
         };
 
         if (aliases[raw]) {
@@ -1379,110 +1271,64 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (
-            [
-                "6",
-                "13",
-                "14"
-            ].includes(
-                String(spot.id)
-            )
+            ["6","13","14"]
+                .includes(String(spot.id))
         ) {
             return "toilet";
         }
 
-        if (
-            String(spot.id) === "7"
-        ) {
+        if (String(spot.id) === "7") {
             return "station-keihan";
         }
 
-        if (
-            String(spot.id) === "8"
-        ) {
+        if (String(spot.id) === "8") {
             return "station-jr";
         }
 
-        return {
-
-            scenery:
-                "viewpoint",
-
-            restaurant:
-                "restaurant",
-
-            shrine:
-                "shrine",
-
-            hiking:
-                "hiking",
-
-            transport:
-                "station-jr",
-
-            toilet:
-                "toilet",
-
-            guide:
-                "guide"
-
-        }[
-            normalizeCategory(
-                spot.category
-            )
-        ] ||
-        "guide";
-    }
-
-    function iconPath(
-        type,
-        gray
-    ) {
         return (
-            `${ICON_DIR}` +
-            `${type}` +
-            `${gray ? "-gray" : ""}` +
-            `.svg`
+            {
+                scenery:"viewpoint",
+                restaurant:"restaurant",
+                shrine:"shrine",
+                hiking:"hiking",
+                transport:"station-jr",
+                toilet:"toilet",
+                guide:"guide"
+            }[normalizeCategory(spot.category)] ||
+            "guide"
         );
     }
 
-    function markerZIndex(
-        spot
-    ) {
+    function iconPath(type,gray) {
+        return `${ICON_DIR}${type}${gray ? "-gray" : ""}.svg`;
+    }
 
-        const type =
-            iconType(spot);
+    function markerZIndex(spot) {
+        const type = iconType(spot);
 
         const facilities = [
-
             "toilet",
             "toilet-male",
             "toilet-female",
             "toilet-western",
             "toilet-japanese",
             "washlet",
-
             "wheelchair",
             "diaper-changing",
             "baby-chair",
             "changing-table",
             "ostomate",
-
             "smoking",
             "exchange",
             "public-phone",
             "trash-box",
-
             "evacuation-shelter",
             "baggage-storage",
             "coin-locker",
             "rest-area"
         ];
 
-        if (
-            facilities.includes(
-                type
-            )
-        ) {
+        if (facilities.includes(type)) {
             return 1400;
         }
 
@@ -1500,18 +1346,13 @@ document.addEventListener("DOMContentLoaded", () => {
        DATA
        ============================================================ */
 
-    async function getJSON(
-        url
-    ) {
-
-        const response =
-            await fetch(
-                `${url}?v=${encodeURIComponent(BUILD_ID)}`,
-                {
-                    cache:
-                        "no-store"
-                }
-            );
+    async function getJSON(url) {
+        const response = await fetch(
+            `${url}?v=${encodeURIComponent(BUILD_ID)}`,
+            {
+                cache:"no-store"
+            }
+        );
 
         if (!response.ok) {
             throw new Error(
@@ -1523,135 +1364,69 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function loadData() {
-
         const [
             spotData,
             routeData
-        ] =
-            await Promise.all([
-                getJSON(SPOTS_URL),
-                getJSON(ROUTES_URL)
-            ]);
+        ] = await Promise.all([
+            getJSON(SPOTS_URL),
+            getJSON(ROUTES_URL)
+        ]);
 
-        const spotArray =
-            Array.isArray(
-                spotData
-            )
+        spots = (
+            Array.isArray(spotData)
                 ? spotData
-                : (
-                    spotData.spots ||
-                    spotData.data ||
-                    []
-                );
+                : spotData.spots || []
+        )
+        .filter(
+            s =>
+                s &&
+                Number.isFinite(Number(s.lat)) &&
+                Number.isFinite(Number(s.lng))
+        );
 
-        const routeArray =
-            Array.isArray(
-                routeData
-            )
+        routes = (
+            Array.isArray(routeData)
                 ? routeData
-                : (
-                    routeData.routes ||
-                    routeData.data ||
-                    []
-                );
+                : routeData.routes || []
+        )
+        .map(route => {
+            const path = (
+                route.path || []
+            )
+            .map(p =>
+                Array.isArray(p)
+                    ? [
+                        Number(p[0]),
+                        Number(p[1])
+                    ]
+                    : [
+                        Number(p.lat),
+                        Number(p.lng)
+                    ]
+            )
+            .filter(
+                p =>
+                    Number.isFinite(p[0]) &&
+                    Number.isFinite(p[1])
+            );
 
-        spots =
-            spotArray
-                .filter(
-                    spot =>
-                        spot &&
-                        Number.isFinite(
-                            Number(
-                                spot.lat
-                            )
-                        ) &&
-                        Number.isFinite(
-                            Number(
-                                spot.lng
-                            )
-                        )
-                );
+            if (
+                !route.from ||
+                !route.to ||
+                path.length < 2
+            ) {
+                return null;
+            }
 
-        routes =
-            routeArray
-                .map(route => {
-
-                    const path =
-                        (
-                            route.path ||
-                            []
-                        )
-                        .map(item => {
-
-                            if (
-                                Array.isArray(
-                                    item
-                                )
-                            ) {
-                                return [
-                                    Number(
-                                        item[0]
-                                    ),
-                                    Number(
-                                        item[1]
-                                    )
-                                ];
-                            }
-
-                            return [
-                                Number(
-                                    item.lat
-                                ),
-                                Number(
-                                    item.lng
-                                )
-                            ];
-                        })
-                        .filter(
-                            p =>
-                                Number.isFinite(
-                                    p[0]
-                                ) &&
-                                Number.isFinite(
-                                    p[1]
-                                )
-                        );
-
-                    if (
-                        !route.from ||
-                        !route.to ||
-                        path.length < 2
-                    ) {
-                        return null;
-                    }
-
-                    return {
-
-                        from:
-                            String(
-                                route.from
-                            ),
-
-                        to:
-                            String(
-                                route.to
-                            ),
-
-                        name:
-                            String(
-                                route.name ||
-                                ""
-                            ),
-
-                        path,
-
-                        meters:
-                            pathDistance(
-                                path
-                            )
-                    };
-                })
-                .filter(Boolean);
+            return {
+                from:String(route.from),
+                to:String(route.to),
+                name:String(route.name || ""),
+                path,
+                meters:pathDistance(path)
+            };
+        })
+        .filter(Boolean);
 
         console.log(
             "routes source:",
@@ -1669,16 +1444,12 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function loadSelected() {
-
         try {
-
-            const ids =
-                JSON.parse(
-                    localStorage.getItem(
-                        SELECTED_KEY
-                    ) ||
-                    "[]"
-                );
+            const ids = JSON.parse(
+                localStorage.getItem(
+                    SELECTED_KEY
+                ) || "[]"
+            );
 
             selectedSpots =
                 Array.isArray(ids)
@@ -1686,122 +1457,78 @@ document.addEventListener("DOMContentLoaded", () => {
                         .map(
                             id =>
                                 spots.find(
-                                    spot =>
-                                        String(
-                                            spot.id
-                                        ) ===
-                                        String(
-                                            id
-                                        )
+                                    s =>
+                                        String(s.id) ===
+                                        String(id)
                                 )
                         )
                         .filter(Boolean)
                     : [];
-
         } catch (_) {
-
             selectedSpots = [];
-
         }
     }
 
     function saveSelected() {
-
         localStorage.setItem(
             SELECTED_KEY,
             JSON.stringify(
                 selectedSpots.map(
-                    spot =>
-                        spot.id
+                    s => s.id
                 )
             )
         );
     }
 
-    function isSelected(
-        spot
-    ) {
-
+    function isSelected(spot) {
         return selectedSpots.some(
-            item =>
-                String(
-                    item.id
-                ) ===
-                String(
-                    spot.id
-                )
+            s =>
+                String(s.id) ===
+                String(spot.id)
         );
     }
 
     function selectedText() {
+        const l = getLanguage();
 
-        const l =
-            getLanguage();
-
-        if (
-            l === "en"
-        ) {
+        if (l === "en") {
             return "✓ Selected";
         }
 
-        if (
-            l === "zh"
-        ) {
+        if (l === "zh") {
             return "✓ 已选择";
         }
 
-        if (
-            l === "ko"
-        ) {
+        if (l === "ko") {
             return "✓ 선택됨";
         }
 
         return "✓ 選択中";
     }
 
-    function toggleSpot(
-        spot
-    ) {
-
+    function toggleSpot(spot) {
         const index =
             selectedSpots.findIndex(
-                item =>
-                    String(
-                        item.id
-                    ) ===
-                    String(
-                        spot.id
-                    )
+                s =>
+                    String(s.id) ===
+                    String(spot.id)
             );
 
-        if (
-            index >= 0
-        ) {
-
+        if (index >= 0) {
             selectedSpots.splice(
                 index,
                 1
             );
-
         } else {
-
-            selectedSpots.push(
-                spot
-            );
+            selectedSpots.push(spot);
         }
 
         saveSelected();
-
         renderCards();
-
         updateSelectedList();
-
         updateInfo();
-
         refreshMarkers();
-
         renderRouteNumbers();
-
         updateNavigationPreview();
     }
 
@@ -1809,76 +1536,60 @@ document.addEventListener("DOMContentLoaded", () => {
        CARDS
        ============================================================ */
 
+    /*
+       写真表示
+       ------------------------------------------------------------
+       以前は
+
+       photoAvailable === true
+       または
+       imageEnabled === true
+
+       という条件がありましたが、
+       spots.json には通常 image だけが入っているため、
+       その条件を完全に廃止しています。
+
+       image があれば ./images/ から読み込みます。
+    */
+
     function photoHTML(spot,name) {
-    const image = String(spot?.image || "").trim();
+        const image =
+            String(
+                spot?.image || ""
+            ).trim();
 
-    if (!image) {
-        return `
-            <div class="planner-spot-photo">
-                PHOTO
-            </div>
-        `;
-    }
-
-    const src = image.startsWith("http://") ||
-                image.startsWith("https://")
-        ? image
-        : `./images/${encodeURIComponent(image)}`;
-
-    return `
-        <div class="planner-spot-photo">
-            <img
-                src="${escapeHTML(src)}"
-                alt="${escapeHTML(name)}"
-                loading="lazy"
-                style="
-                    display:block;
-                    width:100%;
-                    height:220px;
-                    object-fit:cover;
-                    border-radius:18px;
-                "
-                onerror="this.style.display='none'; this.parentElement.innerHTML='PHOTO';"
-            >
-        </div>
-    `;
-}
+        if (!image) {
+            return `
+                <div class="planner-spot-photo">
+                    PHOTO
+                </div>
+            `;
+        }
 
         const src =
-            String(
-                spot.image
-            ).startsWith("http")
-                ? String(
-                    spot.image
-                )
-                : (
-                    "./images/" +
-                    encodeURIComponent(
-                        String(
-                            spot.image
-                        )
-                    )
-                );
+            image.startsWith("http://") ||
+            image.startsWith("https://")
+                ? image
+                : `./images/${encodeURIComponent(image)}`;
 
         return `
-            <div
-                class="planner-spot-photo"
-            >
+            <div class="planner-spot-photo">
                 <img
                     src="${escapeHTML(src)}"
                     alt="${escapeHTML(name)}"
                     loading="lazy"
+                    onerror="
+                        this.parentElement.innerHTML='PHOTO';
+                    "
                 >
             </div>
         `;
     }
 
     function filteredSpots() {
-
         const q =
             String(
-                els.search?.value ||
-                ""
+                els.search?.value || ""
             )
             .trim()
             .toLowerCase();
@@ -1897,18 +1608,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return spots.filter(
             spot => {
-
                 const name =
                     localized(
                         spot.name
-                    ).toLowerCase();
+                    )
+                    .toLowerCase();
 
                 const desc =
                     localized(
                         spot.description
-                    ).toLowerCase();
+                    )
+                    .toLowerCase();
 
-                const cat =
+                const categoryName =
                     normalizeCategory(
                         spot.category
                     );
@@ -1918,15 +1630,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     name.includes(q) ||
                     desc.includes(q) ||
                     String(
-                        spot.category ||
-                        ""
+                        spot.category || ""
                     )
                     .toLowerCase()
                     .includes(q);
 
                 const categoryOK =
                     active === "all" ||
-                    cat === active;
+                    categoryName === active;
 
                 return (
                     searchOK &&
@@ -1937,61 +1648,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderCards() {
-
-        if (
-            !els.spotList
-        ) {
+        if (!els.spotList) {
             return;
         }
 
         const list =
             filteredSpots();
 
-        els.spotList.innerHTML =
-            "";
+        els.spotList.innerHTML = "";
 
-        if (
-            !list.length
-        ) {
-
-            els.spotList.innerHTML =
-                `
+        if (!list.length) {
+            els.spotList.innerHTML = `
                 <p
                     style="
                         padding:12px;
                         color:#777;
                     "
                 >
-                    スポットが
-                    見つかりませんでした。
+                    スポットが見つかりませんでした。
                 </p>
-                `;
+            `;
 
             return;
         }
 
         list.forEach(
             spot => {
-
                 const card =
                     document.createElement(
                         "article"
                     );
 
                 card.className =
-                    "planner-spot-card" +
-                    (
-                        isSelected(
-                            spot
-                        )
+                    `planner-spot-card${
+                        isSelected(spot)
                             ? " selected"
                             : ""
-                    );
+                    }`;
 
                 card.dataset.spotId =
-                    String(
-                        spot.id
-                    );
+                    String(spot.id);
 
                 const name =
                     localized(
@@ -2015,19 +1711,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     )}
 
                     <div
-                        class="
-                            planner-spot-content
-                        "
+                        class="planner-spot-content"
                     >
 
                         <h3>
-                            ${escapeHTML(name)}
+                            ${escapeHTML(
+                                name
+                            )}
                         </h3>
 
                         <div
-                            class="
-                                planner-spot-category
-                            "
+                            class="planner-spot-category"
                         >
                             ${escapeHTML(
                                 categoryLabel(
@@ -2037,9 +1731,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
 
                         <p
-                            class="
-                                planner-spot-description
-                            "
+                            class="planner-spot-description"
                         >
                             ${escapeHTML(
                                 desc
@@ -2047,31 +1739,26 @@ document.addEventListener("DOMContentLoaded", () => {
                         </p>
 
                         <p
-                            class="
-                                planner-spot-time
-                            "
+                            class="planner-spot-time"
                         >
                             ⏱
                             ${escapeHTML(
-                                spot.time ||
-                                "-"
+                                spot.time || "-"
                             )}
                         </p>
 
                         ${
-                            isSelected(
-                                spot
-                            )
+                            isSelected(spot)
                                 ? `
-                                <span
-                                    class="
-                                        planner-selected-label
-                                    "
-                                >
-                                    ${escapeHTML(
-                                        selectedText()
-                                    )}
-                                </span>
+                                    <span
+                                        class="
+                                            planner-selected-label
+                                        "
+                                    >
+                                        ${escapeHTML(
+                                            selectedText()
+                                        )}
+                                    </span>
                                 `
                                 : ""
                         }
@@ -2079,21 +1766,21 @@ document.addEventListener("DOMContentLoaded", () => {
                         ${
                             site
                                 ? `
-                                <a
-                                    href="${escapeHTML(site)}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style="
-                                        display:inline-block;
-                                        margin-top:9px;
-                                        color:#A9441F;
-                                        font-size:12px;
-                                        font-weight:800;
-                                        text-decoration:none;
-                                    "
-                                >
-                                    公式サイトを見る
-                                </a>
+                                    <a
+                                        href="${escapeHTML(site)}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style="
+                                            display:inline-block;
+                                            margin-top:9px;
+                                            color:#A9441F;
+                                            font-size:12px;
+                                            font-weight:800;
+                                            text-decoration:none;
+                                        "
+                                    >
+                                        公式サイトを見る
+                                    </a>
                                 `
                                 : ""
                         }
@@ -2104,7 +1791,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 card.addEventListener(
                     "click",
                     event => {
-
                         if (
                             event.target.closest(
                                 "a"
@@ -2113,9 +1799,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             return;
                         }
 
-                        toggleSpot(
-                            spot
-                        );
+                        toggleSpot(spot);
                     }
                 );
 
@@ -2127,37 +1811,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateSelectedList() {
-
-        if (
-            !els.selectedList
-        ) {
+        if (!els.selectedList) {
             return;
         }
 
-        els.selectedList.innerHTML =
-            "";
+        els.selectedList.innerHTML = "";
 
-        if (
-            !selectedSpots.length
-        ) {
-
-            els.selectedList.innerHTML =
-                `
+        if (!selectedSpots.length) {
+            els.selectedList.innerHTML = `
                 <p>
-                    スポットを
-                    選択してください。
+                    スポットを選択してください。
                 </p>
-                `;
+            `;
 
             return;
         }
 
         selectedSpots.forEach(
-            (
-                spot,
-                index
-            ) => {
-
+            (spot,index) => {
                 const row =
                     document.createElement(
                         "div"
@@ -2165,10 +1836,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 row.style.cssText =
                     `
-                    display:flex;
-                    align-items:center;
-                    gap:10px;
-                    padding:8px 0;
+                        display:flex;
+                        align-items:center;
+                        gap:10px;
+                        padding:8px 0;
                     `;
 
                 row.innerHTML = `
@@ -2178,7 +1849,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             font-size:18px;
                         "
                     >
-                        ${index+1}
+                        ${index + 1}
                     </strong>
 
                     <span
@@ -2210,13 +1881,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 `;
 
                 row
-                    .querySelector(
-                        "button"
-                    )
+                    .querySelector("button")
                     .addEventListener(
                         "click",
                         event => {
-
                             event.stopPropagation();
 
                             selectedSpots =
@@ -2231,17 +1899,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 );
 
                             saveSelected();
-
                             renderCards();
-
                             updateSelectedList();
-
                             updateInfo();
-
                             refreshMarkers();
-
                             renderRouteNumbers();
-
                             updateNavigationPreview();
                         }
                     );
@@ -2254,38 +1916,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateInfo() {
-
-        if (
-            els.count
-        ) {
-
+        if (els.count) {
             els.count.textContent =
                 getLanguage() === "en"
                     ? `${selectedSpots.length} spots`
                     : `${selectedSpots.length}か所`;
         }
 
-        if (
-            els.stay
-        ) {
-
+        if (els.stay) {
             const stay =
                 selectedSpots.reduce(
-                    (
-                        sum,
-                        spot
-                    ) =>
+                    (sum,s) =>
                         sum +
                         stayMinutes(
-                            spot.time
+                            s.time
                         ),
                     0
                 );
 
             els.stay.textContent =
-                formatMinutes(
-                    stay
-                );
+                formatMinutes(stay);
         }
     }
 
@@ -2293,19 +1943,12 @@ document.addEventListener("DOMContentLoaded", () => {
        MARKERS
        ============================================================ */
 
-    function markerHTML(
-        spot
-    ) {
-
+    function markerHTML(spot) {
         const type =
-            iconType(
-                spot
-            );
+            iconType(spot);
 
         const selected =
-            isSelected(
-                spot
-            );
+            isSelected(spot);
 
         return `
             <div
@@ -2314,23 +1957,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     ${selected ? "selected" : ""}
                 "
                 data-marker-id="${escapeHTML(
-                    String(
-                        spot.id
-                    )
+                    String(spot.id)
                 )}"
                 role="button"
                 tabindex="0"
                 aria-label="${escapeHTML(
-                    localized(
-                        spot.name
-                    )
+                    localized(spot.name)
                 )}"
             >
 
                 <div
-                    class="
-                        planner-marker-pin
-                    "
+                    class="planner-marker-pin"
                 >
 
                     <img
@@ -2369,14 +2006,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    function popupHTML(
-        spot
-    ) {
-
+    function popupHTML(spot) {
         const selected =
-            isSelected(
-                spot
-            );
+            isSelected(spot);
 
         const name =
             localized(
@@ -2389,11 +2021,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
         return `
-            <div
-                class="
-                    planner-popup
-                "
-            >
+            <div class="planner-popup">
 
                 ${photoHTML(
                     spot,
@@ -2427,8 +2055,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <p>
                     ⏱
                     ${escapeHTML(
-                        spot.time ||
-                        "-"
+                        spot.time || "-"
                     )}
                 </p>
 
@@ -2439,21 +2066,21 @@ document.addEventListener("DOMContentLoaded", () => {
                         ${selected ? "selected" : ""}
                     "
                     data-popup-select="${escapeHTML(
-                        String(
-                            spot.id
-                        )
+                        String(spot.id)
                     )}"
                 >
                     ${
-                        selected
-                            ? selectedText()
-                            : getLanguage() === "en"
-                                ? "Select this spot"
-                                : getLanguage() === "zh"
-                                    ? "选择此景点"
-                                    : getLanguage() === "ko"
-                                        ? "이 장소 선택"
-                                        : "このスポットを選択"
+                        escapeHTML(
+                            selected
+                                ? selectedText()
+                                : getLanguage() === "en"
+                                    ? "Select this spot"
+                                    : getLanguage() === "zh"
+                                        ? "选择此景点"
+                                        : getLanguage() === "ko"
+                                            ? "이 장소 선택"
+                                            : "このスポットを選択"
+                        )
                     }
                 </button>
 
@@ -2461,23 +2088,16 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    function createMarker(
-        spot
-    ) {
-
+    function createMarker(spot) {
         const marker =
             L.marker(
-                pointOfSpot(
-                    spot
-                ),
+                pointOfSpot(spot),
                 {
-
                     pane:
                         "plannerMarkerPane",
 
                     icon:
                         L.divIcon({
-
                             className:
                                 "planner-marker-icon",
 
@@ -2487,13 +2107,22 @@ document.addEventListener("DOMContentLoaded", () => {
                                 ),
 
                             iconSize:
-                                [58,68],
+                                [
+                                    58,
+                                    68
+                                ],
 
                             iconAnchor:
-                                [29,52],
+                                [
+                                    29,
+                                    52
+                                ],
 
                             popupAnchor:
-                                [0,-50]
+                                [
+                                    0,
+                                    -50
+                                ]
                         }),
 
                     zIndexOffset:
@@ -2517,7 +2146,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 spot
             ),
             {
-
                 className:
                     "planner-liquid-popup",
 
@@ -2544,7 +2172,6 @@ document.addEventListener("DOMContentLoaded", () => {
         marker.on(
             "popupopen",
             () => {
-
                 bindPopupButton(
                     marker,
                     spot
@@ -2555,11 +2182,9 @@ document.addEventListener("DOMContentLoaded", () => {
         marker.on(
             "click",
             event => {
-
                 if (
                     event?.originalEvent
                 ) {
-
                     event
                         .originalEvent
                         .preventDefault?.();
@@ -2576,7 +2201,6 @@ document.addEventListener("DOMContentLoaded", () => {
         marker.on(
             "add",
             () => {
-
                 requestAnimationFrame(
                     () =>
                         attachNativeMarkerEvents(
@@ -2594,7 +2218,6 @@ document.addEventListener("DOMContentLoaded", () => {
         marker,
         spot
     ) {
-
         const host =
             marker.getElement();
 
@@ -2603,15 +2226,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (
-            host.dataset
-                .plannerBound ===
-            "1"
+            host.dataset.plannerBound === "1"
         ) {
             return;
         }
 
-        host.dataset
-            .plannerBound = "1";
+        host.dataset.plannerBound =
+            "1";
 
         host.style.pointerEvents =
             "auto";
@@ -2622,9 +2243,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const root =
             host.querySelector(
                 `[data-marker-id="${CSS.escape(
-                    String(
-                        spot.id
-                    )
+                    String(spot.id)
                 )}"]`
             );
 
@@ -2634,13 +2253,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const open =
             event => {
-
-                event
-                    .preventDefault?.();
-
-                event
-                    .stopPropagation?.();
-
+                event.preventDefault?.();
+                event.stopPropagation?.();
                 marker.openPopup();
             };
 
@@ -2648,8 +2262,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "click",
             open,
             {
-                passive:
-                    false
+                passive:false
             }
         );
 
@@ -2657,8 +2270,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "touchend",
             open,
             {
-                passive:
-                    false
+                passive:false
             }
         );
 
@@ -2666,20 +2278,16 @@ document.addEventListener("DOMContentLoaded", () => {
             "pointerup",
             open,
             {
-                passive:
-                    false
+                passive:false
             }
         );
 
         root.addEventListener(
             "keydown",
             event => {
-
                 if (
-                    event.key ===
-                        "Enter" ||
-                    event.key ===
-                        " "
+                    event.key === "Enter" ||
+                    event.key === " "
                 ) {
                     open(event);
                 }
@@ -2688,26 +2296,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /*
-       今回の最重要部分。
-
-       Leaflet本体のクリックイベントだけではなく、
-       地図のDOMをcapture=trueで監視する。
-
-       そのため、
-       ・PCクリック
-       ・スマホタップ
-       ・PointerEvent
-       ・TouchEvent
-       のいずれでもピンを開ける。
+       Leafletのイベントだけに頼らず、
+       Map DOMをcaptureで監視して
+       実際に押されたピン要素から
+       スポットを直接取得する。
     */
 
-    let lastDelegatedOpen =
-        0;
+    let lastDelegatedOpen = 0;
 
     function delegatedMarkerOpen(
         event
     ) {
-
         const target =
             event.target;
 
@@ -2733,19 +2332,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 "data-marker-id"
             );
 
-        if (!id) {
-            return;
-        }
-
         const spot =
             spots.find(
-                item =>
-                    String(
-                        item.id
-                    ) ===
-                    String(
-                        id
-                    )
+                s =>
+                    String(s.id) ===
+                    String(id)
             );
 
         const marker =
@@ -2753,10 +2344,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 String(id)
             );
 
-        if (
-            !spot ||
-            !marker
-        ) {
+        if (!spot || !marker) {
             return;
         }
 
@@ -2766,7 +2354,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             now -
             lastDelegatedOpen <
-                220
+            220
         ) {
             return;
         }
@@ -2774,71 +2362,62 @@ document.addEventListener("DOMContentLoaded", () => {
         lastDelegatedOpen =
             now;
 
-        event
-            .preventDefault?.();
-
-        event
-            .stopPropagation?.();
+        event.preventDefault?.();
+        event.stopPropagation?.();
 
         marker.openPopup();
     }
 
-    const mapContainer =
-        map.getContainer();
+    map
+        .getContainer()
+        .addEventListener(
+            "pointerup",
+            delegatedMarkerOpen,
+            {
+                capture:true,
+                passive:false
+            }
+        );
 
-    mapContainer.addEventListener(
-        "pointerup",
-        delegatedMarkerOpen,
-        {
-            capture:
-                true,
-            passive:
-                false
-        }
-    );
+    map
+        .getContainer()
+        .addEventListener(
+            "click",
+            delegatedMarkerOpen,
+            {
+                capture:true,
+                passive:false
+            }
+        );
 
-    mapContainer.addEventListener(
-        "click",
-        delegatedMarkerOpen,
-        {
-            capture:
-                true,
-            passive:
-                false
-        }
-    );
-
-    mapContainer.addEventListener(
-        "touchend",
-        delegatedMarkerOpen,
-        {
-            capture:
-                true,
-            passive:
-                false
-        }
-    );
+    map
+        .getContainer()
+        .addEventListener(
+            "touchend",
+            delegatedMarkerOpen,
+            {
+                capture:true,
+                passive:false
+            }
+        );
 
     function bindPopupButton(
         marker,
         spot
     ) {
-
-        const popupElement =
+        const popupEl =
             marker
                 .getPopup()
                 ?.getElement();
 
-        if (!popupElement) {
+        if (!popupEl) {
             return;
         }
 
         const button =
-            popupElement.querySelector(
+            popupEl.querySelector(
                 `[data-popup-select="${CSS.escape(
-                    String(
-                        spot.id
-                    )
+                    String(spot.id)
                 )}"]`
             );
 
@@ -2847,40 +2426,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (
-            button.dataset
-                .bound ===
+            button.dataset.bound ===
             "1"
         ) {
             return;
         }
 
-        button.dataset
-            .bound = "1";
+        button.dataset.bound =
+            "1";
 
         button.addEventListener(
             "click",
             event => {
+                event.preventDefault();
+                event.stopPropagation();
 
-                event
-                    .preventDefault();
-
-                event
-                    .stopPropagation();
-
-                toggleSpot(
-                    spot
-                );
-
-                /*
-                    toggleSpot()でマーカーが
-                    再生成されるので、
-                    新しいマーカーの
-                    ポップアップを開き直す。
-                */
+                toggleSpot(spot);
 
                 requestAnimationFrame(
                     () => {
-
                         const next =
                             markers.get(
                                 String(
@@ -2888,21 +2452,17 @@ document.addEventListener("DOMContentLoaded", () => {
                                 )
                             );
 
-                        if (!next) {
-                            return;
+                        if (next) {
+                            next.openPopup();
+
+                            requestAnimationFrame(
+                                () =>
+                                    bindPopupButton(
+                                        next,
+                                        spot
+                                    )
+                            );
                         }
-
-                        next.openPopup();
-
-                        requestAnimationFrame(
-                            () => {
-
-                                bindPopupButton(
-                                    next,
-                                    spot
-                                );
-                            }
-                        );
                     }
                 );
             }
@@ -2910,10 +2470,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function refreshMarkers() {
-
         markers.forEach(
             marker => {
-
                 try {
                     marker.closePopup();
                 } catch (_) {}
@@ -2928,20 +2486,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         filteredSpots().forEach(
             spot => {
-
                 const marker =
                     createMarker(
                         spot
                     );
 
-                marker.addTo(
-                    map
-                );
+                marker.addTo(map);
 
                 markers.set(
-                    String(
-                        spot.id
-                    ),
+                    String(spot.id),
                     marker
                 );
 
@@ -2961,47 +2514,49 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function currentLocationIcon() {
-
         return L.divIcon({
-
             className:
                 "planner-current-icon",
 
             html:
                 `
-                <div
-                    class="
-                        planner-current
-                    "
-                >
+                    <div
+                        class="planner-current"
+                    >
 
-                    <span
-                        class="
-                            planner-current-pulse
-                        "
-                    ></span>
+                        <span
+                            class="
+                                planner-current-pulse
+                            "
+                        ></span>
 
-                    <span
-                        class="
-                            planner-current-pulse
-                            delay
-                        "
-                    ></span>
+                        <span
+                            class="
+                                planner-current-pulse
+                                delay
+                            "
+                        ></span>
 
-                    <span
-                        class="
-                            planner-current-core
-                        "
-                    ></span>
+                        <span
+                            class="
+                                planner-current-core
+                            "
+                        ></span>
 
-                </div>
+                    </div>
                 `,
 
             iconSize:
-                [46,46],
+                [
+                    46,
+                    46
+                ],
 
             iconAnchor:
-                [23,23]
+                [
+                    23,
+                    23
+                ]
         });
     }
 
@@ -3009,24 +2564,22 @@ document.addEventListener("DOMContentLoaded", () => {
         location,
         center = false
     ) {
-
         currentLocation =
             location;
 
-        const latlng = [
-            location.lat,
-            location.lng
-        ];
+        const latlng =
+            [
+                location.lat,
+                location.lng
+            ];
 
         if (
             !currentLocationMarker
         ) {
-
             currentLocationMarker =
                 L.marker(
                     latlng,
                     {
-
                         pane:
                             "plannerCurrentPane",
 
@@ -3036,12 +2589,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         interactive:
                             false
                     }
-                ).addTo(
-                    map
-                );
-
+                )
+                .addTo(map);
         } else {
-
             currentLocationMarker
                 .setLatLng(
                     latlng
@@ -3051,7 +2601,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             currentAccuracyCircle
         ) {
-
             map.removeLayer(
                 currentAccuracyCircle
             );
@@ -3065,12 +2614,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 location.accuracy
             ) > 0
         ) {
-
             currentAccuracyCircle =
                 L.circle(
                     latlng,
                     {
-
                         pane:
                             "plannerCurrentPane",
 
@@ -3103,15 +2650,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         interactive:
                             false
                     }
-                ).addTo(
-                    map
-                );
+                )
+                .addTo(map);
         }
 
-        if (
-            center
-        ) {
-
+        if (center) {
             map.setView(
                 latlng,
                 Math.max(
@@ -3138,11 +2681,9 @@ document.addEventListener("DOMContentLoaded", () => {
         center = false,
         silent = false
     ) {
-
         if (
             !navigator.geolocation
         ) {
-
             if (!silent) {
                 alert(
                     "このブラウザでは現在地を利用できません。"
@@ -3168,23 +2709,26 @@ document.addEventListener("DOMContentLoaded", () => {
                     resolve,
                     reject
                 ) => {
-
                     navigator.geolocation
                         .getCurrentPosition(
-
                             position => {
+                                const location =
+                                    {
+                                        lat:
+                                            position
+                                                .coords
+                                                .latitude,
 
-                                const location = {
+                                        lng:
+                                            position
+                                                .coords
+                                                .longitude,
 
-                                    lat:
-                                        position.coords.latitude,
-
-                                    lng:
-                                        position.coords.longitude,
-
-                                    accuracy:
-                                        position.coords.accuracy
-                                };
+                                        accuracy:
+                                            position
+                                                .coords
+                                                .accuracy
+                                    };
 
                                 setCurrentLocation(
                                     location,
@@ -3197,7 +2741,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             },
 
                             error => {
-
                                 console.warn(
                                     "現在地取得エラー:",
                                     error
@@ -3206,7 +2749,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (
                                     !silent
                                 ) {
-
                                     alert(
                                         "現在地を取得できませんでした。ブラウザの位置情報許可を確認してください。"
                                     );
@@ -3218,7 +2760,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             },
 
                             {
-
                                 enableHighAccuracy:
                                     true,
 
@@ -3241,7 +2782,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function startWatch() {
-
         if (
             watchId !== null ||
             !navigator.geolocation
@@ -3252,23 +2792,26 @@ document.addEventListener("DOMContentLoaded", () => {
         watchId =
             navigator.geolocation
                 .watchPosition(
-
-                    position => {
-
+                    position =>
                         setCurrentLocation(
                             {
-
                                 lat:
-                                    position.coords.latitude,
+                                    position
+                                        .coords
+                                        .latitude,
 
                                 lng:
-                                    position.coords.longitude,
+                                    position
+                                        .coords
+                                        .longitude,
 
                                 accuracy:
-                                    position.coords.accuracy
-                            }
-                        );
-                    },
+                                    position
+                                        .coords
+                                        .accuracy
+                            },
+                            false
+                        ),
 
                     error =>
                         console.warn(
@@ -3277,7 +2820,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         ),
 
                     {
-
                         enableHighAccuracy:
                             true,
 
@@ -3291,20 +2833,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function stopWatch() {
-
         if (
             watchId === null
         ) {
             return;
         }
 
-        navigator.geolocation
-            .clearWatch(
-                watchId
-            );
+        navigator.geolocation.clearWatch(
+            watchId
+        );
 
-        watchId =
-            null;
+        watchId = null;
     }
 
     /* ============================================================
@@ -3312,7 +2851,6 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function buildGraph() {
-
         const graph =
             new Map();
 
@@ -3321,16 +2859,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 id,
                 edge
             ) => {
-
                 const key =
                     String(id);
 
                 if (
-                    !graph.has(
-                        key
-                    )
+                    !graph.has(key)
                 ) {
-
                     graph.set(
                         key,
                         []
@@ -3339,18 +2873,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 graph
                     .get(key)
-                    .push(
-                        edge
-                    );
+                    .push(edge);
             };
 
         routes.forEach(
             route => {
-
                 add(
                     route.from,
                     {
-
                         from:
                             route.from,
 
@@ -3368,7 +2898,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 add(
                     route.to,
                     {
-
                         from:
                             route.to,
 
@@ -3394,36 +2923,27 @@ document.addEventListener("DOMContentLoaded", () => {
         edge,
         targetId
     ) {
-
         let cost =
             edge.meters;
 
         /*
-            稲荷山山頂(ID 5)を
-            目的地以外で通る場合は
-            余計な山頂迂回を抑える。
+           山頂(5)を目的地以外で
+           中継に使う場合は大きな追加コスト。
+           無駄な大回りを防ぐ。
         */
 
         if (
-            String(edge.to) ===
-                "5" &&
-            String(targetId) !==
-                "5"
+            String(edge.to) === "5" &&
+            String(targetId) !== "5"
         ) {
-
-            cost +=
-                1200;
+            cost += 1200;
         }
 
         if (
-            String(edge.from) ===
-                "5" &&
-            String(targetId) !==
-                "5"
+            String(edge.from) === "5" &&
+            String(targetId) !== "5"
         ) {
-
-            cost +=
-                350;
+            cost += 350;
         }
 
         return cost;
@@ -3433,7 +2953,6 @@ document.addEventListener("DOMContentLoaded", () => {
         fromId,
         toId
     ) {
-
         const graph =
             buildGraph();
 
@@ -3446,12 +2965,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             start === target
         ) {
-
             return {
-
-                edges: [],
-
-                meters: 0
+                edges:[],
+                meters:0
             };
         }
 
@@ -3459,14 +2975,13 @@ document.addEventListener("DOMContentLoaded", () => {
             !graph.has(start) ||
             !graph.has(target)
         ) {
-
             return null;
         }
 
         const dist =
             new Map();
 
-        const previous =
+        const prev =
             new Map();
 
         const open =
@@ -3475,7 +2990,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
         graph.forEach(
-            (_, id) =>
+            (_,id) =>
                 dist.set(
                     id,
                     Infinity
@@ -3490,7 +3005,6 @@ document.addEventListener("DOMContentLoaded", () => {
         while (
             open.size
         ) {
-
             let current =
                 null;
 
@@ -3499,15 +3013,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             open.forEach(
                 id => {
-
                     const value =
-                        dist.get(id);
+                        dist.get(
+                            id
+                        );
 
                     if (
-                        value <
-                        best
+                        value < best
                     ) {
-
                         best =
                             value;
 
@@ -3518,16 +3031,14 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             if (
-                current ===
-                    null ||
+                current === null ||
                 best === Infinity
             ) {
                 break;
             }
 
             if (
-                current ===
-                target
+                current === target
             ) {
                 break;
             }
@@ -3537,12 +3048,11 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             for (
-                const edge of
-                    graph.get(
-                        current
-                    ) || []
+                const edge
+                of graph.get(
+                    current
+                ) || []
             ) {
-
                 if (
                     !open.has(
                         String(
@@ -3568,7 +3078,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         )
                     )
                 ) {
-
                     dist.set(
                         String(
                             edge.to
@@ -3576,16 +3085,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         alt
                     );
 
-                    previous.set(
+                    prev.set(
                         String(
                             edge.to
                         ),
                         {
-
                             from:
                                 current,
 
-                            edge
+                            edge:
+                                edge
                         }
                     );
                 }
@@ -3593,7 +3102,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (
-            !previous.has(
+            !prev.has(
                 target
             )
         ) {
@@ -3607,12 +3116,10 @@ document.addEventListener("DOMContentLoaded", () => {
             target;
 
         while (
-            cursor !==
-            start
+            cursor !== start
         ) {
-
             const item =
-                previous.get(
+                prev.get(
                     cursor
                 );
 
@@ -3629,17 +3136,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         return {
-
             edges,
-
             meters:
                 edges.reduce(
-                    (
-                        sum,
-                        edge
-                    ) =>
+                    (sum,e) =>
                         sum +
-                        edge.meters,
+                        e.meters,
                     0
                 )
         };
@@ -3649,7 +3151,6 @@ document.addEventListener("DOMContentLoaded", () => {
         fromSpot,
         toSpot
     ) {
-
         const result =
             dijkstra(
                 fromSpot.id,
@@ -3665,7 +3166,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         result.edges.forEach(
             edge => {
-
                 coordinates =
                     mergePath(
                         coordinates,
@@ -3675,24 +3175,19 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         if (
-            coordinates.length <
-            2
+            coordinates.length < 2
         ) {
             return null;
         }
 
         return {
-
             coordinates,
-
             meters:
                 pathDistance(
                     coordinates
                 ),
-
             source:
                 "ROUTES",
-
             edges:
                 result.edges
         };
@@ -3706,16 +3201,11 @@ document.addEventListener("DOMContentLoaded", () => {
         from,
         to
     ) {
-
         const coords =
-            `${from.lng},${from.lat};` +
-            `${to.lng},${to.lat}`;
+            `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
         const url =
-            "https://router.project-osrm.org/" +
-            `route/v1/foot/${coords}` +
-            "?overview=full" +
-            "&geometries=geojson";
+            `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
 
         const response =
             await fetch(
@@ -3729,7 +3219,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             !response.ok
         ) {
-
             throw new Error(
                 `OSRM HTTP ${response.status}`
             );
@@ -3742,32 +3231,26 @@ document.addEventListener("DOMContentLoaded", () => {
             data?.routes?.[0];
 
         if (
-            !route?.geometry?.coordinates
-                ?.length
+            !route?.geometry?.coordinates?.length
         ) {
-
             throw new Error(
                 "OSRM徒歩ルートが見つかりませんでした。"
             );
         }
 
         const coordinates =
-            route.geometry.coordinates.map(
-                item =>
-                    [
-                        Number(
-                            item[1]
-                        ),
-                        Number(
-                            item[0]
-                        )
+            route
+                .geometry
+                .coordinates
+                .map(
+                    c => [
+                        Number(c[1]),
+                        Number(c[0])
                     ]
-            );
+                );
 
         return {
-
             coordinates,
-
             meters:
                 Number(
                     route.distance
@@ -3775,7 +3258,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 pathDistance(
                     coordinates
                 ),
-
             source:
                 "OSRM"
         };
@@ -3784,7 +3266,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function nearbyNetworkSpots(
         target
     ) {
-
         if (
             !currentLocation
         ) {
@@ -3800,71 +3281,66 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentLocation.lng
             ];
 
-        return Array.from(
-            graph.keys()
-        )
-        .map(
-            id =>
-                spots.find(
-                    spot =>
-                        String(
-                            spot.id
-                        ) ===
-                        String(
-                            id
-                        )
-                )
-        )
-        .filter(Boolean)
-        .filter(
-            spot =>
-                String(
-                    spot.id
-                ) !==
-                String(
-                    target.id
-                )
-        )
-        .map(
-            spot =>
-                ({
-
-                    spot,
+        return Array
+            .from(
+                graph.keys()
+            )
+            .map(
+                id =>
+                    spots.find(
+                        s =>
+                            String(
+                                s.id
+                            ) ===
+                            String(
+                                id
+                            )
+                    )
+            )
+            .filter(Boolean)
+            .filter(
+                s =>
+                    String(
+                        s.id
+                    ) !==
+                    String(
+                        target.id
+                    )
+            )
+            .map(
+                s => ({
+                    spot:
+                        s,
 
                     distance:
                         map.distance(
                             current,
                             pointOfSpot(
-                                spot
+                                s
                             )
                         )
                 })
-        )
-        .filter(
-            item =>
-                item.distance <=
-                CONFIG.hybridRadius
-        )
-        .sort(
-            (
-                a,
-                b
-            ) =>
-                a.distance -
-                b.distance
-        )
-        .slice(
-            0,
-            CONFIG.hybridCandidates
-        );
+            )
+            .filter(
+                x =>
+                    x.distance <=
+                    CONFIG.hybridRadius
+            )
+            .sort(
+                (a,b) =>
+                    a.distance -
+                    b.distance
+            )
+            .slice(
+                0,
+                CONFIG.hybridCandidates
+            );
     }
 
     async function currentToFirst(
         target
     ) {
-
         const start = {
-
             lat:
                 currentLocation.lat,
 
@@ -3876,12 +3352,10 @@ document.addEventListener("DOMContentLoaded", () => {
             null;
 
         try {
-
             direct =
                 await osrmRoute(
                     start,
                     {
-
                         lat:
                             Number(
                                 target.lat
@@ -3893,13 +3367,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             )
                     }
                 );
-
-        } catch (
-            error
-        ) {
-
+        } catch (error) {
             console.warn(
-                "現在地からOSRM取得失敗:",
+                "現在地からのOSRM取得失敗:",
                 error
             );
         }
@@ -3908,14 +3378,12 @@ document.addEventListener("DOMContentLoaded", () => {
             null;
 
         for (
-            const candidate of
-                nearbyNetworkSpots(
-                    target
-                )
+            const candidate
+            of nearbyNetworkSpots(
+                target
+            )
         ) {
-
             try {
-
                 const network =
                     graphRoute(
                         candidate.spot,
@@ -3930,15 +3398,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     await osrmRoute(
                         start,
                         {
-
                             lat:
                                 Number(
-                                    candidate.spot.lat
+                                    candidate
+                                        .spot
+                                        .lat
                                 ),
 
                             lng:
                                 Number(
-                                    candidate.spot.lng
+                                    candidate
+                                        .spot
+                                        .lng
                                 )
                         }
                     );
@@ -3959,23 +3430,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     meters <
                         bestHybrid.meters
                 ) {
-
                     bestHybrid = {
-
                         coordinates:
                             combined,
 
-                        meters,
+                        meters:
+                            meters,
 
                         source:
                             "HYBRID"
                     };
                 }
-
-            } catch (
-                error
-            ) {
-
+            } catch (error) {
                 console.warn(
                     "Hybrid候補失敗:",
                     candidate.spot.id,
@@ -3988,7 +3454,6 @@ document.addEventListener("DOMContentLoaded", () => {
             bestHybrid &&
             direct
         ) {
-
             const ratio =
                 bestHybrid.meters /
                 Math.max(
@@ -4007,7 +3472,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     )
                 )
             ) {
-
                 return bestHybrid;
             }
 
@@ -4035,22 +3499,18 @@ document.addEventListener("DOMContentLoaded", () => {
         from,
         to
     ) {
-
         const network =
             graphRoute(
                 from,
                 to
             );
 
-        if (
-            network
-        ) {
+        if (network) {
             return network;
         }
 
         return osrmRoute(
             {
-
                 lat:
                     Number(
                         from.lat
@@ -4062,7 +3522,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     )
             },
             {
-
                 lat:
                     Number(
                         to.lat
@@ -4077,11 +3536,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function buildNavigationLegs() {
-
         if (
             !selectedSpots.length
         ) {
-
             throw new Error(
                 "1か所以上のスポットを選択してください。"
             );
@@ -4090,7 +3547,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             !currentLocation
         ) {
-
             throw new Error(
                 "現在地を取得できていません。"
             );
@@ -4099,39 +3555,42 @@ document.addEventListener("DOMContentLoaded", () => {
         const legs =
             [];
 
-        legs.push({
+        legs.push(
+            {
+                target:
+                    selectedSpots[0],
 
-            target:
-                selectedSpots[0],
-
-            ...(
-                await currentToFirst(
-                    selectedSpots[0]
+                ...(
+                    await currentToFirst(
+                        selectedSpots[0]
+                    )
                 )
-            )
-        });
+            }
+        );
 
         for (
             let i = 0;
             i <
-            selectedSpots.length - 1;
+                selectedSpots.length - 1;
             i++
         ) {
+            legs.push(
+                {
+                    target:
+                        selectedSpots[
+                            i + 1
+                        ],
 
-            legs.push({
-
-                target:
-                    selectedSpots[
-                        i+1
-                    ],
-
-                ...(
-                    await spotToSpot(
-                        selectedSpots[i],
-                        selectedSpots[i+1]
+                    ...(
+                        await spotToSpot(
+                            selectedSpots[i],
+                            selectedSpots[
+                                i + 1
+                            ]
+                        )
                     )
-                )
-            });
+                }
+            );
         }
 
         return legs;
@@ -4142,11 +3601,9 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function clearRouteVisuals() {
-
         if (
             routeLine
         ) {
-
             map.removeLayer(
                 routeLine
             );
@@ -4158,7 +3615,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             arrowLayer
         ) {
-
             map.removeLayer(
                 arrowLayer
             );
@@ -4182,7 +3638,6 @@ document.addEventListener("DOMContentLoaded", () => {
         a,
         b
     ) {
-
         const lat1 =
             a[0] *
             Math.PI /
@@ -4194,37 +3649,20 @@ document.addEventListener("DOMContentLoaded", () => {
             180;
 
         const dLng =
-            (
-                b[1] -
-                a[1]
-            ) *
+            (b[1] - a[1]) *
             Math.PI /
             180;
 
         const y =
-            Math.sin(
-                dLng
-            ) *
-            Math.cos(
-                lat2
-            );
+            Math.sin(dLng) *
+            Math.cos(lat2);
 
         const x =
-            Math.cos(
-                lat1
-            ) *
-            Math.sin(
-                lat2
-            ) -
-            Math.sin(
-                lat1
-            ) *
-            Math.cos(
-                lat2
-            ) *
-            Math.cos(
-                dLng
-            );
+            Math.cos(lat1) *
+                Math.sin(lat2) -
+            Math.sin(lat1) *
+                Math.cos(lat2) *
+                Math.cos(dLng);
 
         return (
             Math.atan2(
@@ -4240,7 +3678,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function routeArrowPoints(
         path
     ) {
-
         const points =
             [];
 
@@ -4252,17 +3689,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         for (
             let i = 0;
-            i < path.length - 1;
+            i <
+                path.length - 1;
             i++
         ) {
-
             const a =
                 path[i];
 
             const b =
-                path[
-                    i+1
-                ];
+                path[i + 1];
 
             const segment =
                 map.distance(
@@ -4278,10 +3713,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             while (
                 traveled +
-                segment >=
+                    segment >=
                 next
             ) {
-
                 const ratio =
                     (
                         next -
@@ -4289,31 +3723,32 @@ document.addEventListener("DOMContentLoaded", () => {
                     ) /
                     segment;
 
-                points.push({
+                points.push(
+                    {
+                        point:
+                            [
+                                a[0] +
+                                    (
+                                        b[0] -
+                                        a[0]
+                                    ) *
+                                    ratio,
 
-                    point: [
+                                a[1] +
+                                    (
+                                        b[1] -
+                                        a[1]
+                                    ) *
+                                    ratio
+                            ],
 
-                        a[0] +
-                            (
-                                b[0] -
-                                a[0]
-                            ) *
-                            ratio,
-
-                        a[1] +
-                            (
-                                b[1] -
-                                a[1]
-                            ) *
-                            ratio
-                    ],
-
-                    angle:
-                        bearing(
-                            a,
-                            b
-                        )
-                });
+                        angle:
+                            bearing(
+                                a,
+                                b
+                            )
+                    }
+                );
 
                 next +=
                     CONFIG.arrowSpacing;
@@ -4329,28 +3764,23 @@ document.addEventListener("DOMContentLoaded", () => {
     function drawRoute(
         legs
     ) {
-
         clearRouteVisuals();
 
         let coordinates =
             [];
 
         legs.forEach(
-            leg => {
-
+            leg =>
                 coordinates =
                     mergePath(
                         coordinates,
                         leg.coordinates
-                    );
-            }
+                    )
         );
 
         if (
-            coordinates.length <
-            2
+            coordinates.length < 2
         ) {
-
             throw new Error(
                 "ルート座標が不足しています。"
             );
@@ -4360,7 +3790,6 @@ document.addEventListener("DOMContentLoaded", () => {
             L.polyline(
                 coordinates,
                 {
-
                     pane:
                         "plannerRoutePane",
 
@@ -4382,26 +3811,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     interactive:
                         false
                 }
-            ).addTo(
-                map
-            );
+            )
+            .addTo(map);
 
         arrowLayer =
             L.layerGroup()
-                .addTo(
-                    map
-                );
+                .addTo(map);
 
         routeArrowPoints(
             coordinates
-        ).forEach(
+        )
+        .forEach(
             item => {
-
                 const marker =
                     L.marker(
                         item.point,
                         {
-
                             pane:
                                 "plannerArrowPane",
 
@@ -4409,32 +3834,39 @@ document.addEventListener("DOMContentLoaded", () => {
                                 false,
 
                             icon:
-                                L.divIcon({
+                                L.divIcon(
+                                    {
+                                        className:
+                                            "planner-route-arrow-icon",
 
-                                    className:
-                                        "planner-route-arrow-icon",
+                                        html:
+                                            `
+                                                <span
+                                                    class="
+                                                        planner-route-arrow
+                                                    "
+                                                    style="
+                                                        transform:
+                                                            rotate(
+                                                                ${item.angle}deg
+                                                            );
+                                                    "
+                                                ></span>
+                                            `,
 
-                                    html:
-                                        `
-                                        <span
-                                            class="
-                                                planner-route-arrow
-                                            "
-                                            style="
-                                                transform:
-                                                    rotate(
-                                                        ${item.angle}deg
-                                                    );
-                                            "
-                                        ></span>
-                                        `,
+                                        iconSize:
+                                            [
+                                                10,
+                                                14
+                                            ],
 
-                                    iconSize:
-                                        [10,14],
-
-                                    iconAnchor:
-                                        [5,7]
-                                })
+                                        iconAnchor:
+                                            [
+                                                5,
+                                                7
+                                            ]
+                                    }
+                                )
                         }
                     );
 
@@ -4451,12 +3883,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 .getBounds()
                 .isValid()
         ) {
-
             map.fitBounds(
                 routeLine.getBounds(),
                 {
                     padding:
-                        [45,45]
+                        [
+                            45,
+                            45
+                        ]
                 }
             );
         }
@@ -4469,7 +3903,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             els.distance
         ) {
-
             els.distance.textContent =
                 formatDistance(
                     total
@@ -4479,17 +3912,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             els.walk
         ) {
-
             els.walk.textContent =
                 formatMinutes(
                     total /
-                    CONFIG.walkSpeed
+                        CONFIG.walkSpeed
                 );
         }
     }
 
     function renderRouteNumbers() {
-
         routeNumberMarkers.forEach(
             marker =>
                 map.removeLayer(
@@ -4501,18 +3932,13 @@ document.addEventListener("DOMContentLoaded", () => {
             [];
 
         selectedSpots.forEach(
-            (
-                spot,
-                index
-            ) => {
-
+            (spot,index) => {
                 const marker =
                     L.marker(
                         pointOfSpot(
                             spot
                         ),
                         {
-
                             pane:
                                 "plannerNumberPane",
 
@@ -4520,36 +3946,38 @@ document.addEventListener("DOMContentLoaded", () => {
                                 false,
 
                             icon:
-                                L.divIcon({
+                                L.divIcon(
+                                    {
+                                        className:
+                                            "planner-route-number-icon",
 
-                                    className:
-                                        "planner-route-number-icon",
+                                        html:
+                                            `
+                                                <div
+                                                    class="
+                                                        planner-route-number
+                                                    "
+                                                >
+                                                    ${index + 1}
+                                                </div>
+                                            `,
 
-                                    html:
-                                        `
-                                        <div
-                                            class="
-                                                planner-route-number
-                                            "
-                                        >
-                                            ${
-                                                index +
-                                                1
-                                            }
-                                        </div>
-                                        `,
+                                        iconSize:
+                                            [
+                                                31,
+                                                31
+                                            ],
 
-                                    iconSize:
-                                        [31,31],
-
-                                    iconAnchor:
-                                        [15.5,15.5]
-                                })
+                                        iconAnchor:
+                                            [
+                                                15.5,
+                                                15.5
+                                            ]
+                                    }
+                                )
                         }
                     )
-                    .addTo(
-                        map
-                    );
+                    .addTo(map);
 
                 routeNumberMarkers.push(
                     marker
@@ -4563,7 +3991,6 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     function updateProgressUI() {
-
         nav.progress.innerHTML =
             "";
 
@@ -4573,12 +4000,11 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
         start.className =
-            "planner-nav-step" +
-            (
+            `planner-nav-step${
                 navigationActive
                     ? ""
                     : " current"
-            );
+            }`;
 
         start.textContent =
             "現在地";
@@ -4592,7 +4018,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 spot,
                 index
             ) => {
-
                 const arrow =
                     document.createElement(
                         "span"
@@ -4617,7 +4042,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     "planner-nav-step";
 
                 step.textContent =
-                    `${index+1} ${localized(
+                    `${index + 1} ${localized(
                         spot.name
                     )}`;
 
@@ -4626,7 +4051,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     index ===
                         navigationLegIndex
                 ) {
-
                     step.classList.add(
                         "current"
                     );
@@ -4637,7 +4061,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     index <
                         navigationLegIndex
                 ) {
-
                     step.classList.add(
                         "done"
                     );
@@ -4651,13 +4074,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateNavigationPreview() {
-
         if (
             !selectedSpots.length
         ) {
-
             hideNavigation();
-
             return;
         }
 
@@ -4666,7 +4086,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             !navigationActive
         ) {
-
             nav.status.textContent =
                 currentLocation
                     ? "現在地取得済み"
@@ -4680,45 +4099,46 @@ document.addEventListener("DOMContentLoaded", () => {
             if (
                 currentLocation
             ) {
-
                 const d =
                     map.distance(
                         [
-                            currentLocation.lat,
-                            currentLocation.lng
+                            currentLocation
+                                .lat,
+
+                            currentLocation
+                                .lng
                         ],
                         pointOfSpot(
                             selectedSpots[0]
                         )
                     );
 
-                nav.meta.innerHTML = `
-                    <span
-                        class="
-                            planner-nav-chip
-                        "
-                    >
-                        現在地から 約
-                        ${escapeHTML(
-                            formatDistance(
-                                d
-                            )
-                        )}
-                    </span>
-                `;
-
+                nav.meta.innerHTML =
+                    `
+                        <span
+                            class="
+                                planner-nav-chip
+                            "
+                        >
+                            現在地から
+                            約${escapeHTML(
+                                formatDistance(
+                                    d
+                                )
+                            )}
+                        </span>
+                    `;
             } else {
-
-                nav.meta.innerHTML = `
-                    <span
-                        class="
-                            planner-nav-chip
-                        "
-                    >
-                        現在地を
-                        取得してください
-                    </span>
-                `;
+                nav.meta.innerHTML =
+                    `
+                        <span
+                            class="
+                                planner-nav-chip
+                            "
+                        >
+                            現在地を取得してください
+                        </span>
+                    `;
             }
         }
 
@@ -4734,13 +4154,12 @@ document.addEventListener("DOMContentLoaded", () => {
         a,
         b
     ) {
-
         const latScale =
             111320 *
             Math.cos(
                 point[0] *
-                Math.PI /
-                180
+                    Math.PI /
+                    180
             );
 
         const lngScale =
@@ -4780,15 +4199,9 @@ document.addEventListener("DOMContentLoaded", () => {
             dx * dx +
             dy * dy;
 
-        if (
-            !denom
-        ) {
-
+        if (!denom) {
             return {
-
-                t:
-                    0,
-
+                t:0,
                 distance:
                     map.distance(
                         point,
@@ -4803,16 +4216,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 Math.min(
                     1,
                     (
-                        (
-                            px -
-                            ax
-                        ) *
-                        dx +
-                        (
-                            py -
-                            ay
-                        ) *
-                        dy
+                        (px - ax) * dx +
+                        (py - ay) * dy
                     ) /
                     denom
                 )
@@ -4820,7 +4225,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const nearest =
             [
-
                 a[0] +
                     (
                         b[0] -
@@ -4837,9 +4241,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ];
 
         return {
-
             t,
-
             distance:
                 map.distance(
                     point,
@@ -4852,50 +4254,45 @@ document.addEventListener("DOMContentLoaded", () => {
         path,
         current
     ) {
-
         if (
             !current ||
-            path.length <
-                2
+            path.length < 2
         ) {
-
             return pathDistance(
                 path
             );
         }
 
-        let best = {
+        let best =
+            {
+                segment:
+                    0,
 
-            segment:
-                0,
+                t:
+                    0,
 
-            t:
-                0,
-
-            distance:
-                Infinity
-        };
+                distance:
+                    Infinity
+            };
 
         for (
             let i = 0;
-            i < path.length - 1;
+            i <
+                path.length - 1;
             i++
         ) {
-
             const candidate =
                 nearestOnSegment(
                     current,
                     path[i],
-                    path[i+1]
+                    path[i + 1]
                 );
 
             if (
                 candidate.distance <
                 best.distance
             ) {
-
                 best = {
-
                     segment:
                         i,
 
@@ -4929,11 +4326,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 path.length - 1;
             i++
         ) {
-
             total +=
                 map.distance(
                     path[i],
-                    path[i+1]
+                    path[i + 1]
                 );
         }
 
@@ -4944,16 +4340,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateNavigationProgress() {
-
         if (
             !navigationActive ||
             !navigationLegs[
                 navigationLegIndex
             ]
         ) {
-
             updateNavigationPreview();
-
             return;
         }
 
@@ -4976,10 +4369,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 current
             );
 
-        if (
-            current
-        ) {
-
+        if (current) {
             const d =
                 map.distance(
                     current,
@@ -4992,9 +4382,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 d <=
                 CONFIG.arrivalRadius
             ) {
-
                 handleArrival();
-
                 return;
             }
         }
@@ -5007,80 +4395,74 @@ document.addEventListener("DOMContentLoaded", () => {
                 leg.target.name
             );
 
-        nav.meta.innerHTML = `
-            <span
-                class="
-                    planner-nav-chip
-                "
-            >
-                残り
-                ${escapeHTML(
-                    formatDistance(
-                        remaining
-                    )
-                )}
-            </span>
+        nav.meta.innerHTML =
+            `
+                <span
+                    class="
+                        planner-nav-chip
+                    "
+                >
+                    残り
+                    ${escapeHTML(
+                        formatDistance(
+                            remaining
+                        )
+                    )}
+                </span>
 
-            <span
-                class="
-                    planner-nav-chip
-                "
-            >
-                徒歩 約
-                ${escapeHTML(
-                    formatMinutes(
-                        remaining /
-                        CONFIG.walkSpeed
-                    )
-                )}
-            </span>
+                <span
+                    class="
+                        planner-nav-chip
+                    "
+                >
+                    徒歩 約
+                    ${escapeHTML(
+                        formatMinutes(
+                            remaining /
+                                CONFIG.walkSpeed
+                        )
+                    )}
+                </span>
 
-            <span
-                class="
-                    planner-nav-chip
-                "
-            >
-                ${
-                    leg.source ===
-                        "ROUTES"
-                        ? "参道ネットワーク"
-                        : leg.source ===
-                            "HYBRID"
-                            ? "ハイブリッド"
-                            : "一般道路"
-                }
-            </span>
-        `;
+                <span
+                    class="
+                        planner-nav-chip
+                    "
+                >
+                    ${escapeHTML(
+                        leg.source ===
+                            "ROUTES"
+                            ? "参道ネットワーク"
+                            : leg.source ===
+                                "HYBRID"
+                                ? "ハイブリッド"
+                                : "一般道路"
+                    )}
+                </span>
+            `;
 
         updateProgressUI();
     }
 
     async function createRoute() {
-
         if (
             !selectedSpots.length
         ) {
-
             alert(
                 "1か所以上のスポットを選択してください。"
             );
-
             return;
         }
 
         if (
             !currentLocation
         ) {
-
             try {
-
                 await getCurrentLocation(
                     false,
                     false
                 );
-
             } catch (_) {
-
                 return;
             }
         }
@@ -5096,19 +4478,18 @@ document.addEventListener("DOMContentLoaded", () => {
         nav.title.textContent =
             "次の目的地";
 
-        nav.meta.innerHTML = `
-            <span
-                class="
-                    planner-nav-chip
-                "
-            >
-                現在地から
-                計算しています
-            </span>
-        `;
+        nav.meta.innerHTML =
+            `
+                <span
+                    class="
+                        planner-nav-chip
+                    "
+                >
+                    現在地から計算しています
+                </span>
+            `;
 
         try {
-
             const legs =
                 await buildNavigationLegs();
 
@@ -5131,10 +4512,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             updateNavigationPreview();
 
-        } catch (
-            error
-        ) {
-
+        } catch (error) {
             console.error(
                 "ルート作成エラー:",
                 error
@@ -5148,28 +4526,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function startNavigation() {
-
         if (
             !selectedSpots.length
         ) {
-
             alert(
                 "先にスポットを選択してください。"
             );
-
             return;
         }
 
         if (
             !navigationLegs.length
         ) {
-
             await createRoute();
 
             if (
                 !navigationLegs.length
             ) {
-
                 return;
             }
         }
@@ -5194,7 +4567,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleArrival() {
-
         const arrived =
             navigationLegs[
                 navigationLegIndex
@@ -5207,29 +4579,28 @@ document.addEventListener("DOMContentLoaded", () => {
         nav.arrival.style.display =
             "block";
 
-        nav.arrival.innerHTML = `
-            <strong>
-                ${escapeHTML(
-                    localized(
-                        arrived.name
-                    )
-                )}
-                に到着
-            </strong>
+        nav.arrival.innerHTML =
+            `
+                <strong>
+                    ${escapeHTML(
+                        localized(
+                            arrived.name
+                        )
+                    )}
+                    に到着
+                </strong>
 
-            目的地へ
-            到着しました。
-        `;
+                目的地へ到着しました。
+            `;
 
-        navigationLegIndex += 1;
+        navigationLegIndex +=
+            1;
 
         if (
             navigationLegIndex >=
             navigationLegs.length
         ) {
-
             completeNavigation();
-
             return;
         }
 
@@ -5237,7 +4608,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setTimeout(
             () => {
-
                 nav.arrival.style.display =
                     "none";
 
@@ -5251,19 +4621,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getGoogleFormURL() {
-
         return (
             safeURL(
                 document.body
                     ?.dataset
-                    ?.googleFormUrl
+                    ?.googleFormUrl ||
+                FORM_URL
             ) ||
             FORM_URL
         );
     }
 
     function openGoogleForm() {
-
         const url =
             getGoogleFormURL();
 
@@ -5272,7 +4641,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function completeNavigation() {
-
         navigationActive =
             false;
 
@@ -5289,28 +4657,30 @@ document.addEventListener("DOMContentLoaded", () => {
         nav.title.textContent =
             "ルート完了";
 
-        nav.meta.innerHTML = `
-            <span
-                class="
-                    planner-nav-chip
-                "
-            >
-                ${selectedSpots.length}
-                地点を巡りました
-            </span>
-        `;
+        nav.meta.innerHTML =
+            `
+                <span
+                    class="
+                        planner-nav-chip
+                    "
+                >
+                    ${selectedSpots.length}地点を巡りました
+                </span>
+            `;
 
         updateProgressUI();
 
         nav.arrival.style.display =
             "block";
 
-        nav.arrival.innerHTML = `
-            <strong>
-                ルート完了
-            </strong>
-            アンケートへ進みます。
-        `;
+        nav.arrival.innerHTML =
+            `
+                <strong>
+                    ルート完了
+                </strong>
+
+                アンケートへ進みます。
+            `;
 
         setTimeout(
             openGoogleForm,
@@ -5321,7 +4691,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function stopNavigation(
         openForm = true
     ) {
-
         navigationActive =
             false;
 
@@ -5341,7 +4710,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             openForm
         ) {
-
             openGoogleForm();
         }
     }
@@ -5366,7 +4734,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
         els.location
     ) {
-
         els.location.addEventListener(
             "click",
             () =>
@@ -5382,7 +4749,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
         els.create
     ) {
-
         els.create.addEventListener(
             "click",
             createRoute
@@ -5392,12 +4758,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
         els.clear
     ) {
-
         els.clear.addEventListener(
             "click",
             () => {
-
-                routeToken += 1;
+                routeToken +=
+                    1;
 
                 stopNavigation(
                     false
@@ -5432,15 +4797,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
         els.save
     ) {
-
         els.save.addEventListener(
             "click",
             () => {
-
                 if (
                     !selectedSpots.length
                 ) {
-
                     alert(
                         "保存するにはスポットを選択してください。"
                     );
@@ -5450,21 +4812,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 localStorage.setItem(
                     SAVED_ROUTE_KEY,
-                    JSON.stringify({
+                    JSON.stringify(
+                        {
+                            createdAt:
+                                new Date()
+                                    .toISOString(),
 
-                        createdAt:
-                            new Date()
-                                .toISOString(),
+                            start:
+                                "currentLocation",
 
-                        start:
-                            "currentLocation",
-
-                        spots:
-                            selectedSpots.map(
-                                spot =>
-                                    spot.id
-                            )
-                    })
+                            spots:
+                                selectedSpots.map(
+                                    s =>
+                                        s.id
+                                )
+                        }
+                    )
                 );
 
                 alert(
@@ -5477,13 +4840,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
         els.search
     ) {
-
         els.search.addEventListener(
             "input",
             () => {
-
                 renderCards();
-
                 refreshMarkers();
             }
         );
@@ -5491,11 +4851,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     categoryButtons.forEach(
         button => {
-
             button.addEventListener(
                 "click",
                 () => {
-
                     categoryButtons.forEach(
                         item =>
                             item.classList.remove(
@@ -5508,7 +4866,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     );
 
                     renderCards();
-
                     refreshMarkers();
                 }
             );
@@ -5518,15 +4875,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener(
         "languagechange",
         () => {
-
             renderCards();
-
             refreshMarkers();
-
             updateSelectedList();
-
             updateInfo();
-
             updateNavigationPreview();
         }
     );
@@ -5534,20 +4886,14 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener(
         "storage",
         event => {
-
             if (
                 event.key ===
                 "language"
             ) {
-
                 renderCards();
-
                 refreshMarkers();
-
                 updateSelectedList();
-
                 updateInfo();
-
                 updateNavigationPreview();
             }
         }
@@ -5558,9 +4904,7 @@ document.addEventListener("DOMContentLoaded", () => {
        ============================================================ */
 
     async function initialize() {
-
         try {
-
             await loadData();
 
             loadSelected();
@@ -5575,18 +4919,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             updateNavigationPreview();
 
-            /*
-                起動時に現在地取得。
-                許可されていない場合でも
-                Planner自体は表示する。
-            */
-
             getCurrentLocation(
                 false,
                 true
             ).catch(
                 () => {
-
                     nav.status.textContent =
                         "現在地未取得";
                 }
@@ -5603,10 +4940,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             );
 
-        } catch (
-            error
-        ) {
-
+        } catch (error) {
             console.error(
                 "planner初期化エラー:",
                 error
@@ -5615,21 +4949,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (
                 els.spotList
             ) {
-
-                els.spotList.innerHTML = `
-                    <p
-                        style="
-                            padding:16px;
-                            color:#777;
-                            line-height:1.7;
-                        "
-                    >
-                        Plannerの読み込みに
-                        失敗しました。<br>
-                        Live Serverで開いているか
-                        確認してください。
-                    </p>
-                `;
+                els.spotList.innerHTML =
+                    `
+                        <p
+                            style="
+                                padding:16px;
+                                color:#777;
+                                line-height:1.7;
+                            "
+                        >
+                            Plannerの読み込みに失敗しました。<br>
+                            Live Serverで開いているか確認してください。
+                        </p>
+                    `;
             }
         }
     }
