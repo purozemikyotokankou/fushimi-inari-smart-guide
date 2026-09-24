@@ -9,7 +9,6 @@
         "time": "30分",
         "image": "torii.jpg"
     },
-
     {
         "id": 2,
         "name": "伏見稲荷大社 本殿",
@@ -20,7 +19,6 @@
         "time": "15分",
         "image": "honden.jpg"
     },
-
     {
         "id": 3,
         "name": "奥社奉拝所（奥の院）",
@@ -31,18 +29,16 @@
         "time": "20分",
         "image": "okusha.jpg"
     },
-
     {
         "id": 4,
         "name": "四ツ辻",
-        "category": "展望",
+        "category": "景観",
         "lat": 34.969046,
         "lng": 135.781564,
         "description": "京都市街を見渡せる展望スポットです。休憩場所としても利用できます。",
         "time": "30分",
         "image": "yotsutsuji.jpg"
     },
-
     {
         "id": 5,
         "name": "稲荷山 山頂（一ノ峰）",
@@ -53,7 +49,6 @@
         "time": "60分",
         "image": "summit.jpg"
     },
-
     {
         "id": 6,
         "name": "トイレ",
@@ -64,7 +59,6 @@
         "time": "5分",
         "image": "toire.jpg"
     },
-
     {
         "id": 7,
         "name": "京阪電車伏見稲荷駅",
@@ -75,7 +69,6 @@
         "time": "-",
         "image": "station.jpg"
     },
-
     {
         "id": 8,
         "name": "JR西日本奈良線稲荷駅",
@@ -86,7 +79,6 @@
         "time": "-",
         "image": "inari_station.jpg"
     },
-
     {
         "id": 9,
         "name": "伏見稲荷入口",
@@ -97,7 +89,6 @@
         "time": "5分",
         "image": "entrance.jpg"
     },
-
     {
         "id": 10,
         "name": "Vermillion-cafe",
@@ -109,19 +100,16 @@
         "image": "Vermillion.jpg",
         "url": "https://www.vermillioncafe.com/"
     },
-
     {
         "id": 11,
         "name": "ちいかわ本舗",
         "category": "飲食店",
         "lat": 34.968005,
         "lng": 135.771089,
-        "description": "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。",
+        "description": "「もぐもぐ（食べる）」と「和」をテーマにした、人気キャラクター「ちいかわ」の常設オフィシャルグッズショップ",
         "time": "5分",
-        "image": "Vermillion.jpg",
-        "url": ""
+        "image": "chiikawa.jpg"
     },
-
     {
         "id": 12,
         "name": "eight",
@@ -130,10 +118,8 @@
         "lng": 135.769422,
         "description": "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。",
         "time": "5分",
-        "image": "Vermillion.jpg",
-        "url": ""
+        "image": "Vermillion.jpg"
     },
-
     {
         "id": 13,
         "name": "トイレ②",
@@ -144,7 +130,6 @@
         "time": "5分",
         "image": "toire2.jpg"
     },
-
     {
         "id": 14,
         "name": "トイレ③",
