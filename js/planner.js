@@ -1809,27 +1809,40 @@ document.addEventListener("DOMContentLoaded", () => {
        CARDS
        ============================================================ */
 
-    function photoHTML(
-        spot,
-        name
-    ) {
+    function photoHTML(spot,name) {
+    const image = String(spot?.image || "").trim();
 
-        const usable =
-            spot?.image &&
-            (
-                spot.photoAvailable === true ||
-                spot.imageEnabled === true
-            );
+    if (!image) {
+        return `
+            <div class="planner-spot-photo">
+                PHOTO
+            </div>
+        `;
+    }
 
-        if (!usable) {
-            return `
-                <div
-                    class="planner-spot-photo"
-                >
-                    PHOTO
-                </div>
-            `;
-        }
+    const src = image.startsWith("http://") ||
+                image.startsWith("https://")
+        ? image
+        : `./images/${encodeURIComponent(image)}`;
+
+    return `
+        <div class="planner-spot-photo">
+            <img
+                src="${escapeHTML(src)}"
+                alt="${escapeHTML(name)}"
+                loading="lazy"
+                style="
+                    display:block;
+                    width:100%;
+                    height:220px;
+                    object-fit:cover;
+                    border-radius:18px;
+                "
+                onerror="this.style.display='none'; this.parentElement.innerHTML='PHOTO';"
+            >
+        </div>
+    `;
+}
 
         const src =
             String(
