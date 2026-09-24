@@ -1,0 +1,3422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fushimi Inari Smart Guide - Spot Manager">
+    <title>Spot Manager | Fushimi Inari Smart Guide</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ3K1Q2ZlF7m7k5Q0VJm4l5y5u5V5z8="
+        crossorigin=""
+    >
+
+    <style>
+        :root {
+            --bg: #f5f5f7;
+            --text: #1d1d1f;
+            --sub: #6e6e73;
+            --line: rgba(0, 0, 0, .08);
+            --glass: rgba(255, 255, 255, .72);
+            --glass-strong: rgba(255, 255, 255, .88);
+            --accent: #ff4b00;
+            --accent-dark: #d83e00;
+            --ok: #21805d;
+            --danger: #c62828;
+            --shadow: 0 18px 50px rgba(0, 0, 0, .08);
+            --radius: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            background:
+                radial-gradient(
+                    circle at 10% 5%,
+                    rgba(255,255,255,.95),
+                    transparent 24%
+                ),
+                radial-gradient(
+                    circle at 90% 10%,
+                    rgba(255,255,255,.78),
+                    transparent 22%
+                ),
+                var(--bg);
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .page {
+            width: min(1480px, calc(100% - 28px));
+            margin: 0 auto;
+            padding: 92px 0 56px;
+        }
+
+        .topbar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            z-index: 3000;
+            width: min(1480px, calc(100% - 28px));
+            min-height: 60px;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 18px;
+            border: 1px solid rgba(255,255,255,.78);
+            border-radius: 20px;
+            background: rgba(255,255,255,.68);
+            box-shadow:
+                0 12px 32px rgba(0,0,0,.06),
+                inset 0 1px 0 rgba(255,255,255,.95);
+            backdrop-filter: blur(22px) saturate(1.15);
+            -webkit-backdrop-filter: blur(22px) saturate(1.15);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: rgba(255,75,0,.10);
+            color: var(--accent);
+            font-size: 18px;
+            flex: 0 0 auto;
+        }
+
+        .brand-text {
+            min-width: 0;
+        }
+
+        .brand-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: -.02em;
+        }
+
+        .brand-sub {
+            margin-top: 1px;
+            color: var(--sub);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            border: 1px solid rgba(255,255,255,.86);
+            border-radius: 999px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,.74);
+            color: var(--text);
+            box-shadow:
+                0 8px 20px rgba(0,0,0,.05),
+                inset 0 1px 0 rgba(255,255,255,.98);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 850;
+            transition:
+                transform .18s ease,
+                box-shadow .18s ease,
+                background .18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow:
+                0 12px 24px rgba(0,0,0,.07),
+                inset 0 1px 0 rgba(255,255,255,.98);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            color: #fff;
+            border-color: transparent;
+            background:
+                linear-gradient(
+                    145deg,
+                    var(--accent),
+                    var(--accent-dark)
+                );
+        }
+
+        .btn-danger {
+            color: #fff;
+            border-color: transparent;
+            background:
+                linear-gradient(
+                    145deg,
+                    #d84343,
+                    #b51f1f
+                );
+        }
+
+        .btn-ghost {
+            background: rgba(255,255,255,.50);
+        }
+
+        .btn-small {
+            padding: 8px 11px;
+            font-size: 11px;
+        }
+
+        .hero {
+            margin-bottom: 24px;
+            padding: 10px 4px 0;
+        }
+
+        .hero-kicker {
+            margin: 0 0 8px;
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .17em;
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(34px, 4.5vw, 62px);
+            line-height: .98;
+            letter-spacing: -.055em;
+        }
+
+        .hero p {
+            max-width: 760px;
+            margin: 16px 0 0;
+            color: var(--sub);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,.82);
+            border-radius: 16px;
+            background: rgba(255,255,255,.58);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.90);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .status-message {
+            color: var(--sub);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .status-count {
+            flex: 0 0 auto;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255,75,0,.09);
+            color: var(--accent-dark);
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .panel {
+            border: 1px solid rgba(255,255,255,.78);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,.80),
+                    rgba(255,255,255,.52)
+                );
+            box-shadow:
+                var(--shadow),
+                inset 0 1px 0 rgba(255,255,255,.95);
+            backdrop-filter: blur(24px) saturate(1.12);
+            -webkit-backdrop-filter: blur(24px) saturate(1.12);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px 12px;
+        }
+
+        .panel-title {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 900;
+            letter-spacing: -.025em;
+        }
+
+        .panel-sub {
+            margin: 3px 0 0;
+            color: var(--sub);
+            font-size: 11px;
+        }
+
+        .form {
+            display: grid;
+            gap: 14px;
+            padding: 8px 20px 20px;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .field label {
+            color: #4f4f54;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .field-note {
+            color: #8a8a8f;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+
+        .input,
+        .select,
+        .textarea {
+            width: 100%;
+            border: 1px solid rgba(0,0,0,.07);
+            border-radius: 15px;
+            outline: none;
+            background: rgba(255,255,255,.72);
+            color: var(--text);
+            padding: 11px 12px;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.88);
+            transition:
+                border-color .18s ease,
+                box-shadow .18s ease;
+        }
+
+        .textarea {
+            min-height: 110px;
+            resize: vertical;
+            line-height: 1.7;
+        }
+
+        .input:focus,
+        .select:focus,
+        .textarea:focus {
+            border-color: rgba(255,75,0,.35);
+            box-shadow:
+                0 0 0 4px rgba(255,75,0,.08),
+                inset 0 1px 0 rgba(255,255,255,.96);
+        }
+
+        .category-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .category-pill {
+            border: 1px solid rgba(0,0,0,.06);
+            border-radius: 999px;
+            padding: 8px 11px;
+            background: rgba(255,255,255,.58);
+            color: #5e5e63;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .category-pill.active {
+            border-color: rgba(255,75,0,.25);
+            background: rgba(255,75,0,.09);
+            color: var(--accent-dark);
+        }
+
+        .image-field {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .image-preview {
+            width: 92px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,.88);
+            border-radius: 15px;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,.88),
+                    rgba(236,236,240,.68)
+                );
+            color: #8a8a8e;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .10em;
+            text-align: center;
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .checkbox-line {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #55555a;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .checkbox-line input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+        }
+
+        .form-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .helper-card {
+            padding: 12px 13px;
+            border: 1px solid rgba(255,75,0,.10);
+            border-radius: 16px;
+            background: rgba(255,75,0,.05);
+        }
+
+        .helper-card strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--accent-dark);
+            font-size: 11px;
+        }
+
+        .helper-card span {
+            color: #6b6b70;
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        .list-panel {
+            min-width: 0;
+        }
+
+        .search-row {
+            display: grid;
+            grid-template-columns: minmax(0,1fr) auto;
+            gap: 10px;
+            padding: 0 20px 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            border: 1px solid rgba(0,0,0,.06);
+            border-radius: 14px;
+            padding: 11px 12px;
+            background: rgba(255,255,255,.68);
+            outline: none;
+        }
+
+        .list {
+            max-height: 760px;
+            overflow-y: auto;
+            padding: 0 20px 20px;
+        }
+
+        .spot-card {
+            display: grid;
+            grid-template-columns: 94px minmax(0,1fr) auto;
+            gap: 12px;
+            align-items: center;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,.80);
+            border-radius: 18px;
+            background: rgba(255,255,255,.56);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.88);
+        }
+
+        .spot-thumb {
+            width: 94px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 14px;
+            background: #ececef;
+            color: #999;
+            font-size: 9px;
+            font-weight: 900;
+        }
+
+        .spot-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .spot-main {
+            min-width: 0;
+        }
+
+        .spot-id {
+            margin-bottom: 3px;
+            color: var(--accent);
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .10em;
+        }
+
+        .spot-name {
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .spot-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .meta-pill {
+            padding: 4px 7px;
+            border-radius: 999px;
+            background: rgba(0,0,0,.045);
+            color: #6f6f74;
+            font-size: 9px;
+            font-weight: 800;
+        }
+
+        .spot-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .empty {
+            padding: 30px 10px 40px;
+            color: #85858a;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .map-panel {
+            position: sticky;
+            top: 90px;
+            min-width: 0;
+        }
+
+        .map-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 18px 14px;
+        }
+
+        .map-hint {
+            flex: 1 1 100%;
+            color: var(--sub);
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        #map {
+            width: 100%;
+            height: 640px;
+            background: #ececef;
+        }
+
+        .coords-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 14px 18px 18px;
+        }
+
+        .coords-item {
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,.80);
+            border-radius: 14px;
+            background: rgba(255,255,255,.50);
+        }
+
+        .coords-label {
+            color: #8a8a8f;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .10em;
+            text-transform: uppercase;
+        }
+
+        .coords-value {
+            margin-top: 4px;
+            color: #2f2f33;
+            font-size: 12px;
+            font-weight: 850;
+            word-break: break-all;
+        }
+
+        .export-panel {
+            margin-top: 20px;
+        }
+
+        .export-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 8px 20px 20px;
+        }
+
+        .export-box {
+            display: grid;
+            gap: 8px;
+        }
+
+        .export-box h3 {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .export-box p {
+            margin: 0;
+            color: var(--sub);
+            font-size: 10px;
+            line-height: 1.6;
+        }
+
+        .export-box textarea {
+            min-height: 190px;
+            width: 100%;
+            border: 1px solid rgba(0,0,0,.07);
+            border-radius: 15px;
+            padding: 11px;
+            background: rgba(255,255,255,.74);
+            color: #38383d;
+            font-family:
+                ui-monospace,
+                SFMono-Regular,
+                Menlo,
+                Consolas,
+                monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            color: #8a8a8f;
+            font-size: 10px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .toast {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 5000;
+            max-width: min(420px, calc(100% - 36px));
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,.88);
+            border-radius: 15px;
+            background: rgba(255,255,255,.90);
+            color: #333;
+            box-shadow: 0 16px 40px rgba(0,0,0,.14);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            font-size: 11px;
+            line-height: 1.6;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition:
+                opacity .2s ease,
+                transform .2s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .marker-label {
+            min-width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border: 2px solid #fff;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 900;
+            box-shadow: 0 5px 14px rgba(0,0,0,.20);
+        }
+
+        @media (max-width: 1100px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .map-panel {
+                position: static;
+            }
+
+            #map {
+                height: 560px;
+            }
+
+            .export-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                width: min(100% - 16px, 100%);
+                padding-top: 84px;
+            }
+
+            .topbar {
+                width: calc(100% - 16px);
+                min-height: 56px;
+                padding: 0 12px;
+            }
+
+            .topbar-actions .btn:nth-child(1),
+            .topbar-actions .btn:nth-child(2) {
+                display: none;
+            }
+
+            .brand-title {
+                font-size: 13px;
+            }
+
+            .hero h1 {
+                font-size: 39px;
+            }
+
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .search-row {
+                grid-template-columns: 1fr;
+            }
+
+            .spot-card {
+                grid-template-columns: 78px minmax(0,1fr);
+            }
+
+            .spot-thumb {
+                width: 78px;
+                height: 64px;
+            }
+
+            .spot-actions {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                justify-content: flex-end;
+            }
+
+            #map {
+                height: 460px;
+            }
+
+            .coords-box {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">⛩</div>
+            <div class="brand-text">
+                <p class="brand-title">Fushimi Inari Smart Guide</p>
+                <div class="brand-sub">Spot Manager</div>
+            </div>
+        </div>
+
+        <div class="topbar-actions">
+            <button
+                type="button"
+                class="btn btn-small btn-ghost"
+                id="loadBtn"
+            >
+                最新データを読み込む
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-small"
+                id="copyJsonBtn"
+            >
+                JSONをコピー
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-small btn-primary"
+                id="downloadJsonBtn"
+            >
+                spots.jsonを保存
+            </button>
+        </div>
+    </header>
+
+    <main class="page">
+
+        <section class="hero">
+            <p class="hero-kicker">FUSHIMI INARI · SPOT MANAGER</p>
+            <h1>スポットを<br>かんたん追加。</h1>
+            <p>
+                スポット名・カテゴリー・説明・画像名を入力して、
+                地図をクリックすれば緯度経度まで自動入力。
+                最後に <strong>spots.json</strong> をコピーまたは保存して
+                GitHubの <code>data/spots.json</code> を更新できます。
+            </p>
+        </section>
+
+        <div class="status-bar">
+            <div
+                id="statusMessage"
+                class="status-message"
+            >
+                spots.json を読み込んでいます…
+            </div>
+
+            <div
+                id="statusCount"
+                class="status-count"
+            >
+                0スポット
+            </div>
+        </div>
+
+        <section class="workspace">
+
+            <!-- =================================================
+                 FORM
+            ================================================== -->
+            <aside class="panel">
+
+                <div class="panel-header">
+                    <div>
+                        <h2
+                            id="formTitle"
+                            class="panel-title"
+                        >
+                            新しいスポットを追加
+                        </h2>
+
+                        <p class="panel-sub">
+                            入力 → 地図で位置設定 → 追加
+                        </p>
+                    </div>
+
+                    <span
+                        id="editingBadge"
+                        class="meta-pill"
+                        style="display:none;"
+                    >
+                        EDIT
+                    </span>
+                </div>
+
+                <div class="form">
+
+                    <input
+                        type="hidden"
+                        id="editingId"
+                        value=""
+                    >
+
+                    <div class="field">
+                        <label for="spotName">
+                            スポット名
+                        </label>
+
+                        <input
+                            id="spotName"
+                            class="input"
+                            type="text"
+                            placeholder="例：四ツ辻"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label>
+                            カテゴリー
+                        </label>
+
+                        <div
+                            id="categoryPills"
+                            class="category-pills"
+                        ></div>
+
+                        <input
+                            type="hidden"
+                            id="spotCategory"
+                            value="景観"
+                        >
+
+                        <div
+                            id="categoryHint"
+                            class="field-note"
+                        >
+                            景色・景観・展望 → viewpoint
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+
+                        <div class="field">
+                            <label for="spotLat">
+                                緯度
+                            </label>
+
+                            <input
+                                id="spotLat"
+                                class="input"
+                                type="number"
+                                step="0.00000001"
+                                placeholder="34.967016"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="spotLng">
+                                経度
+                            </label>
+
+                            <input
+                                id="spotLng"
+                                class="input"
+                                type="number"
+                                step="0.00000001"
+                                placeholder="135.774702"
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="helper-card">
+                        <strong>地図から座標を入れる</strong>
+                        <span>
+                            右の地図をクリックすると、
+                            その地点の緯度・経度が自動入力されます。
+                            既存マーカーをクリックすると編集対象にできます。
+                        </span>
+                    </div>
+
+                    <div class="field">
+                        <label for="spotDescription">
+                            説明
+                        </label>
+
+                        <textarea
+                            id="spotDescription"
+                            class="textarea"
+                            placeholder="このスポットの説明"
+                        ></textarea>
+                    </div>
+
+                    <div class="field-row">
+
+                        <div class="field">
+                            <label for="spotTime">
+                                滞在時間
+                            </label>
+
+                            <input
+                                id="spotTime"
+                                class="input"
+                                type="text"
+                                placeholder="例：30分"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="spotUrl">
+                                公式サイト
+                            </label>
+
+                            <input
+                                id="spotUrl"
+                                class="input"
+                                type="url"
+                                placeholder="https://..."
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="field">
+                        <label>
+                            画像
+                        </label>
+
+                        <div class="image-field">
+
+                            <div
+                                id="imagePreview"
+                                class="image-preview"
+                            >
+                                PHOTO
+                            </div>
+
+                            <div>
+                                <input
+                                    id="spotImageFile"
+                                    class="input"
+                                    type="file"
+                                    accept="image/*"
+                                >
+
+                                <div
+                                    class="field-note"
+                                    style="margin-top:6px;"
+                                >
+                                    ローカル画像を選ぶと
+                                    プレビューとファイル名を自動設定します。
+                                    実際の画像はGitHubの
+                                    <strong>images/</strong> にアップロードしてください。
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <input
+                            id="spotImage"
+                            class="input"
+                            type="text"
+                            placeholder="例：yotsutsuji.jpg"
+                        >
+                    </div>
+
+                    <label class="checkbox-line">
+                        <input
+                            id="openAfterSave"
+                            type="checkbox"
+                            checked
+                        >
+                        保存後に編集内容をクリアする
+                    </label>
+
+                    <div class="form-actions">
+
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            id="saveSpotBtn"
+                        >
+                            スポットを追加
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-ghost"
+                            id="resetFormBtn"
+                        >
+                            入力をクリア
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+            <!-- =================================================
+                 MAP + LIST
+            ================================================== -->
+            <div>
+
+                <section class="panel map-panel">
+
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">
+                                地図
+                            </h2>
+
+                            <p class="panel-sub">
+                                クリックで座標入力 / マーカークリックで編集
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="map-toolbar">
+
+                        <div class="map-hint">
+                            新しいスポットの位置を決めるときは、
+                            地図の好きな場所をクリックしてください。
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn btn-small"
+                            id="centerMapBtn"
+                        >
+                            伏見稲荷へ戻す
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-small"
+                            id="locateMeBtn"
+                        >
+                            現在地
+                        </button>
+
+                    </div>
+
+                    <div id="map"></div>
+
+                    <div class="coords-box">
+
+                        <div class="coords-item">
+                            <div class="coords-label">
+                                Latitude
+                            </div>
+
+                            <div
+                                id="latDisplay"
+                                class="coords-value"
+                            >
+                                —
+                            </div>
+                        </div>
+
+                        <div class="coords-item">
+                            <div class="coords-label">
+                                Longitude
+                            </div>
+
+                            <div
+                                id="lngDisplay"
+                                class="coords-value"
+                            >
+                                —
+                            </div>
+                        </div>
+
+                    </div>
+
+                </section>
+
+                <section class="panel list-panel" style="margin-top:20px;">
+
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">
+                                登録済みスポット
+                            </h2>
+
+                            <p class="panel-sub">
+                                編集・削除もここから
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="search-row">
+
+                        <input
+                            id="searchInput"
+                            class="search-input"
+                            type="search"
+                            placeholder="スポット名・カテゴリーで検索"
+                        >
+
+                        <button
+                            type="button"
+                            class="btn btn-small"
+                            id="sortBtn"
+                        >
+                            ID順
+                        </button>
+
+                    </div>
+
+                    <div
+                        id="spotList"
+                        class="list"
+                    ></div>
+
+                </section>
+
+            </div>
+
+        </section>
+
+        <!-- =====================================================
+             EXPORT
+        ====================================================== -->
+        <section class="panel export-panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <h2 class="panel-title">
+                        spots.json 出力
+                    </h2>
+
+                    <p class="panel-sub">
+                        GitHubの data/spots.json を更新するときに使用
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="export-grid">
+
+                <div class="export-box">
+
+                    <h3>
+                        完成した spots.json
+                    </h3>
+
+                    <p>
+                        この内容をそのまま
+                        <strong>data/spots.json</strong>
+                        に置き換えます。
+                    </p>
+
+                    <textarea
+                        id="jsonOutput"
+                        readonly
+                    ></textarea>
+
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="copyJsonBtn2"
+                    >
+                        JSONをコピー
+                    </button>
+
+                </div>
+
+                <div class="export-box">
+
+                    <h3>
+                        追加した画像一覧
+                    </h3>
+
+                    <p>
+                        GitHubの
+                        <strong>images/</strong>
+                        にアップロードする画像名です。
+                    </p>
+
+                    <textarea
+                        id="imageOutput"
+                        readonly
+                    ></textarea>
+
+                    <button
+                        type="button"
+                        class="btn"
+                        id="copyImagesBtn"
+                    >
+                        画像一覧をコピー
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <p class="footer-note">
+            この管理画面はブラウザ内で spots.json を編集するためのツールです。
+            GitHubのファイルを直接変更するものではありません。
+            編集後はJSONを保存し、GitHubの data/spots.json を置き換えてください。
+        </p>
+
+    </main>
+
+    <div
+        id="toast"
+        class="toast"
+        role="status"
+        aria-live="polite"
+    ></div>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+
+    <script>
+        (() => {
+            "use strict";
+
+            const DATA_URL = "./data/spots.json";
+
+            const DEFAULT_CENTER = [34.96705, 135.7743];
+            const DEFAULT_ZOOM = 16;
+
+            const categoryDefs = [
+                {
+                    key: "景観",
+                    label: "景観",
+                    icon: "viewpoint"
+                },
+                {
+                    key: "神社",
+                    label: "神社",
+                    icon: "shrine"
+                },
+                {
+                    key: "登山",
+                    label: "登山",
+                    icon: "hiking"
+                },
+                {
+                    key: "飲食店",
+                    label: "グルメ",
+                    icon: "restaurant"
+                },
+                {
+                    key: "交通",
+                    label: "交通",
+                    icon: "station-jr"
+                },
+                {
+                    key: "トイレ",
+                    label: "トイレ",
+                    icon: "toilet"
+                },
+                {
+                    key: "案内",
+                    label: "案内",
+                    icon: "guide"
+                }
+            ];
+
+            const $ = id =>
+                document.getElementById(id);
+
+            const els = {
+                statusMessage:
+                    $("statusMessage"),
+                statusCount:
+                    $("statusCount"),
+
+                formTitle:
+                    $("formTitle"),
+                editingId:
+                    $("editingId"),
+                editingBadge:
+                    $("editingBadge"),
+
+                spotName:
+                    $("spotName"),
+                spotCategory:
+                    $("spotCategory"),
+                categoryPills:
+                    $("categoryPills"),
+                categoryHint:
+                    $("categoryHint"),
+
+                spotLat:
+                    $("spotLat"),
+                spotLng:
+                    $("spotLng"),
+
+                spotDescription:
+                    $("spotDescription"),
+                spotTime:
+                    $("spotTime"),
+                spotUrl:
+                    $("spotUrl"),
+
+                spotImageFile:
+                    $("spotImageFile"),
+                spotImage:
+                    $("spotImage"),
+                imagePreview:
+                    $("imagePreview"),
+
+                openAfterSave:
+                    $("openAfterSave"),
+
+                saveSpotBtn:
+                    $("saveSpotBtn"),
+                resetFormBtn:
+                    $("resetFormBtn"),
+
+                centerMapBtn:
+                    $("centerMapBtn"),
+                locateMeBtn:
+                    $("locateMeBtn"),
+
+                latDisplay:
+                    $("latDisplay"),
+                lngDisplay:
+                    $("lngDisplay"),
+
+                searchInput:
+                    $("searchInput"),
+                sortBtn:
+                    $("sortBtn"),
+                spotList:
+                    $("spotList"),
+
+                jsonOutput:
+                    $("jsonOutput"),
+                imageOutput:
+                    $("imageOutput"),
+
+                copyJsonBtn:
+                    $("copyJsonBtn"),
+                copyJsonBtn2:
+                    $("copyJsonBtn2"),
+                copyImagesBtn:
+                    $("copyImagesBtn"),
+
+                loadBtn:
+                    $("loadBtn"),
+
+                toast:
+                    $("toast")
+            };
+
+            let spots = [];
+            let selectedMapMarker = null;
+            let markerLayer = L.layerGroup();
+            let markerById = new Map();
+            let sortAscending = true;
+            let toastTimer = null;
+
+            const map =
+                L.map("map", {
+                    zoomControl: true
+                })
+                .setView(
+                    DEFAULT_CENTER,
+                    DEFAULT_ZOOM
+                );
+
+            const gsi =
+                L.tileLayer(
+                    "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+                    {
+                        maxZoom: 18,
+                        attribution:
+                            "&copy; 国土地理院"
+                    }
+                );
+
+            const osm =
+                L.tileLayer(
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    {
+                        maxZoom: 19,
+                        attribution:
+                            "&copy; OpenStreetMap contributors"
+                    }
+                );
+
+            gsi.addTo(map);
+
+            L.control.layers(
+                {
+                    "地理院地図": gsi,
+                    "OpenStreetMap": osm
+                },
+                null,
+                {
+                    collapsed: true
+                }
+            ).addTo(map);
+
+            markerLayer.addTo(map);
+
+            function showToast(message) {
+                els.toast.textContent =
+                    message;
+
+                els.toast.classList.add(
+                    "show"
+                );
+
+                clearTimeout(
+                    toastTimer
+                );
+
+                toastTimer =
+                    setTimeout(
+                        () => {
+                            els.toast.classList.remove(
+                                "show"
+                            );
+                        },
+                        2600
+                    );
+            }
+
+            function setStatus(
+                message,
+                count = spots.length
+            ) {
+                els.statusMessage.textContent =
+                    message;
+
+                els.statusCount.textContent =
+                    `${count}スポット`;
+            }
+
+            function escapeHTML(value) {
+                return String(value ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function normalizeCategory(value) {
+                const raw =
+                    String(value ?? "")
+                        .trim();
+
+                if (
+                    ["景色","景観","展望"]
+                        .includes(raw)
+                ) {
+                    return "景観";
+                }
+
+                if (
+                    ["グルメ","飲食店"]
+                        .includes(raw)
+                ) {
+                    return "飲食店";
+                }
+
+                if (
+                    ["登山","ハイキング"]
+                        .includes(raw)
+                ) {
+                    return "登山";
+                }
+
+                return raw || "案内";
+            }
+
+            function categoryInfo(value) {
+                const normalized =
+                    normalizeCategory(value);
+
+                return (
+                    categoryDefs.find(
+                        item =>
+                            item.key ===
+                            normalized
+                    ) ||
+                    categoryDefs[
+                        categoryDefs.length - 1
+                    ]
+                );
+            }
+
+            function makeCategoryPills() {
+                els.categoryPills.innerHTML =
+                    "";
+
+                categoryDefs.forEach(
+                    category => {
+                        const button =
+                            document.createElement(
+                                "button"
+                            );
+
+                        button.type =
+                            "button";
+
+                        button.className =
+                            "category-pill";
+
+                        button.textContent =
+                            category.label;
+
+                        button.dataset.category =
+                            category.key;
+
+                        button.addEventListener(
+                            "click",
+                            () => {
+                                setCategory(
+                                    category.key
+                                );
+                            }
+                        );
+
+                        els.categoryPills.appendChild(
+                            button
+                        );
+                    }
+                );
+
+                setCategory(
+                    els.spotCategory.value ||
+                    "景観"
+                );
+            }
+
+            function setCategory(
+                category
+            ) {
+                const normalized =
+                    normalizeCategory(
+                        category
+                    );
+
+                els.spotCategory.value =
+                    normalized;
+
+                els.categoryPills
+                    .querySelectorAll(
+                        ".category-pill"
+                    )
+                    .forEach(
+                        button => {
+                            button.classList.toggle(
+                                "active",
+                                button.dataset.category ===
+                                    normalized
+                            );
+                        }
+                    );
+
+                const info =
+                    categoryInfo(
+                        normalized
+                    );
+
+                els.categoryHint.textContent =
+                    `${info.label} → ${info.icon}`;
+            }
+
+            function safeURL(value) {
+                const raw =
+                    String(value ?? "")
+                        .trim();
+
+                if (!raw) {
+                    return "";
+                }
+
+                try {
+                    const url =
+                        new URL(
+                            raw,
+                            window.location.href
+                        );
+
+                    if (
+                        url.protocol !==
+                            "http:" &&
+                        url.protocol !==
+                            "https:"
+                    ) {
+                        return "";
+                    }
+
+                    return url.href;
+                } catch (_) {
+                    return "";
+                }
+            }
+
+            function imageSource(
+                image
+            ) {
+                const raw =
+                    String(image ?? "")
+                        .trim();
+
+                if (!raw) {
+                    return "";
+                }
+
+                if (
+                    raw.startsWith(
+                        "http://"
+                    ) ||
+                    raw.startsWith(
+                        "https://"
+                    ) ||
+                    raw.startsWith(
+                        "data:"
+                    )
+                ) {
+                    return raw;
+                }
+
+                return (
+                    `./images/${encodeURIComponent(
+                        raw
+                    )}`
+                );
+            }
+
+            function formatCoord(
+                value
+            ) {
+                const num =
+                    Number(value);
+
+                return Number.isFinite(
+                    num
+                )
+                    ? num.toFixed(8)
+                    : "—";
+            }
+
+            function isValidCoord(
+                lat,
+                lng
+            ) {
+                return (
+                    Number.isFinite(
+                        Number(lat)
+                    ) &&
+                    Number.isFinite(
+                        Number(lng)
+                    ) &&
+                    Number(lat) >= -90 &&
+                    Number(lat) <= 90 &&
+                    Number(lng) >= -180 &&
+                    Number(lng) <= 180
+                );
+            }
+
+            function nextID() {
+                const max =
+                    spots.reduce(
+                        (
+                            currentMax,
+                            spot
+                        ) => {
+                            const n =
+                                Number(
+                                    spot.id
+                                );
+
+                            return Number.isFinite(
+                                n
+                            )
+                                ? Math.max(
+                                    currentMax,
+                                    n
+                                )
+                                : currentMax;
+                        },
+                        0
+                    );
+
+                return max + 1;
+            }
+
+            function normalizeSpot(
+                source
+            ) {
+                const spot =
+                    {
+                        ...source
+                    };
+
+                if (
+                    !spot ||
+                    spot.id == null
+                ) {
+                    return null;
+                }
+
+                const numericId =
+                    Number(
+                        spot.id
+                    );
+
+                if (
+                    Number.isFinite(
+                        numericId
+                    )
+                ) {
+                    spot.id =
+                        numericId;
+                } else {
+                    spot.id =
+                        String(
+                            spot.id
+                        );
+                }
+
+                spot.name =
+                    String(
+                        spot.name ?? ""
+                    );
+
+                spot.category =
+                    normalizeCategory(
+                        spot.category
+                    );
+
+                spot.lat =
+                    Number(
+                        spot.lat
+                    );
+
+                spot.lng =
+                    Number(
+                        spot.lng
+                    );
+
+                spot.description =
+                    String(
+                        spot.description ??
+                        ""
+                    );
+
+                spot.time =
+                    String(
+                        spot.time ??
+                        "-"
+                    );
+
+                spot.image =
+                    String(
+                        spot.image ??
+                        ""
+                    );
+
+                spot.url =
+                    String(
+                        spot.url ??
+                        ""
+                    );
+
+                return spot;
+            }
+
+            function toExportObject(
+                spot
+            ) {
+                const out = {
+                    ...spot
+                };
+
+                if (
+                    !out.url
+                ) {
+                    delete out.url;
+                }
+
+                return out;
+            }
+
+            function jsonText() {
+                return JSON.stringify(
+                    spots.map(
+                        toExportObject
+                    ),
+                    null,
+                    4
+                );
+            }
+
+            function refreshJSONOutput() {
+                els.jsonOutput.value =
+                    jsonText();
+
+                const imageNames =
+                    [
+                        ...new Set(
+                            spots
+                                .map(
+                                    spot =>
+                                        String(
+                                            spot.image ||
+                                            ""
+                                        ).trim()
+                                )
+                                .filter(Boolean)
+                        )
+                    ]
+                    .sort(
+                        (a,b) =>
+                            a.localeCompare(
+                                b,
+                                "ja"
+                            )
+                    );
+
+                els.imageOutput.value =
+                    imageNames.join(
+                        "\n"
+                    );
+
+                setStatus(
+                    "編集中のデータを表示中。"
+                );
+            }
+
+            function setCoordinates(
+                lat,
+                lng,
+                shouldCenter = false
+            ) {
+                if (
+                    !isValidCoord(
+                        lat,
+                        lng
+                    )
+                ) {
+                    return;
+                }
+
+                const latValue =
+                    Number(lat);
+
+                const lngValue =
+                    Number(lng);
+
+                els.spotLat.value =
+                    latValue
+                        .toFixed(8);
+
+                els.spotLng.value =
+                    lngValue
+                        .toFixed(8);
+
+                els.latDisplay.textContent =
+                    latValue.toFixed(
+                        8
+                    );
+
+                els.lngDisplay.textContent =
+                    lngValue.toFixed(
+                        8
+                    );
+
+                if (
+                    shouldCenter
+                ) {
+                    map.setView(
+                        [
+                            latValue,
+                            lngValue
+                        ],
+                        Math.max(
+                            map.getZoom(),
+                            17
+                        ),
+                        {
+                            animate:
+                                true
+                        }
+                    );
+                }
+            }
+
+            function updateCoordinateDisplay() {
+                els.latDisplay.textContent =
+                    formatCoord(
+                        els.spotLat.value
+                    );
+
+                els.lngDisplay.textContent =
+                    formatCoord(
+                        els.spotLng.value
+                    );
+            }
+
+            function markerHTML(
+                spot
+            ) {
+                const selected =
+                    String(
+                        spot.id
+                    ) ===
+                    String(
+                        els.editingId.value
+                    );
+
+                return `
+                    <div
+                        class="marker-label"
+                        style="
+                            transform:
+                                scale(
+                                    ${selected ? 1.15 : 1}
+                                );
+                        "
+                        title="${escapeHTML(
+                            spot.name
+                        )}"
+                    >
+                        ${escapeHTML(
+                            String(
+                                spot.id
+                            )
+                        )}
+                    </div>
+                `;
+            }
+
+            function renderMapMarkers() {
+                markerLayer.clearLayers();
+                markerById.clear();
+
+                spots.forEach(
+                    spot => {
+                        if (
+                            !isValidCoord(
+                                spot.lat,
+                                spot.lng
+                            )
+                        ) {
+                            return;
+                        }
+
+                        const marker =
+                            L.marker(
+                                [
+                                    Number(
+                                        spot.lat
+                                    ),
+                                    Number(
+                                        spot.lng
+                                    )
+                                ],
+                                {
+                                    title:
+                                        `${spot.id}: ${spot.name}`
+                                }
+                            );
+
+                        marker.bindPopup(
+                            `
+                                <div
+                                    style="
+                                        min-width:220px;
+                                        line-height:1.6;
+                                    "
+                                >
+                                    <strong>
+                                        ${escapeHTML(
+                                            spot.name
+                                        )}
+                                    </strong>
+
+                                    <div
+                                        style="
+                                            margin-top:5px;
+                                            color:#777;
+                                            font-size:11px;
+                                        "
+                                    >
+                                        ID ${escapeHTML(
+                                            String(
+                                                spot.id
+                                            )
+                                        )}
+                                        ・
+                                        ${escapeHTML(
+                                            categoryInfo(
+                                                spot.category
+                                            ).label
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        data-edit-marker-id="${escapeHTML(
+                                            String(
+                                                spot.id
+                                            )
+                                        )}"
+                                        style="
+                                            width:100%;
+                                            margin-top:10px;
+                                            padding:9px 12px;
+                                            border:0;
+                                            border-radius:999px;
+                                            background:#ff4b00;
+                                            color:#fff;
+                                            font-weight:800;
+                                            cursor:pointer;
+                                        "
+                                    >
+                                        このスポットを編集
+                                    </button>
+                                </div>
+                            `
+                        );
+
+                        marker.on(
+                            "popupopen",
+                            event => {
+                                const popupEl =
+                                    event.popup
+                                        .getElement();
+
+                                if (
+                                    !popupEl
+                                ) {
+                                    return;
+                                }
+
+                                const button =
+                                    popupEl.querySelector(
+                                        `[data-edit-marker-id="${CSS.escape(
+                                            String(
+                                                spot.id
+                                            )
+                                        )}"]`
+                                    );
+
+                                button?.addEventListener(
+                                    "click",
+                                    () => {
+                                        editSpot(
+                                            spot.id
+                                        );
+
+                                        marker.closePopup();
+                                    }
+                                );
+                            }
+                        );
+
+                        marker.on(
+                            "click",
+                            () => {
+                                setCoordinates(
+                                    spot.lat,
+                                    spot.lng,
+                                    false
+                                );
+                            }
+                        );
+
+                        markerLayer.addLayer(
+                            marker
+                        );
+
+                        markerById.set(
+                            String(
+                                spot.id
+                            ),
+                            marker
+                        );
+                    }
+                );
+            }
+
+            function filteredSpots() {
+                const q =
+                    String(
+                        els.searchInput.value ||
+                        ""
+                    )
+                    .trim()
+                    .toLowerCase();
+
+                let result =
+                    spots.filter(
+                        spot => {
+                            if (!q) {
+                                return true;
+                            }
+
+                            return (
+                                String(
+                                    spot.name
+                                )
+                                .toLowerCase()
+                                .includes(q) ||
+
+                                String(
+                                    spot.category
+                                )
+                                .toLowerCase()
+                                .includes(q) ||
+
+                                String(
+                                    spot.description
+                                )
+                                .toLowerCase()
+                                .includes(q)
+                            );
+                        }
+                    );
+
+                result.sort(
+                    (a,b) => {
+                        const aId =
+                            Number(
+                                a.id
+                            );
+
+                        const bId =
+                            Number(
+                                b.id
+                            );
+
+                        if (
+                            Number.isFinite(
+                                aId
+                            ) &&
+                            Number.isFinite(
+                                bId
+                            )
+                        ) {
+                            return (
+                                sortAscending
+                                    ? aId - bId
+                                    : bId - aId
+                            );
+                        }
+
+                        return String(
+                            a.id
+                        ).localeCompare(
+                            String(
+                                b.id
+                            )
+                        );
+                    }
+                );
+
+                return result;
+            }
+
+            function renderSpotList() {
+                els.spotList.innerHTML =
+                    "";
+
+                const list =
+                    filteredSpots();
+
+                if (!list.length) {
+                    els.spotList.innerHTML =
+                        `
+                            <div class="empty">
+                                該当するスポットがありません。
+                            </div>
+                        `;
+                    return;
+                }
+
+                list.forEach(
+                    spot => {
+                        const card =
+                            document.createElement(
+                                "article"
+                            );
+
+                        card.className =
+                            "spot-card";
+
+                        const image =
+                            imageSource(
+                                spot.image
+                            );
+
+                        card.innerHTML =
+                            `
+                                <div
+                                    class="spot-thumb"
+                                >
+                                    ${
+                                        image
+                                            ? `
+                                                <img
+                                                    src="${escapeHTML(
+                                                        image
+                                                    )}"
+                                                    alt="${escapeHTML(
+                                                        spot.name
+                                                    )}"
+                                                    onerror="
+                                                        this.parentElement.textContent='PHOTO';
+                                                    "
+                                                >
+                                            `
+                                            : "PHOTO"
+                                    }
+                                </div>
+
+                                <div
+                                    class="spot-main"
+                                >
+                                    <div
+                                        class="spot-id"
+                                    >
+                                        ID ${escapeHTML(
+                                            String(
+                                                spot.id
+                                            )
+                                        )}
+                                    </div>
+
+                                    <h3
+                                        class="spot-name"
+                                    >
+                                        ${escapeHTML(
+                                            spot.name
+                                        )}
+                                    </h3>
+
+                                    <div
+                                        class="spot-meta"
+                                    >
+                                        <span
+                                            class="meta-pill"
+                                        >
+                                            ${escapeHTML(
+                                                categoryInfo(
+                                                    spot.category
+                                                ).label
+                                            )}
+                                        </span>
+
+                                        <span
+                                            class="meta-pill"
+                                        >
+                                            ${escapeHTML(
+                                                formatCoord(
+                                                    spot.lat
+                                                )
+                                            )}
+                                            ,
+                                            ${escapeHTML(
+                                                formatCoord(
+                                                    spot.lng
+                                                )
+                                            )}
+                                        </span>
+
+                                        <span
+                                            class="meta-pill"
+                                        >
+                                            ${escapeHTML(
+                                                spot.image ||
+                                                "画像なし"
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="spot-actions"
+                                >
+                                    <button
+                                        type="button"
+                                        class="btn btn-small"
+                                        data-edit-id="${escapeHTML(
+                                            String(
+                                                spot.id
+                                            )
+                                        )}"
+                                    >
+                                        編集
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-small btn-danger"
+                                        data-delete-id="${escapeHTML(
+                                            String(
+                                                spot.id
+                                            )
+                                        )}"
+                                    >
+                                        削除
+                                    </button>
+                                </div>
+                            `;
+
+                        card.querySelector(
+                            "[data-edit-id]"
+                        )
+                        .addEventListener(
+                            "click",
+                            () => {
+                                editSpot(
+                                    spot.id
+                                );
+                            }
+                        );
+
+                        card.querySelector(
+                            "[data-delete-id]"
+                        )
+                        .addEventListener(
+                            "click",
+                            () => {
+                                deleteSpot(
+                                    spot.id
+                                );
+                            }
+                        );
+
+                        els.spotList.appendChild(
+                            card
+                        );
+                    }
+                );
+            }
+
+            function renderAll() {
+                renderSpotList();
+                renderMapMarkers();
+                refreshJSONOutput();
+            }
+
+            function clearForm() {
+                els.editingId.value =
+                    "";
+
+                els.formTitle.textContent =
+                    "新しいスポットを追加";
+
+                els.editingBadge.style.display =
+                    "none";
+
+                els.saveSpotBtn.textContent =
+                    "スポットを追加";
+
+                els.spotName.value =
+                    "";
+
+                setCategory(
+                    "景観"
+                );
+
+                els.spotLat.value =
+                    "";
+
+                els.spotLng.value =
+                    "";
+
+                els.spotDescription.value =
+                    "";
+
+                els.spotTime.value =
+                    "";
+
+                els.spotUrl.value =
+                    "";
+
+                els.spotImage.value =
+                    "";
+
+                els.spotImageFile.value =
+                    "";
+
+                els.imagePreview.textContent =
+                    "PHOTO";
+
+                els.latDisplay.textContent =
+                    "—";
+
+                els.lngDisplay.textContent =
+                    "—";
+
+                markerLayer.eachLayer(
+                    marker => {
+                        if (
+                            marker.setOpacity
+                        ) {
+                            marker.setOpacity(
+                                1
+                            );
+                        }
+                    }
+                );
+
+                showToast(
+                    "入力をクリアしました。"
+                );
+            }
+
+            function findSpot(
+                id
+            ) {
+                return spots.find(
+                    spot =>
+                        String(
+                            spot.id
+                        ) ===
+                        String(
+                            id
+                        )
+                );
+            }
+
+            function editSpot(
+                id
+            ) {
+                const spot =
+                    findSpot(id);
+
+                if (!spot) {
+                    showToast(
+                        "スポットが見つかりません。"
+                    );
+                    return;
+                }
+
+                els.editingId.value =
+                    String(
+                        spot.id
+                    );
+
+                els.formTitle.textContent =
+                    `スポットID ${spot.id} を編集`;
+
+                els.editingBadge.style.display =
+                    "inline-flex";
+
+                els.saveSpotBtn.textContent =
+                    "変更を保存";
+
+                els.spotName.value =
+                    spot.name;
+
+                setCategory(
+                    spot.category
+                );
+
+                els.spotLat.value =
+                    Number.isFinite(
+                        Number(
+                            spot.lat
+                        )
+                    )
+                        ? Number(
+                            spot.lat
+                        ).toFixed(8)
+                        : "";
+
+                els.spotLng.value =
+                    Number.isFinite(
+                        Number(
+                            spot.lng
+                        )
+                    )
+                        ? Number(
+                            spot.lng
+                        ).toFixed(8)
+                        : "";
+
+                els.spotDescription.value =
+                    spot.description;
+
+                els.spotTime.value =
+                    spot.time === "-"
+                        ? ""
+                        : spot.time;
+
+                els.spotUrl.value =
+                    spot.url || "";
+
+                els.spotImage.value =
+                    spot.image || "";
+
+                showImagePreview(
+                    spot.image
+                );
+
+                updateCoordinateDisplay();
+
+                if (
+                    isValidCoord(
+                        spot.lat,
+                        spot.lng
+                    )
+                ) {
+                    map.setView(
+                        pointOfSpot(
+                            spot
+                        ),
+                        Math.max(
+                            map.getZoom(),
+                            17
+                        ),
+                        {
+                            animate:
+                                true
+                        }
+                    );
+                }
+
+                showToast(
+                    `「${spot.name}」を編集しています。`
+                );
+            }
+
+            function deleteSpot(
+                id
+            ) {
+                const spot =
+                    findSpot(id);
+
+                if (!spot) {
+                    return;
+                }
+
+                const confirmed =
+                    window.confirm(
+                        `「${spot.name}」を削除しますか？\n\nこの操作は管理画面内の編集データから削除します。`
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                spots =
+                    spots.filter(
+                        item =>
+                            String(
+                                item.id
+                            ) !==
+                            String(
+                                id
+                            )
+                    );
+
+                if (
+                    String(
+                        els.editingId.value
+                    ) ===
+                    String(
+                        id
+                    )
+                ) {
+                    clearForm();
+                }
+
+                renderAll();
+
+                showToast(
+                    `「${spot.name}」を削除しました。`
+                );
+            }
+
+            function collectFormData() {
+                const rawId =
+                    String(
+                        els.editingId.value ||
+                        nextID()
+                    ).trim();
+
+                const idNumber =
+                    Number(
+                        rawId
+                    );
+
+                const id =
+                    Number.isFinite(
+                        idNumber
+                    )
+                        ? idNumber
+                        : rawId;
+
+                const name =
+                    String(
+                        els.spotName.value ||
+                        ""
+                    ).trim();
+
+                const category =
+                    normalizeCategory(
+                        els.spotCategory.value
+                    );
+
+                const lat =
+                    Number(
+                        els.spotLat.value
+                    );
+
+                const lng =
+                    Number(
+                        els.spotLng.value
+                    );
+
+                const description =
+                    String(
+                        els.spotDescription.value ||
+                        ""
+                    ).trim();
+
+                const time =
+                    String(
+                        els.spotTime.value ||
+                        ""
+                    ).trim();
+
+                const image =
+                    String(
+                        els.spotImage.value ||
+                        ""
+                    ).trim();
+
+                const url =
+                    String(
+                        els.spotUrl.value ||
+                        ""
+                    ).trim();
+
+                return {
+                    id,
+                    name,
+                    category,
+                    lat,
+                    lng,
+                    description,
+                    time:
+                        time || "-",
+                    image,
+                    url
+                };
+            }
+
+            function validateSpot(
+                data
+            ) {
+                const errors =
+                    [];
+
+                if (!data.name) {
+                    errors.push(
+                        "スポット名を入力してください。"
+                    );
+                }
+
+                if (
+                    !isValidCoord(
+                        data.lat,
+                        data.lng
+                    )
+                ) {
+                    errors.push(
+                        "緯度・経度を正しく入力してください。"
+                    );
+                }
+
+                if (!data.description) {
+                    errors.push(
+                        "説明を入力してください。"
+                    );
+                }
+
+                if (
+                    data.url &&
+                    !safeURL(data.url)
+                ) {
+                    errors.push(
+                        "公式サイトURLが正しくありません。"
+                    );
+                }
+
+                return errors;
+            }
+
+            function saveForm() {
+                const data =
+                    collectFormData();
+
+                const errors =
+                    validateSpot(
+                        data
+                    );
+
+                if (
+                    errors.length
+                ) {
+                    alert(
+                        errors.join(
+                            "\n"
+                        )
+                    );
+                    return;
+                }
+
+                const editing =
+                    Boolean(
+                        String(
+                            els.editingId.value
+                        ).trim()
+                    );
+
+                const existingIndex =
+                    spots.findIndex(
+                        spot =>
+                            String(
+                                spot.id
+                            ) ===
+                            String(
+                                data.id
+                            )
+                    );
+
+                const clean =
+                    {
+                        id:
+                            data.id,
+
+                        name:
+                            data.name,
+
+                        category:
+                            data.category,
+
+                        lat:
+                            Number(
+                                data.lat
+                            ),
+
+                        lng:
+                            Number(
+                                data.lng
+                            ),
+
+                        description:
+                            data.description,
+
+                        time:
+                            data.time,
+
+                        image:
+                            data.image
+                    };
+
+                if (
+                    data.url
+                ) {
+                    clean.url =
+                        data.url;
+                }
+
+                if (
+                    existingIndex >= 0
+                ) {
+                    spots[
+                        existingIndex
+                    ] = clean;
+                } else {
+                    spots.push(
+                        clean
+                    );
+                }
+
+                renderAll();
+
+                if (
+                    els.openAfterSave.checked
+                ) {
+                    clearForm();
+                } else {
+                    editSpot(
+                        data.id
+                    );
+                }
+
+                showToast(
+                    editing
+                        ? `「${data.name}」を更新しました。`
+                        : `「${data.name}」を追加しました。`
+                );
+            }
+
+            function pointOfSpot(
+                spot
+            ) {
+                return [
+                    Number(
+                        spot.lat
+                    ),
+                    Number(
+                        spot.lng
+                    )
+                ];
+            }
+
+            function showImagePreview(
+                imageName
+            ) {
+                const src =
+                    imageSource(
+                        imageName
+                    );
+
+                if (!src) {
+                    els.imagePreview.textContent =
+                        "PHOTO";
+                    return;
+                }
+
+                els.imagePreview.innerHTML =
+                    `
+                        <img
+                            src="${escapeHTML(
+                                src
+                            )}"
+                            alt=""
+                            onerror="
+                                this.parentElement.textContent='PHOTO';
+                            "
+                        >
+                    `;
+            }
+
+            function loadLocalImagePreview(
+                file
+            ) {
+                if (!file) {
+                    return;
+                }
+
+                const reader =
+                    new FileReader();
+
+                reader.onload =
+                    event => {
+                        els.imagePreview.innerHTML =
+                            `
+                                <img
+                                    src="${event.target.result}"
+                                    alt=""
+                                >
+                            `;
+                    };
+
+                reader.readAsDataURL(
+                    file
+                );
+
+                if (
+                    !els.spotImage.value.trim()
+                ) {
+                    els.spotImage.value =
+                        file.name;
+                }
+
+                showToast(
+                    `画像名を「${file.name}」に設定しました。`
+                );
+            }
+
+            async function copyText(
+                text
+            ) {
+                try {
+                    await navigator.clipboard.writeText(
+                        text
+                    );
+
+                    showToast(
+                        "クリップボードにコピーしました。"
+                    );
+
+                    return;
+                } catch (_) {}
+
+                const temp =
+                    document.createElement(
+                        "textarea"
+                    );
+
+                temp.value =
+                    text;
+
+                document.body.appendChild(
+                    temp
+                );
+
+                temp.select();
+
+                try {
+                    document.execCommand(
+                        "copy"
+                    );
+
+                    showToast(
+                        "コピーしました。"
+                    );
+                } catch (_) {
+                    showToast(
+                        "コピーできませんでした。"
+                    );
+                }
+
+                temp.remove();
+            }
+
+            function downloadText(
+                filename,
+                text
+            ) {
+                const blob =
+                    new Blob(
+                        [
+                            text
+                        ],
+                        {
+                            type:
+                                "application/json;charset=utf-8"
+                        }
+                    );
+
+                const url =
+                    URL.createObjectURL(
+                        blob
+                    );
+
+                const a =
+                    document.createElement(
+                        "a"
+                    );
+
+                a.href =
+                    url;
+
+                a.download =
+                    filename;
+
+                document.body.appendChild(
+                    a
+                );
+
+                a.click();
+
+                a.remove();
+
+                URL.revokeObjectURL(
+                    url
+                );
+
+                showToast(
+                    `「${filename}」を保存しました。`
+                );
+            }
+
+            async function loadData(
+                showMessage = true
+            ) {
+                try {
+                    const response =
+                        await fetch(
+                            `${DATA_URL}?v=${Date.now()}`,
+                            {
+                                cache:
+                                    "no-store"
+                            }
+                        );
+
+                    if (!response.ok) {
+                        throw new Error(
+                            `${response.status}`
+                        );
+                    }
+
+                    const data =
+                        await response.json();
+
+                    if (
+                        !Array.isArray(
+                            data
+                        )
+                    ) {
+                        throw new Error(
+                            "spots.jsonは配列形式ではありません。"
+                        );
+                    }
+
+                    spots =
+                        data
+                            .map(
+                                normalizeSpot
+                            )
+                            .filter(
+                                Boolean
+                            );
+
+                    renderAll();
+
+                    if (
+                        showMessage
+                    ) {
+                        showToast(
+                            `spots.jsonから${spots.length}スポットを読み込みました。`
+                        );
+                    }
+                } catch (
+                    error
+                ) {
+                    console.error(
+                        error
+                    );
+
+                    setStatus(
+                        "spots.jsonを読み込めません。Live Server または GitHub Pages 上で開いてください。"
+                    );
+
+                    els.spotList.innerHTML =
+                        `
+                            <div class="empty">
+                                <strong>
+                                    spots.jsonを読み込めませんでした。
+                                </strong>
+                                <br><br>
+                                このページを
+                                <strong>Live Server</strong>
+                                または
+                                <strong>GitHub Pages</strong>
+                                で開いているか確認してください。
+                                <br><br>
+                                既存のファイルを使わず、
+                                この管理画面だけで新しくJSONを作る場合は
+                                下の入力欄から追加できます。
+                            </div>
+                        `;
+
+                    refreshJSONOutput();
+
+                    if (
+                        showMessage
+                    ) {
+                        showToast(
+                            "spots.jsonの読み込みに失敗しました。"
+                        );
+                    }
+                }
+            }
+
+            map.on(
+                "click",
+                event => {
+                    setCoordinates(
+                        event.latlng.lat,
+                        event.latlng.lng,
+                        false
+                    );
+
+                    showToast(
+                        "地図から緯度・経度を入力しました。"
+                    );
+                }
+            );
+
+            els.spotLat.addEventListener(
+                "input",
+                updateCoordinateDisplay
+            );
+
+            els.spotLng.addEventListener(
+                "input",
+                updateCoordinateDisplay
+            );
+
+            els.spotImage.addEventListener(
+                "input",
+                () => {
+                    showImagePreview(
+                        els.spotImage.value
+                    );
+                }
+            );
+
+            els.spotImageFile.addEventListener(
+                "change",
+                event => {
+                    const file =
+                        event.target.files?.[0];
+
+                    loadLocalImagePreview(
+                        file
+                    );
+                }
+            );
+
+            els.saveSpotBtn.addEventListener(
+                "click",
+                saveForm
+            );
+
+            els.resetFormBtn.addEventListener(
+                "click",
+                clearForm
+            );
+
+            els.centerMapBtn.addEventListener(
+                "click",
+                () => {
+                    map.setView(
+                        DEFAULT_CENTER,
+                        DEFAULT_ZOOM,
+                        {
+                            animate:
+                                true
+                        }
+                    );
+                }
+            );
+
+            els.locateMeBtn.addEventListener(
+                "click",
+                () => {
+                    if (
+                        !navigator.geolocation
+                    ) {
+                        alert(
+                            "このブラウザでは現在地を利用できません。"
+                        );
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                        position => {
+                            setCoordinates(
+                                position.coords.latitude,
+                                position.coords.longitude,
+                                true
+                            );
+
+                            showToast(
+                                "現在地を座標欄に設定しました。"
+                            );
+                        },
+                        error => {
+                            console.error(
+                                error
+                            );
+
+                            alert(
+                                "現在地を取得できませんでした。ブラウザの位置情報許可を確認してください。"
+                            );
+                        },
+                        {
+                            enableHighAccuracy:
+                                true,
+
+                            timeout:
+                                10000,
+
+                            maximumAge:
+                                30000
+                        }
+                    );
+                }
+            );
+
+            els.searchInput.addEventListener(
+                "input",
+                renderSpotList
+            );
+
+            els.sortBtn.addEventListener(
+                "click",
+                () => {
+                    sortAscending =
+                        !sortAscending;
+
+                    els.sortBtn.textContent =
+                        sortAscending
+                            ? "ID昇順"
+                            : "ID降順";
+
+                    renderSpotList();
+                }
+            );
+
+            async function copyJSON() {
+                await copyText(
+                    jsonText()
+                );
+            }
+
+            els.copyJsonBtn.addEventListener(
+                "click",
+                copyJSON
+            );
+
+            els.copyJsonBtn2.addEventListener(
+                "click",
+                copyJSON
+            );
+
+            els.copyImagesBtn.addEventListener(
+                "click",
+                async () => {
+                    await copyText(
+                        els.imageOutput.value
+                    );
+                }
+            );
+
+            els.downloadJsonBtn.addEventListener(
+                "click",
+                () => {
+                    downloadText(
+                        "spots.json",
+                        jsonText()
+                    );
+                }
+            );
+
+            els.loadBtn.addEventListener(
+                "click",
+                () => {
+                    const confirmed =
+                        window.confirm(
+                            "現在の編集内容を破棄して、GitHub/Live Server上の spots.json を読み直しますか？"
+                        );
+
+                    if (
+                        !confirmed
+                    ) {
+                        return;
+                    }
+
+                    loadData(
+                        true
+                    );
+                }
+            );
+
+            window.addEventListener(
+                "beforeunload",
+                event => {
+                    if (
+                        els.formTitle.textContent !==
+                            "新しいスポットを追加"
+                    ) {
+                        return;
+                    }
+                }
+            );
+
+            /*
+                初期セットアップ
+            */
+            makeCategoryPills();
+
+            els.sortBtn.textContent =
+                "ID昇順";
+
+            loadData(
+                false
+            );
+
+            /*
+                地図サイズを念のため再計算。
+            */
+            setTimeout(
+                () => {
+                    map.invalidateSize();
+                },
+                250
+            );
+        })();
+    </script>
+
+</body>
+</html>
