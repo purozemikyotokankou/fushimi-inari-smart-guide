@@ -4968,3 +4968,584 @@ document.addEventListener("DOMContentLoaded", () => {
 
     initialize();
 });
+/* ============================================================
+   V11.8 MOBILE MAP CONTROL FIX
+   ×ボタンとLeafletレイヤー切替ボタンの重なりを解消
+   ============================================================ */
+
+(() => {
+    "use strict";
+
+    function findMap() {
+        return document.getElementById("map");
+    }
+
+    function findLayerControl(mapEl) {
+        if (!mapEl) return null;
+
+        return mapEl.querySelector(
+            ".leaflet-control-layers"
+        );
+    }
+
+    function findCloseButton(mapEl) {
+        if (!mapEl) return null;
+
+        const elements = mapEl.querySelectorAll(
+            "button, a, [role='button']"
+        );
+
+        let result = null;
+
+        elements.forEach(el => {
+            if (result) return;
+
+            if (
+                el.closest(".leaflet-control-layers") ||
+                el.closest(".leaflet-control-zoom")
+            ) {
+                return;
+            }
+
+            const text =
+                String(
+                    el.textContent || ""
+                ).trim();
+
+            const aria =
+                String(
+                    el.getAttribute("aria-label") || ""
+                ).trim();
+
+            const title =
+                String(
+                    el.getAttribute("title") || ""
+                ).trim();
+
+            const className =
+                String(
+                    el.className || ""
+                );
+
+            const html =
+                String(
+                    el.innerHTML || ""
+                );
+
+            const isCloseText =
+                text === "×" ||
+                text === "✕" ||
+                text === "✖" ||
+                text === "x";
+
+            const isCloseLabel =
+                /閉じる|close/i.test(aria) ||
+                /閉じる|close/i.test(title);
+
+            const isCloseClass =
+                /planner-map-close|map-close|close-map/i.test(
+                    className
+                );
+
+            const isCloseHTML =
+                html.includes("×") ||
+                html.includes("✕") ||
+                html.includes("✖");
+
+            if (
+                isCloseText ||
+                isCloseLabel ||
+                isCloseClass ||
+                isCloseHTML
+            ) {
+                result = el;
+            }
+        });
+
+        return result;
+    }
+
+    function applyMobileMapControlFix() {
+        const mapEl = findMap();
+
+        if (!mapEl) {
+            return;
+        }
+
+        const width =
+            window.innerWidth ||
+            document.documentElement.clientWidth ||
+            0;
+
+        const height =
+            window.innerHeight ||
+            document.documentElement.clientHeight ||
+            0;
+
+        const rect =
+            mapEl.getBoundingClientRect();
+
+        const computed =
+            window.getComputedStyle(mapEl);
+
+        const isNativeFullscreen =
+            document.fullscreenElement === mapEl;
+
+        const isFixed =
+            computed.position === "fixed";
+
+        const fillsScreen =
+            height > 0 &&
+            rect.height >= height * 0.88;
+
+        const mobile =
+            width <= 760;
+
+        const safe =
+            mobile &&
+            (
+                isNativeFullscreen ||
+                isFixed ||
+                fillsScreen
+            );
+
+        const layerControl =
+            findLayerControl(mapEl);
+
+        const closeButton =
+            findCloseButton(mapEl);
+
+        /*
+         * --------------------------------------------------------
+         * Leaflet レイヤー切替
+         * --------------------------------------------------------
+         */
+
+        if (layerControl) {
+
+            layerControl.style.setProperty(
+                "z-index",
+                "1500",
+                "important"
+            );
+
+            layerControl.style.setProperty(
+                "pointer-events",
+                "auto",
+                "important"
+            );
+
+            if (safe) {
+
+                /*
+                 * 右上固定
+                 * ×ボタンはその左側へ配置
+                 */
+
+                layerControl.style.setProperty(
+                    "position",
+                    "absolute",
+                    "important"
+                );
+
+                layerControl.style.setProperty(
+                    "top",
+                    "10px",
+                    "important"
+                );
+
+                layerControl.style.setProperty(
+                    "right",
+                    "10px",
+                    "important"
+                );
+
+                layerControl.style.setProperty(
+                    "left",
+                    "auto",
+                    "important"
+                );
+
+                layerControl.style.setProperty(
+                    "bottom",
+                    "auto",
+                    "important"
+                );
+
+                layerControl.style.setProperty(
+                    "margin",
+                    "0",
+                    "important"
+                );
+
+                const toggle =
+                    layerControl.querySelector(
+                        ".leaflet-control-layers-toggle"
+                    );
+
+                if (toggle) {
+
+                    toggle.style.setProperty(
+                        "width",
+                        "52px",
+                        "important"
+                    );
+
+                    toggle.style.setProperty(
+                        "height",
+                        "52px",
+                        "important"
+                    );
+
+                    toggle.style.setProperty(
+                        "min-width",
+                        "52px",
+                        "important"
+                    );
+
+                    toggle.style.setProperty(
+                        "min-height",
+                        "52px",
+                        "important"
+                    );
+
+                    toggle.style.setProperty(
+                        "touch-action",
+                        "manipulation",
+                        "important"
+                    );
+
+                    toggle.style.setProperty(
+                        "pointer-events",
+                        "auto",
+                        "important"
+                    );
+                }
+
+            } else {
+
+                /*
+                 * 通常時はLeaflet本来の位置に戻す
+                 */
+
+                layerControl.style.removeProperty(
+                    "position"
+                );
+
+                layerControl.style.removeProperty(
+                    "top"
+                );
+
+                layerControl.style.removeProperty(
+                    "right"
+                );
+
+                layerControl.style.removeProperty(
+                    "left"
+                );
+
+                layerControl.style.removeProperty(
+                    "bottom"
+                );
+
+                layerControl.style.removeProperty(
+                    "margin"
+                );
+            }
+        }
+
+        /*
+         * --------------------------------------------------------
+         * ×ボタン
+         * --------------------------------------------------------
+         */
+
+        if (closeButton) {
+
+            closeButton.style.setProperty(
+                "pointer-events",
+                "auto",
+                "important"
+            );
+
+            closeButton.style.setProperty(
+                "touch-action",
+                "manipulation",
+                "important"
+            );
+
+            if (safe) {
+
+                /*
+                 * レイヤー切替の左隣
+                 *
+                 * ×  ｜ レイヤー
+                 */
+
+                closeButton.style.setProperty(
+                    "position",
+                    "absolute",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "top",
+                    "10px",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "right",
+                    "72px",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "left",
+                    "auto",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "bottom",
+                    "auto",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "width",
+                    "52px",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "height",
+                    "52px",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "min-width",
+                    "52px",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "min-height",
+                    "52px",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "margin",
+                    "0",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "z-index",
+                    "1600",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "display",
+                    "flex",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "align-items",
+                    "center",
+                    "important"
+                );
+
+                closeButton.style.setProperty(
+                    "justify-content",
+                    "center",
+                    "important"
+                );
+
+            } else {
+
+                closeButton.style.removeProperty(
+                    "position"
+                );
+
+                closeButton.style.removeProperty(
+                    "top"
+                );
+
+                closeButton.style.removeProperty(
+                    "right"
+                );
+
+                closeButton.style.removeProperty(
+                    "left"
+                );
+
+                closeButton.style.removeProperty(
+                    "bottom"
+                );
+
+                closeButton.style.removeProperty(
+                    "width"
+                );
+
+                closeButton.style.removeProperty(
+                    "height"
+                );
+
+                closeButton.style.removeProperty(
+                    "min-width"
+                );
+
+                closeButton.style.removeProperty(
+                    "min-height"
+                );
+
+                closeButton.style.removeProperty(
+                    "margin"
+                );
+
+                closeButton.style.removeProperty(
+                    "z-index"
+                );
+
+                closeButton.style.removeProperty(
+                    "display"
+                );
+
+                closeButton.style.removeProperty(
+                    "align-items"
+                );
+
+                closeButton.style.removeProperty(
+                    "justify-content"
+                );
+            }
+        }
+    }
+
+    function scheduleFix() {
+
+        requestAnimationFrame(() => {
+            applyMobileMapControlFix();
+        });
+    }
+
+    function init() {
+
+        const mapEl =
+            findMap();
+
+        if (!mapEl) {
+            return;
+        }
+
+        /*
+         * 最初の適用
+         */
+
+        scheduleFix();
+
+        /*
+         * 画面サイズ変更
+         */
+
+        window.addEventListener(
+            "resize",
+            scheduleFix,
+            {
+                passive: true
+            }
+        );
+
+        /*
+         * スマホ縦横回転
+         */
+
+        window.addEventListener(
+            "orientationchange",
+            () => {
+
+                setTimeout(
+                    scheduleFix,
+                    150
+                );
+
+            },
+            {
+                passive: true
+            }
+        );
+
+        /*
+         * ブラウザのFullscreen変化
+         */
+
+        document.addEventListener(
+            "fullscreenchange",
+            scheduleFix
+        );
+
+        /*
+         * Leafletが後からボタンを生成しても対応
+         */
+
+        const observer =
+            new MutationObserver(
+                () => {
+                    scheduleFix();
+                }
+            );
+
+        observer.observe(
+            mapEl,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
+
+        /*
+         * Leafletの初期描画後にも再確認
+         */
+
+        setTimeout(
+            scheduleFix,
+            100
+        );
+
+        setTimeout(
+            scheduleFix,
+            500
+        );
+
+        setTimeout(
+            scheduleFix,
+            1000
+        );
+    }
+
+    /*
+     * planner.js 自体がDOMContentLoaded内で
+     * 実行される場合にも対応
+     */
+
+    if (
+        document.readyState ===
+        "loading"
+    ) {
+        document.addEventListener(
+            "DOMContentLoaded",
+            init,
+            {
+                once: true
+            }
+        );
+    } else {
+        init();
+    }
+
+})();
