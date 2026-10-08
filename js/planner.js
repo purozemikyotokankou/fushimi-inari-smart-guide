@@ -41,6 +41,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
     const SAVED_ROUTE_KEY = "selectedRoute";
 
+    // 写真ファイルが未配置でもスポット一覧・地図が停止しないようにする。
+    // 写真を追加したあと true に変更すれば画像表示を有効化できる。
+    const ENABLE_PHOTOS = false;
+
     // Google Form URL
     // planner.html の body に
     // data-google-form-url="https://docs.google.com/forms/..."
