@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V12-APPLE-MAP-FIXED";
-    console.log("[Fushimi Inari Smart Guide] planner.js V12-APPLE-MAP-FIXED loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V13-MOBILE-GALAXY-FIXED";
+    console.log("[Fushimi Inari Smart Guide] planner.js V13-MOBILE-GALAXY-FIXED loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -221,34 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
 
-    // ============================================================
-    // OpenStreetMap
-    // ============================================================
-
-    const osmLayer =
-        L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-                maxZoom: 19,
-                attribution:
-                    "&copy; OpenStreetMap contributors"
-            }
-        );
-
     gsiLayer.addTo(map);
-
-    L.control.layers(
-        {
-            "地理院地図（モノクロ）":
-                gsiLayer,
-            "OpenStreetMap":
-                osmLayer
-        },
-        null,
-        {
-            collapsed: true
-        }
-    ).addTo(map);
 
     // ============================================================
     // ルート用Pane
@@ -603,6 +576,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
             setPlannerSheetState("expanded");
+            requestAnimationFrame(function () {
+                if (typeof map?.invalidateSize === "function") {
+                    map.invalidateSize({ pan: false });
+                }
+            });
         } else {
             setPlannerSheetState("normal");
         }
@@ -637,6 +615,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return false;
         }
 
+        console.log("Google Form navigation:", url);
         window.location.assign(url);
         return true;
     }
@@ -6112,11 +6091,15 @@ document.addEventListener("DOMContentLoaded", function () {
             walkTime.textContent = "0分";
         }
 
-        window.requestAnimationFrame(function () {
-            if (typeof map?.invalidateSize === "function") {
+        if (typeof map?.invalidateSize === "function") {
+            window.requestAnimationFrame(function () {
                 map.invalidateSize({ pan: false });
-            }
-        });
+            });
+        }
+
+        // 「ナビ終了」は案内を完全に終了したあと、
+        // そのままアンケートページへ進む。
+        openGoogleForm();
     }
 
     function updateNavigationPanel() {
