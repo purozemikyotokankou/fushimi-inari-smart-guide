@@ -594,6 +594,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updatePlannerSheetSummary();
 
+    // スマホではスポット一覧が最初から見える状態にする。
+    // マップを主役にしつつ、一覧が潰れて操作できなくなるのを防ぐ。
+    function applyMobileSheetDefault() {
+        if (!plannerBottomSheet) {
+            return;
+        }
+
+        if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
+            setPlannerSheetState("expanded");
+        } else {
+            setPlannerSheetState("normal");
+        }
+    }
+
+    applyMobileSheetDefault();
+
+    window.addEventListener("orientationchange", function () {
+        setTimeout(applyMobileSheetDefault, 220);
+    });
+
     // ============================================================
     // Google Form
     // ============================================================
