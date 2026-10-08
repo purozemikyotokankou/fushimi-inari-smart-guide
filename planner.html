@@ -1725,6 +1725,209 @@
             }
         }
 
+        /* =========================================================
+           FINAL FIX — SELECTED SPOTS NEVER HIDE THE MAP
+
+           PC  : left = spot controls / right = map
+           <=1000px: map first, then spot controls
+           Mobile: selected spots become a compact horizontal rail
+                    and the map is NOT sticky, so it cannot cover content.
+        ========================================================= */
+
+        .planner-workspace {
+            position: relative;
+        }
+
+        @media (min-width: 1001px) {
+            .planner-workspace {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) !important;
+                align-items: start !important;
+            }
+
+            .planner-workspace > .planner-map-panel {
+                grid-column: 2 !important;
+                grid-row: 1 !important;
+                position: sticky !important;
+                top: 88px !important;
+            }
+
+            .planner-workspace > .planner-spot-panel {
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .planner-workspace {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+            }
+
+            .planner-workspace > .planner-map-panel {
+                order: 1 !important;
+                position: relative !important;
+                top: auto !important;
+                z-index: 1 !important;
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+            .planner-workspace > .planner-spot-panel {
+                order: 2 !important;
+                width: 100% !important;
+            }
+
+            .planner-workspace > .planner-map-panel #map {
+                width: 100% !important;
+                height: min(48svh, 500px) !important;
+                min-height: 300px !important;
+                aspect-ratio: auto !important;
+                margin: 0 !important;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .planner-workspace {
+                gap: 10px !important;
+            }
+
+            .planner-workspace > .planner-map-panel {
+                position: relative !important;
+                top: auto !important;
+            }
+
+            .planner-workspace > .planner-map-panel #map {
+                height: min(43svh, 390px) !important;
+                min-height: 275px !important;
+            }
+
+            /* 選択中は地図の下にある独立した細いレールとして表示 */
+            .planner-workspace > .planner-spot-panel {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            .planner-workspace > .planner-spot-panel > .selected-section {
+                order: 1 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 12px 12px 10px !important;
+                border-radius: 20px !important;
+                overflow: hidden !important;
+            }
+
+            .planner-workspace > .planner-spot-panel > section:not(.selected-section):not(.spot-list-window) {
+                order: 2 !important;
+            }
+
+            .planner-workspace > .planner-spot-panel > .spot-list-window {
+                order: 3 !important;
+            }
+
+            .planner-workspace > .planner-spot-panel > .selected-section h2 {
+                margin: 0 0 8px !important;
+                font-size: 15px !important;
+                line-height: 1.2 !important;
+            }
+
+            #selectedSpots {
+                min-height: 0 !important;
+                padding: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            #selectedList {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 8px !important;
+                width: 100% !important;
+                min-height: 42px !important;
+                max-height: 52px !important;
+                padding: 2px 2px 5px !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                scrollbar-width: none !important;
+                overscroll-behavior-x: contain !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            #selectedList::-webkit-scrollbar {
+                display: none !important;
+            }
+
+            #selectedList > .selected-spot {
+                flex: 0 0 auto !important;
+                min-width: max-content !important;
+                width: auto !important;
+                max-width: 78vw !important;
+                padding: 8px 9px 8px 11px !important;
+                border-radius: 999px !important;
+                gap: 8px !important;
+                box-shadow:
+                    0 5px 14px rgba(0,0,0,.055),
+                    inset 0 1px 0 rgba(255,255,255,.94) !important;
+            }
+
+            #selectedList > .selected-spot > span {
+                max-width: 56vw !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                font-size: 12px !important;
+            }
+
+            #selectedList > .selected-spot button {
+                width: 25px !important;
+                height: 25px !important;
+                flex: 0 0 25px !important;
+                font-size: 16px !important;
+            }
+
+            #selectedList > p {
+                width: 100% !important;
+                min-width: 100% !important;
+                padding: 8px !important;
+                margin: 0 !important;
+                font-size: 12px !important;
+                border-radius: 14px !important;
+            }
+
+            /* ナビは地図の中にいても最小サイズ。地図そのものを隠さない */
+            .planner-v11-map-panel {
+                left: 5px !important;
+                right: 5px !important;
+                bottom: 5px !important;
+            }
+
+            .planner-v11-nav-card {
+                width: min(100%, 420px) !important;
+                max-height: 126px !important;
+                padding: 9px 11px !important;
+                border-radius: 17px !important;
+                overflow: hidden !important;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .planner-workspace > .planner-map-panel #map {
+                height: 38svh !important;
+                min-height: 255px !important;
+            }
+
+            .planner-workspace > .planner-spot-panel > .selected-section {
+                padding: 10px 10px 8px !important;
+            }
+
+            #selectedList > .selected-spot {
+                padding: 7px 8px 7px 10px !important;
+            }
+        }
+
     </style>
 </head>
 
@@ -1800,7 +2003,46 @@
 
         <div class="planner-workspace">
 
-            <div class="planner-spot-panel">
+<div class="planner-map-panel">
+
+                <section class="planner-map-section">
+
+                    <h2>
+                        地図
+                    </h2>
+
+                    <div id="map"></div>
+
+                    <div class="planner-map-buttons">
+
+                        <button
+                            type="button"
+                            id="locationBtn"
+                        >
+                            📍 現在地
+                        </button>
+
+                        <button
+                            type="button"
+                            id="createRouteBtn"
+                        >
+                            🧭 ルート作成
+                        </button>
+
+                        <button
+                            type="button"
+                            id="clearBtn"
+                        >
+                            ✕ ルートを消去
+                        </button>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+<div class="planner-spot-panel">
 
                 <!-- SEARCH -->
                 <section>
@@ -1901,20 +2143,6 @@
                 </section>
 
 
-                <!-- SPOT LIST -->
-                <section class="spot-list-window">
-
-                    <h2 data-i18n="spotList">
-                        スポット一覧
-                    </h2>
-
-                    <div id="spotList">
-                        <!-- planner.js -->
-                    </div>
-
-                </section>
-
-
                 <!-- SELECTED SPOTS -->
                 <section class="selected-section">
 
@@ -1932,52 +2160,30 @@
 
                     </div>
 
-                </section>
 
-            </div>
+                <!-- SPOT LIST -->
+                <section class="spot-list-window">
 
-
-            <!-- MAP -->
-            <div class="planner-map-panel">
-
-                <section class="planner-map-section">
-
-                    <h2>
-                        地図
+                    <h2 data-i18n="spotList">
+                        スポット一覧
                     </h2>
 
-                    <div id="map"></div>
-
-                    <div class="planner-map-buttons">
-
-                        <button
-                            type="button"
-                            id="locationBtn"
-                        >
-                            📍 現在地
-                        </button>
-
-                        <button
-                            type="button"
-                            id="createRouteBtn"
-                        >
-                            🧭 ルート作成
-                        </button>
-
-                        <button
-                            type="button"
-                            id="clearBtn"
-                        >
-                            ✕ ルートを消去
-                        </button>
-
+                    <div id="spotList">
+                        <!-- planner.js -->
                     </div>
+
+                </section>
+
+
+
 
                 </section>
 
             </div>
 
         </div>
+
+</div>
 
 
         <!-- =====================================================
