@@ -1,972 +1,303 @@
-/* ================================================================
-   Fushimi Inari Smart Guide / planner.js V11.7
-   MARKER POPUP + LIQUID GLASS FINAL
-   ================================================================ */
+document.addEventListener("DOMContentLoaded", function () {
 
-document.addEventListener("DOMContentLoaded", () => {
-    "use strict";
+    // ============================================================
+    // BUILD MARKER — V11.2
+    // この文字列がConsoleに出れば、このplanner.jsが実行されています。
+    // ============================================================
+    window.__FUSHIMI_PLANNER_BUILD__ = "V11.2-ALL-IN-ONE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V11.2-ALL-IN-ONE loaded");
 
-    const BUILD_ID = "V11.7-MARKER-POPUP-FINAL";
-    window.__FUSHIMI_PLANNER_BUILD__ = BUILD_ID;
+    // ============================================================
+    // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
+    //
+    // V11 additions
+    // ① 現在地を出発地点として利用
+    // ② Liquid Glass UIをJSから追加
+    // ③ GSI地図をモノクロ表示
+    // ④ ルート線を #e94709
+    // ⑤ routes.json をグラフとして扱う
+    // ⑥ routes.json の複数区間を自動接続
+    // ⑦ 直線フォールバックは使用しない
+    // ⑧ 一般道路はOSRM徒歩ルート
+    // ⑨ 現在地→最寄りの既知地点→routes.json→目的地のハイブリッド
+    // ⑩ 選択順番号を地図に表示
+    // ⑪ 次の目的地 / 残距離 / 徒歩時間をLiquid Glass表示
+    // ⑫ 現在地追跡ナビ
+    // ⑬ 最終到着時にGoogleフォームへ進める準備
+    // ============================================================
 
-    const SPOTS_URL = "./data/spots.json";
-    const ROUTES_URL = "./data/routes.json";
+    const DATA_URL = "./data/spots.json";
+
+    // 最初に通常のroutes.jsonを使い、
+    // 存在しなければGIS系ファイルを探す。
+    const ROUTE_URLS = [
+        "./data/routes.json",
+        "./data/routes_from_gis.json",
+        "./data/routes_gis_shortest_fixed.json",
+        "./routes.json",
+        "./routes_from_gis.json",
+        "./routes_gis_shortest_fixed.json"
+    ];
+
     const ICON_DIR = "./images/icons/";
-    const SELECTED_KEY = "plannerSelectedSpots";
+
+    const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
     const SAVED_ROUTE_KEY = "selectedRoute";
-    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfZQYyVeUwdfxDnmGi2dWMtzfNxWuxCfhIR0BTycJzAO8pytQ/viewform?usp=dialog";
 
-    const COLOR = {
-        pin: "#ff4b00",
-        route: "#e94709",
-        gray: "#8A8A8E"
+    // Google Form URL
+    // planner.html の body に
+    // data-google-form-url="https://docs.google.com/forms/..."
+    // を付けても設定できる。
+    const GOOGLE_FORM_URL =
+        document.body.dataset.googleFormUrl || "";
+
+    const GRAY_COLOR = "#8A8A8E";
+    const PIN_COLOR = "#ff4b00";
+    const ROUTE_COLOR = "#e94709";
+
+    // ============================================================
+    // アイコンカラー
+    // ============================================================
+
+    const ICON_COLOR_MAP = {
+        toilet: "#B97800",
+        "toilet-male": "#2F86B2",
+        "toilet-female": "#C95F66",
+        "toilet-western": "#B97800",
+        "toilet-japanese": "#B97800",
+        washlet: "#B97800",
+
+        wheelchair: "#21805D",
+        "diaper-changing": "#21805D",
+        "baby-chair": "#21805D",
+        "changing-table": "#21805D",
+        ostomate: "#21805D",
+
+        scenery: "#5C548F",
+        viewpoint: "#5C548F",
+        shrine: "#A83432",
+        hiking: "#2C7F5E",
+        restaurant: "#B97800",
+        guide: "#327B9B",
+
+        torii: "#A83432"
     };
 
-    const CONFIG = {
-        walkSpeed: 80,
-        arrivalRadius: 35,
-        arrowSpacing: 170,
-        hybridRadius: 1200,
-        hybridCandidates: 5
-    };
-
-    const $ = id => document.getElementById(id);
-
-    const els = {
-        spotList: $("spotList"),
-        selectedList: $("selectedList"),
-        search: $("searchInput"),
-        location: $("locationBtn"),
-        create: $("createRouteBtn"),
-        clear: $("clearBtn"),
-        save: $("saveRoute"),
-        count: $("spotCount"),
-        distance: $("distance"),
-        walk: $("walkTime"),
-        stay: $("stayTime")
-    };
-
-    const categoryButtons = document.querySelectorAll(".category");
-
-    if (!window.L || !$("map")) {
-        console.error("Leafletまたは#mapが見つかりません。");
-        return;
-    }
+    // ============================================================
+    // 状態
+    // ============================================================
 
     let spots = [];
     let routes = [];
     let selectedSpots = [];
-    let markers = new Map();
+
+    let markers = [];
+    let markerMap = new Map();
 
     let routeLine = null;
-    let arrowLayer = null;
+    let routeSegments = [];
     let routeNumberMarkers = [];
 
-    let currentLocation = null;
     let currentLocationMarker = null;
-    let currentAccuracyCircle = null;
-    let watchId = null;
-    let locationPromise = null;
+    let currentLocation = null;
 
+    let navigationWatchId = null;
+    let navigationActive = false;
     let navigationLegs = [];
     let navigationLegIndex = 0;
-    let navigationActive = false;
-    let routeToken = 0;
 
-    /* ============================================================
-       MAP
-       ============================================================ */
+    let routeArrowLayer = null;
 
-    const map = L.map("map", {
-        zoomControl: true,
-        preferCanvas: true
-    }).setView([34.96705, 135.7743], 16);
+    // ============================================================
+    // HTML要素
+    // ============================================================
+
+    const spotList =
+        document.getElementById("spotList");
+
+    const selectedList =
+        document.getElementById("selectedList");
+
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const locationBtn =
+        document.getElementById("locationBtn");
+
+    const createRouteBtn =
+        document.getElementById("createRouteBtn");
+
+    const clearBtn =
+        document.getElementById("clearBtn");
+
+    const saveRouteBtn =
+        document.getElementById("saveRoute");
+
+    const spotCount =
+        document.getElementById("spotCount");
+
+    const distance =
+        document.getElementById("distance");
+
+    const walkTime =
+        document.getElementById("walkTime");
+
+    const stayTime =
+        document.getElementById("stayTime");
+
+    const categoryButtons =
+        document.querySelectorAll(".category");
+
+    // ============================================================
+    // Leaflet地図
+    // ============================================================
+
+    const map =
+        L.map("map", {
+            zoomControl: true,
+            preferCanvas: true
+        }).setView(
+            [34.96705, 135.7743],
+            16
+        );
+
+    function refreshPlannerMapSize() {
+        requestAnimationFrame(function () {
+            if (map && typeof map.invalidateSize === "function") {
+                map.invalidateSize({
+                    pan: false
+                });
+            }
+        });
+    }
+
+    window.addEventListener("resize", refreshPlannerMapSize);
+    window.addEventListener("orientationchange", function () {
+        setTimeout(refreshPlannerMapSize, 180);
+    });
+    setTimeout(refreshPlannerMapSize, 120);
+
+    // ============================================================
+    // GSIモノクロ地図
+    // ============================================================
 
     map.createPane("plannerGsiPane");
-    map.getPane("plannerGsiPane").style.zIndex = "200";
-    map.getPane("plannerGsiPane").style.filter = "grayscale(100%)";
-    map.getPane("plannerGsiPane").style.webkitFilter = "grayscale(100%)";
 
-    map.createPane("plannerRoutePane");
-    map.getPane("plannerRoutePane").style.zIndex = "450";
-    map.getPane("plannerRoutePane").style.pointerEvents = "none";
+    map.getPane(
+        "plannerGsiPane"
+    ).style.zIndex = "200";
 
-    map.createPane("plannerMarkerPane");
-    map.getPane("plannerMarkerPane").style.zIndex = "650";
-    map.getPane("plannerMarkerPane").style.pointerEvents = "auto";
+    map.getPane(
+        "plannerGsiPane"
+    ).style.filter =
+        "grayscale(100%)";
 
-    map.createPane("plannerArrowPane");
-    map.getPane("plannerArrowPane").style.zIndex = "700";
-    map.getPane("plannerArrowPane").style.pointerEvents = "none";
+    map.getPane(
+        "plannerGsiPane"
+    ).style.webkitFilter =
+        "grayscale(100%)";
 
-    map.createPane("plannerNumberPane");
-    map.getPane("plannerNumberPane").style.zIndex = "720";
-    map.getPane("plannerNumberPane").style.pointerEvents = "none";
+    const gsiLayer =
+        L.tileLayer(
+            "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+            {
+                maxZoom: 18,
+                pane: "plannerGsiPane",
+                attribution:
+                    '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院</a>'
+            }
+        );
 
-    map.createPane("plannerCurrentPane");
-    map.getPane("plannerCurrentPane").style.zIndex = "780";
-    map.getPane("plannerCurrentPane").style.pointerEvents = "none";
+    // ============================================================
+    // OpenStreetMap
+    // ============================================================
 
-    const gsiLayer = L.tileLayer(
-        "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-        {
-            maxZoom: 18,
-            pane: "plannerGsiPane",
-            attribution: '&copy; 国土地理院'
-        }
-    ).addTo(map);
+    const osmLayer =
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 19,
+                attribution:
+                    "&copy; OpenStreetMap contributors"
+            }
+        );
 
-    const osmLayer = L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            maxZoom: 19,
-            attribution: "&copy; OpenStreetMap contributors"
-        }
-    );
+    gsiLayer.addTo(map);
 
     L.control.layers(
         {
-            "地理院地図（モノクロ）": gsiLayer,
-            "OpenStreetMap": osmLayer
+            "地理院地図（モノクロ）":
+                gsiLayer,
+            "OpenStreetMap":
+                osmLayer
         },
         null,
-        { collapsed: true }
+        {
+            collapsed: true
+        }
     ).addTo(map);
 
-    /* ============================================================
-       CSS
-       ============================================================ */
-
-    function injectCSS() {
-        if ($("plannerV117CSS")) return;
-
-        const style = document.createElement("style");
-        style.id = "plannerV117CSS";
-
-        style.textContent = `
-            #map .leaflet-marker-icon.planner-marker-icon {
-                pointer-events: auto !important;
-                touch-action: manipulation !important;
-                cursor: pointer !important;
-            }
-
-            #map #plannerMarkerPane {
-                pointer-events: auto !important;
-            }
-
-            #map #plannerNumberPane,
-            #map #plannerArrowPane,
-            #map #plannerCurrentPane {
-                pointer-events: none !important;
-            }
-
-            .planner-marker-root {
-                position: relative;
-                width: 58px;
-                height: 68px;
-                display: flex;
-                align-items: flex-start;
-                justify-content: center;
-                perspective: 1000px;
-                cursor: pointer;
-                touch-action: manipulation;
-                user-select: none;
-            }
-
-            .planner-marker-pin {
-                position: relative;
-                width: 50px;
-                height: 50px;
-                margin-top: 1px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2px solid ${COLOR.pin};
-                border-radius: 50%;
-                background: linear-gradient(
-                    145deg,
-                    rgba(255,255,255,.97),
-                    rgba(255,247,243,.82)
-                );
-                box-shadow:
-                    0 8px 20px rgba(0,0,0,.12),
-                    0 0 0 2px rgba(255,255,255,.82),
-                    inset 0 1px 0 rgba(255,255,255,1);
-                backdrop-filter: blur(16px) saturate(1.08);
-                -webkit-backdrop-filter: blur(16px) saturate(1.08);
-                transform-style: preserve-3d;
-                transition:
-                    transform .25s cubic-bezier(.16,1,.3,1),
-                    box-shadow .25s ease;
-            }
-
-            .planner-marker-pin::after {
-                content: "";
-                position: absolute;
-                left: 50%;
-                bottom: -7px;
-                width: 16px;
-                height: 16px;
-                transform: translateX(-50%) rotate(45deg);
-                background: rgba(255,247,243,.88);
-                border-right: 2px solid ${COLOR.pin};
-                border-bottom: 2px solid ${COLOR.pin};
-                z-index: -1;
-            }
-
-            .planner-marker-icon {
-                position: absolute;
-                left: 50%;
-                top: 50%;
-                width: 28px;
-                height: 28px;
-                object-fit: contain;
-                transform: translate(-50%,-50%) scale(1);
-                transition:
-                    opacity .18s ease,
-                    transform .25s cubic-bezier(.16,1,.3,1);
-                pointer-events: none !important;
-            }
-
-            .planner-marker-icon.gray {
-                opacity: 1;
-            }
-
-            .planner-marker-icon.color {
-                opacity: 0;
-            }
-
-            .planner-marker-root:hover .planner-marker-pin {
-                transform:
-                    translateY(-3px)
-                    scale(1.08);
-                animation: plannerMarkerRotateX .8s ease;
-                box-shadow:
-                    0 12px 25px rgba(0,0,0,.18),
-                    0 0 0 3px rgba(255,75,0,.12),
-                    inset 0 1px 0 rgba(255,255,255,1);
-            }
-
-            .planner-marker-root:hover .planner-marker-icon.gray {
-                opacity: 0;
-            }
-
-            .planner-marker-root:hover .planner-marker-icon.color {
-                opacity: 1;
-                transform:
-                    translate(-50%,-50%)
-                    scale(1.10);
-            }
-
-            .planner-marker-root.selected .planner-marker-pin {
-                transform:
-                    translateY(-3px)
-                    scale(1.13);
-                box-shadow:
-                    0 14px 28px rgba(0,0,0,.21),
-                    0 0 0 4px rgba(255,75,0,.20),
-                    0 0 0 7px rgba(255,75,0,.07),
-                    inset 0 1px 0 rgba(255,255,255,1);
-                animation: none;
-            }
-
-            .planner-marker-root.selected .planner-marker-icon.gray {
-                opacity: 0;
-            }
-
-            .planner-marker-root.selected .planner-marker-icon.color {
-                opacity: 1;
-                transform:
-                    translate(-50%,-50%)
-                    scale(1.22);
-            }
-
-            @keyframes plannerMarkerRotateX {
-                0% {
-                    transform:
-                        translateY(-3px)
-                        rotateX(0deg)
-                        scale(1.08);
-                }
-
-                30% {
-                    transform:
-                        translateY(-3px)
-                        rotateX(-11deg)
-                        scale(1.08);
-                }
-
-                60% {
-                    transform:
-                        translateY(-3px)
-                        rotateX(9deg)
-                        scale(1.08);
-                }
-
-                100% {
-                    transform:
-                        translateY(-3px)
-                        rotateX(0deg)
-                        scale(1.08);
-                }
-            }
-
-            .spot-list-window #spotList {
-                display: grid;
-                grid-template-columns:
-                    repeat(2,minmax(0,1fr));
-                gap: 16px;
-                align-items: stretch;
-            }
-
-            .planner-spot-card {
-                position: relative;
-                overflow: hidden;
-                min-width: 0;
-                border:
-                    1px solid rgba(255,255,255,.78);
-                border-radius: 24px;
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.78),
-                        rgba(255,255,255,.46)
-                    );
-                box-shadow:
-                    0 14px 34px rgba(0,0,0,.055),
-                    inset 0 1px 0 rgba(255,255,255,.92);
-                backdrop-filter:
-                    blur(20px)
-                    saturate(1.16);
-                -webkit-backdrop-filter:
-                    blur(20px)
-                    saturate(1.16);
-                cursor: pointer;
-                transition:
-                    transform .22s
-                        cubic-bezier(.16,1,.3,1),
-                    box-shadow .22s ease,
-                    border-color .22s ease;
-            }
-
-            .planner-spot-card:hover {
-                transform: translateY(-4px);
-                border-color:
-                    rgba(255,75,0,.23);
-                box-shadow:
-                    0 20px 40px rgba(0,0,0,.08),
-                    inset 0 1px 0 rgba(255,255,255,.98);
-            }
-
-            .planner-spot-card.selected {
-                border-color:
-                    rgba(255,75,0,.44);
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.86),
-                        rgba(255,241,235,.65)
-                    );
-                box-shadow:
-                    0 18px 40px rgba(233,71,9,.11),
-                    0 0 0 2px rgba(255,75,0,.08),
-                    inset 0 1px 0 rgba(255,255,255,.98);
-            }
-
-            .planner-spot-photo {
-                width: 100%;
-                height: 160px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-                border-radius: 17px;
-                margin: 0 0 12px;
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.95),
-                        rgba(236,236,240,.74)
-                    );
-                color: ${COLOR.gray};
-                font-size: 12px;
-                font-weight: 900;
-                letter-spacing: .22em;
-                border:
-                    1px solid rgba(255,255,255,.9);
-            }
-
-            .planner-spot-photo img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-
-            .planner-spot-content {
-                position: relative;
-                z-index: 1;
-                padding: 0 17px 17px;
-            }
-
-            .planner-spot-content h3 {
-                margin: 0 0 7px;
-                color: #202024;
-                font-size: 18px;
-                line-height: 1.4;
-                font-weight: 900;
-            }
-
-            .planner-spot-category {
-                display: inline-flex;
-                align-items: center;
-                min-height: 27px;
-                margin: 0 0 9px;
-                padding: 0 9px;
-                border-radius: 999px;
-                background:
-                    rgba(255,75,0,.08);
-                border:
-                    1px solid rgba(255,255,255,.76);
-                color: #A9441F;
-                font-size: 11px;
-                font-weight: 850;
-            }
-
-            .planner-spot-description {
-                margin: 0 0 9px;
-                color: #636369;
-                font-size: 13px;
-                line-height: 1.7;
-            }
-
-            .planner-spot-time {
-                margin: 0 0 10px;
-                color: #4A4A4F;
-                font-size: 12px;
-                font-weight: 800;
-            }
-
-            .planner-selected-label {
-                display: inline-flex;
-                align-items: center;
-                min-height: 28px;
-                padding: 0 10px;
-                border-radius: 999px;
-                color: #fff;
-                background:
-                    linear-gradient(
-                        145deg,
-                        ${COLOR.pin},
-                        #cf430a
-                    );
-                font-size: 11px;
-                font-weight: 900;
-                box-shadow:
-                    0 7px 16px rgba(255,75,0,.18);
-            }
-
-            .planner-popup {
-                width: 290px;
-                max-width: 290px;
-            }
-
-            .planner-popup h3 {
-                margin: 0 0 8px;
-                color: #18181b;
-                font-size: 18px;
-                line-height: 1.35;
-                font-weight: 900;
-            }
-
-            .planner-popup-category {
-                display: inline-flex;
-                align-items: center;
-                min-height: 28px;
-                padding: 0 10px;
-                margin: 0 0 9px;
-                border-radius: 999px;
-                background:
-                    rgba(255,75,0,.09);
-                color: #B8491F;
-                font-size: 11px;
-                font-weight: 800;
-            }
-
-            .planner-popup p {
-                margin: 0 0 10px;
-                color: #5D5D63;
-                font-size: 13px;
-                line-height: 1.7;
-            }
-
-            .planner-popup-select {
-                width: 100%;
-                min-height: 43px;
-                border:
-                    1px solid rgba(255,255,255,.88);
-                border-radius: 999px;
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.97),
-                        rgba(255,255,255,.60)
-                    );
-                color: #222225;
-                font: inherit;
-                font-size: 13px;
-                font-weight: 850;
-                cursor: pointer;
-                touch-action: manipulation;
-                box-shadow:
-                    0 8px 22px rgba(0,0,0,.08),
-                    inset 0 1px 0 rgba(255,255,255,.98);
-            }
-
-            .planner-popup-select.selected {
-                color: #fff;
-                background:
-                    linear-gradient(
-                        145deg,
-                        ${COLOR.pin},
-                        #cc4007
-                    );
-            }
-
-            .leaflet-popup-pane {
-                z-index: 1200 !important;
-                pointer-events: auto !important;
-            }
-
-            .leaflet-popup-content-wrapper {
-                border-radius: 19px !important;
-                border:
-                    1px solid rgba(255,255,255,.86);
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.97),
-                        rgba(247,247,249,.92)
-                    );
-                box-shadow:
-                    0 18px 45px rgba(0,0,0,.18),
-                    inset 0 1px 0 rgba(255,255,255,1);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-            }
-
-            .leaflet-popup-tip {
-                background:
-                    rgba(255,255,255,.96) !important;
-            }
-
-            .planner-route-number {
-                width: 31px;
-                height: 31px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2px solid #fff;
-                border-radius: 50%;
-                background: ${COLOR.route};
-                color: #fff;
-                font-size: 12px;
-                font-weight: 900;
-                box-shadow:
-                    0 7px 18px rgba(0,0,0,.2);
-                pointer-events: none;
-            }
-
-            .planner-route-arrow {
-                width: 0;
-                height: 0;
-                border-left:
-                    5px solid transparent;
-                border-right:
-                    5px solid transparent;
-                border-bottom:
-                    11px solid ${COLOR.route};
-                filter:
-                    drop-shadow(
-                        0 2px 4px rgba(0,0,0,.18)
-                    );
-                pointer-events: none;
-            }
-
-            .planner-current {
-                width: 46px;
-                height: 46px;
-                position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .planner-current-pulse {
-                position: absolute;
-                inset: 5px;
-                border-radius: 50%;
-                background:
-                    rgba(255,75,0,.16);
-                border:
-                    1px solid rgba(255,75,0,.25);
-                animation:
-                    plannerCurrentPulse 2s
-                    ease-out infinite;
-            }
-
-            .planner-current-pulse.delay {
-                animation-delay: -1s;
-            }
-
-            .planner-current-core {
-                width: 15px;
-                height: 15px;
-                border: 3px solid #fff;
-                border-radius: 50%;
-                background: ${COLOR.pin};
-                box-shadow:
-                    0 4px 13px rgba(0,0,0,.24);
-            }
-
-            @keyframes plannerCurrentPulse {
-                0% {
-                    transform: scale(.7);
-                    opacity: .85;
-                }
-
-                70% {
-                    transform: scale(1.8);
-                    opacity: 0;
-                }
-
-                100% {
-                    transform: scale(1.8);
-                    opacity: 0;
-                }
-            }
-
-            .planner-navigation-wrap {
-                position: absolute;
-                left: 9px;
-                right: 9px;
-                bottom: 9px;
-                z-index: 1300;
-                display: flex;
-                justify-content: center;
-                pointer-events: none;
-            }
-
-            .planner-navigation {
-                width: min(560px,calc(100% - 4px));
-                padding: 15px 16px;
-                border-radius: 23px;
-                border:
-                    1px solid rgba(255,255,255,.87);
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.86),
-                        rgba(255,255,255,.58)
-                    );
-                box-shadow:
-                    0 20px 50px rgba(0,0,0,.17),
-                    inset 0 1px 0 rgba(255,255,255,.98);
-                backdrop-filter:
-                    blur(23px)
-                    saturate(1.12);
-                -webkit-backdrop-filter:
-                    blur(23px)
-                    saturate(1.12);
-                pointer-events: auto;
-            }
-
-            .planner-navigation.hidden {
-                display:none;
-            }
-
-            .planner-nav-kicker {
-                color:#77777d;
-                font-size:10px;
-                font-weight:900;
-                letter-spacing:.16em;
-            }
-
-            .planner-nav-status {
-                color:#77777d;
-                font-size:11px;
-                font-weight:800;
-            }
-
-            .planner-nav-title {
-                margin:4px 0 0;
-                color:#202024;
-                font-size:21px;
-                line-height:1.3;
-                font-weight:900;
-            }
-
-            .planner-nav-meta {
-                display:flex;
-                flex-wrap:wrap;
-                gap:7px;
-                margin-top:10px;
-            }
-
-            .planner-nav-chip {
-                display:inline-flex;
-                align-items:center;
-                min-height:29px;
-                padding:0 10px;
-                border-radius:999px;
-                border:
-                    1px solid rgba(255,255,255,.78);
-                background:rgba(255,255,255,.60);
-                color:#48484d;
-                font-size:11px;
-                font-weight:800;
-            }
-
-            .planner-nav-progress {
-                display:flex;
-                align-items:center;
-                gap:5px;
-                overflow-x:auto;
-                margin-top:10px;
-                padding:7px;
-                border-radius:16px;
-                border:
-                    1px solid rgba(255,255,255,.72);
-                background:rgba(255,255,255,.46);
-            }
-
-            .planner-nav-step {
-                flex:0 0 auto;
-                min-height:27px;
-                display:inline-flex;
-                align-items:center;
-                padding:0 8px;
-                border-radius:999px;
-                background:rgba(255,255,255,.42);
-                color:#8A8A8E;
-                font-size:11px;
-                font-weight:850;
-            }
-
-            .planner-nav-step.current {
-                background:${COLOR.route};
-                color:#fff;
-            }
-
-            .planner-nav-step.done {
-                background:rgba(0,0,0,.06);
-                color:#7d7d82;
-            }
-
-            .planner-nav-actions {
-                display:flex;
-                gap:8px;
-                margin-top:10px;
-            }
-
-            .planner-nav-button {
-                flex:1;
-                min-height:42px;
-                border:
-                    1px solid rgba(255,255,255,.86);
-                border-radius:999px;
-                background:
-                    linear-gradient(
-                        145deg,
-                        rgba(255,255,255,.93),
-                        rgba(255,255,255,.56)
-                    );
-                color:#222225;
-                font:inherit;
-                font-size:12px;
-                font-weight:850;
-                cursor:pointer;
-            }
-
-            .planner-nav-button.primary {
-                color:#fff;
-                background:
-                    linear-gradient(
-                        145deg,
-                        ${COLOR.pin},
-                        #cc4007
-                    );
-                border-color:transparent;
-            }
-
-            .planner-nav-button:disabled {
-                opacity:.45;
-                cursor:not-allowed;
-            }
-
-            .planner-nav-arrival {
-                margin-top:9px;
-                padding:11px 12px;
-                border-radius:15px;
-                background:rgba(255,255,255,.52);
-                font-size:12px;
-                line-height:1.6;
-            }
-
-            .planner-nav-arrival strong {
-                display:block;
-                margin-bottom:2px;
-                font-size:14px;
-                font-weight:900;
-            }
-
-            @media(max-width:760px){
-                .spot-list-window #spotList{
-                    grid-template-columns:1fr;
-                }
-
-                .planner-nav-actions{
-                    flex-direction:column;
-                }
-
-                .planner-navigation{
-                    border-radius:19px;
-                }
-            }
-        `;
-
-        document.head.appendChild(style);
+    // ============================================================
+    // ルート用Pane
+    // ============================================================
+
+    map.createPane(
+        "plannerRoutePane"
+    );
+
+    map.getPane(
+        "plannerRoutePane"
+    ).style.zIndex = "450";
+
+    map.createPane(
+        "plannerNumberPane"
+    );
+
+    map.getPane(
+        "plannerNumberPane"
+    ).style.zIndex = "720";
+
+    map.createPane(
+        "plannerCurrentPane"
+    );
+
+    map.getPane(
+        "plannerCurrentPane"
+    ).style.zIndex = "760";
+
+    // ============================================================
+    // 多言語
+    // ============================================================
+
+    function getCurrentLanguage() {
+
+        return (
+            localStorage.getItem(
+                "language"
+            ) || "ja"
+        );
     }
 
-    injectCSS();
+    function getLocalizedValue(value) {
 
-    /* ============================================================
-       NAVIGATION UI
-       ============================================================ */
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return "";
+        }
 
-    const navWrap = document.createElement("div");
-
-    navWrap.className =
-        "planner-navigation-wrap";
-
-    navWrap.innerHTML = `
-        <div
-            id="plannerNavigation"
-            class="planner-navigation hidden"
-        >
-            <div
-                style="
-                    display:flex;
-                    justify-content:space-between;
-                    gap:10px;
-                "
-            >
-                <span class="planner-nav-kicker">
-                    NAVIGATION
-                </span>
-
-                <span
-                    id="plannerNavStatus"
-                    class="planner-nav-status"
-                >
-                    準備中
-                </span>
-            </div>
-
-            <h3
-                id="plannerNavTitle"
-                class="planner-nav-title"
-            >
-                次の目的地
-            </h3>
-
-            <div
-                id="plannerNavMeta"
-                class="planner-nav-meta"
-            ></div>
-
-            <div
-                id="plannerNavProgress"
-                class="planner-nav-progress"
-            ></div>
-
-            <div class="planner-nav-actions">
-
-                <button
-                    id="plannerNavStart"
-                    class="planner-nav-button primary"
-                    type="button"
-                >
-                    現在地からナビ開始
-                </button>
-
-                <button
-                    id="plannerNavStop"
-                    class="planner-nav-button"
-                    type="button"
-                >
-                    ナビ終了
-                </button>
-
-            </div>
-
-            <div
-                id="plannerNavArrival"
-                class="planner-nav-arrival"
-                style="display:none;"
-            ></div>
-
-        </div>
-    `;
-
-    map.getContainer().appendChild(navWrap);
-
-    const nav = {
-        card: $("plannerNavigation"),
-        status: $("plannerNavStatus"),
-        title: $("plannerNavTitle"),
-        meta: $("plannerNavMeta"),
-        progress: $("plannerNavProgress"),
-        start: $("plannerNavStart"),
-        stop: $("plannerNavStop"),
-        arrival: $("plannerNavArrival")
-    };
-
-    function showNavigation() {
-        nav.card.classList.remove("hidden");
-    }
-
-    function hideNavigation() {
-        nav.card.classList.add("hidden");
-    }
-
-    /* ============================================================
-       UTIL
-       ============================================================ */
-
-    function escapeHTML(value) {
-        return String(value ?? "")
-            .replace(/&/g,"&amp;")
-            .replace(/</g,"&lt;")
-            .replace(/>/g,"&gt;")
-            .replace(/"/g,"&quot;")
-            .replace(/'/g,"&#039;");
-    }
-
-    function getLanguage() {
-        return localStorage.getItem("language") || "ja";
-    }
-
-    function localized(value) {
-        if (value == null) return "";
-
-        if (typeof value !== "object") {
+        if (
+            typeof value !== "object"
+        ) {
             return String(value);
         }
 
-        const l = getLanguage();
+        const language =
+            getCurrentLanguage();
 
         return (
-            value[l] ||
+            value[language] ||
             value.ja ||
             value.en ||
             value.zh ||
@@ -976,151 +307,249 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    function safeURL(value) {
-        try {
-            const url = new URL(
-                value,
-                window.location.href
-            );
+    function getText(
+        key,
+        fallback
+    ) {
 
-            return ["http:","https:"]
-                .includes(url.protocol)
-                ? url.href
-                : "";
-        } catch (_) {
-            return "";
-        }
-    }
+        if (
+            typeof window.t ===
+            "function"
+        ) {
 
-    function formatDistance(meters) {
-        const m = Math.max(
-            0,
-            Math.round(Number(meters) || 0)
-        );
+            try {
 
-        return m < 1000
-            ? `${m} m`
-            : `${(m / 1000).toFixed(2)} km`;
-    }
+                const translated =
+                    window.t(key);
 
-    function formatMinutes(minutes) {
-        const n = Math.max(
-            0,
-            Math.ceil(Number(minutes) || 0)
-        );
+                if (
+                    translated &&
+                    translated !== key
+                ) {
+                    return translated;
+                }
 
-        if (n < 60) {
-            return `${n}分`;
-        }
-
-        const h = Math.floor(n / 60);
-        const m = n % 60;
-
-        return m
-            ? `${h}時間${m}分`
-            : `${h}時間`;
-    }
-
-    function stayMinutes(value) {
-        const s = String(value ?? "");
-
-        const h = s.match(
-            /(\d+(?:\.\d+)?)\s*(?:時間|hour|hours|시간|小时)/i
-        );
-
-        const m = s.match(
-            /(\d+(?:\.\d+)?)\s*(?:分|minutes?|분|分钟)/i
-        );
-
-        let total = 0;
-
-        if (h) {
-            total += Number(h[1]) * 60;
-        }
-
-        if (m) {
-            total += Number(m[1]);
-        }
-
-        if (!total) {
-            const n = s.match(/\d+/);
-
-            if (n) {
-                total = Number(n[0]);
+            } catch (error) {
+                // 翻訳関数に依存しない。
             }
         }
 
-        return Number.isFinite(total)
-            ? Math.round(total)
-            : 0;
+        return fallback;
     }
 
-    function pointOfSpot(spot) {
-        return [
-            Number(spot.lat),
-            Number(spot.lng)
-        ];
+    function escapeHTML(value) {
+
+        return String(
+            value ?? ""
+        )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
     }
 
-    function pathDistance(path) {
-        if (!Array.isArray(path) || path.length < 2) {
-            return 0;
+    function getSafeURL(value) {
+
+        if (!value) {
+            return "";
         }
 
-        let total = 0;
+        try {
 
-        for (
-            let i = 0;
-            i < path.length - 1;
-            i++
+            const url =
+                new URL(
+                    value,
+                    window.location.href
+                );
+
+            if (
+                url.protocol ===
+                    "http:" ||
+                url.protocol ===
+                    "https:"
+            ) {
+                return url.href;
+            }
+
+        } catch (error) {
+            return "";
+        }
+
+        return "";
+    }
+
+    function getOfficialSiteText() {
+
+        const language =
+            getCurrentLanguage();
+
+        if (
+            language === "en"
         ) {
-            total += map.distance(
-                path[i],
-                path[i + 1]
+            return "Official Website";
+        }
+
+        if (
+            language === "zh"
+        ) {
+            return "官方网站";
+        }
+
+        if (
+            language === "ko"
+        ) {
+            return "공식 웹사이트";
+        }
+
+        return "公式サイトを見る";
+    }
+
+    function getSelectedText() {
+
+        const language =
+            getCurrentLanguage();
+
+        if (
+            language === "en"
+        ) {
+            return "✓ Selected";
+        }
+
+        if (
+            language === "zh"
+        ) {
+            return "✓ 已选择";
+        }
+
+        if (
+            language === "ko"
+        ) {
+            return "✓ 선택됨";
+        }
+
+        return "✓ 選択中";
+    }
+
+    function getNoSelectedText() {
+
+        const language =
+            getCurrentLanguage();
+
+        if (
+            language === "en"
+        ) {
+            return (
+                "No spots have been selected yet."
             );
         }
 
-        return total;
-    }
-
-    function mergePath(a,b) {
-        if (!a.length) {
-            return b.slice();
-        }
-
-        if (!b.length) {
-            return a.slice();
-        }
-
-        const out = a.slice();
-
         if (
-            map.distance(
-                out[out.length - 1],
-                b[0]
-            ) <= 2
+            language === "zh"
         ) {
-            out.push(...b.slice(1));
-        } else {
-            out.push(...b);
+            return "尚未选择任何景点。";
         }
 
-        return out;
+        if (
+            language === "ko"
+        ) {
+            return (
+                "아직 선택한 관광지가 없습니다."
+            );
+        }
+
+        return "スポットを選択してください。";
     }
 
-    /* ============================================================
-       CATEGORY
-       ============================================================ */
+    function getSelectButtonText() {
 
-    function normalizeCategory(value) {
-        const v =
-            String(value ?? "")
-                .trim()
-                .toLowerCase();
+        const language =
+            getCurrentLanguage();
 
         if (
-            ["all","すべて","全部"]
-                .includes(v)
+            language === "en"
+        ) {
+            return "Select this spot";
+        }
+
+        if (
+            language === "zh"
+        ) {
+            return "选择此景点";
+        }
+
+        if (
+            language === "ko"
+        ) {
+            return "이 장소 선택";
+        }
+
+        return "このスポットを選択";
+    }
+
+    function getNavigationLabel() {
+
+        const language =
+            getCurrentLanguage();
+
+        if (
+            language === "en"
+        ) {
+            return "Navigation";
+        }
+
+        if (
+            language === "zh"
+        ) {
+            return "导航";
+        }
+
+        if (
+            language === "ko"
+        ) {
+            return "내비게이션";
+        }
+
+        return "ナビゲーション";
+    }
+
+    // ============================================================
+    // カテゴリー
+    // ============================================================
+
+    function normalizeCategory(
+        category
+    ) {
+
+        const value =
+            String(
+                category ?? ""
+            )
+            .trim()
+            .toLowerCase();
+
+        if (
+            [
+                "all",
+                "すべて",
+                "全部",
+                "전체"
+            ].includes(value)
         ) {
             return "all";
         }
@@ -1137,7 +566,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 "观景",
                 "경관",
                 "전망"
-            ].includes(v)
+            ].includes(value)
         ) {
             return "scenery";
         }
@@ -1150,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 "restaurants",
                 "餐厅",
                 "음식점"
-            ].includes(v)
+            ].includes(value)
         ) {
             return "restaurant";
         }
@@ -1160,7 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 "神社",
                 "shrine",
                 "신사"
-            ].includes(v)
+            ].includes(value)
         ) {
             return "shrine";
         }
@@ -1168,11 +597,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             [
                 "登山",
-                "ハイキング",
                 "hiking",
-                "trail",
-                "산행"
-            ].includes(v)
+                "등산"
+            ].includes(value)
         ) {
             return "hiking";
         }
@@ -1181,10 +608,8 @@ document.addEventListener("DOMContentLoaded", () => {
             [
                 "交通",
                 "transport",
-                "station",
-                "駅",
                 "교통"
-            ].includes(v)
+            ].includes(value)
         ) {
             return "transport";
         }
@@ -1192,11 +617,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             [
                 "トイレ",
-                "便所",
                 "toilet",
-                "restroom",
                 "화장실"
-            ].includes(v)
+            ].includes(value)
         ) {
             return "toilet";
         }
@@ -1204,109 +627,1644 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             [
                 "案内",
-                "ガイド",
                 "guide",
-                "information",
                 "안내"
-            ].includes(v)
+            ].includes(value)
         ) {
             return "guide";
         }
 
-        return v || "guide";
+        return value;
     }
 
-    function categoryLabel(value) {
-        return (
-            {
-                all:"すべて",
-                scenery:"景色・景観・展望",
-                restaurant:"グルメ",
-                shrine:"神社",
-                hiking:"登山・ハイキング",
-                transport:"交通",
-                toilet:"トイレ",
-                guide:"案内"
-            }[normalizeCategory(value)] ||
-            String(value ?? "")
-        );
-    }
+    function getCategoryLabel(
+        category
+    ) {
 
-    /* ============================================================
-       ICON
-       ============================================================ */
+        const normalized =
+            normalizeCategory(
+                category
+            );
 
-    function iconType(spot) {
-        const raw =
-            String(
-                spot.iconType ||
-                spot.icon ||
-                spot.markerIcon ||
-                ""
-            )
-            .trim()
-            .toLowerCase();
-
-        const aliases = {
-            "景色":"viewpoint",
-            "景観":"viewpoint",
-            "展望":"viewpoint",
-            "神社":"shrine",
-            "登山":"hiking",
-            "ハイキング":"hiking",
-            "飲食店":"restaurant",
-            "グルメ":"restaurant",
-            "交通":"station-jr",
-            "トイレ":"toilet",
-            "案内":"guide",
-            "駅":"station-jr"
+        const fallback = {
+            scenery: "景色",
+            restaurant: "グルメ",
+            shrine: "神社",
+            hiking: "登山",
+            transport: "交通",
+            toilet: "トイレ",
+            guide: "案内"
         };
 
-        if (aliases[raw]) {
-            return aliases[raw];
-        }
-
-        if (raw) {
-            return raw;
+        if (
+            normalized ===
+            "scenery"
+        ) {
+            return getText(
+                "scenery",
+                fallback.scenery
+            );
         }
 
         if (
-            ["6","13","14"]
-                .includes(String(spot.id))
+            normalized ===
+            "restaurant"
         ) {
-            return "toilet";
+            return getText(
+                "restaurant",
+                fallback.restaurant
+            );
         }
 
-        if (String(spot.id) === "7") {
-            return "station-keihan";
+        if (
+            normalized ===
+            "shrine"
+        ) {
+            return getText(
+                "shrine",
+                fallback.shrine
+            );
         }
 
-        if (String(spot.id) === "8") {
-            return "station-jr";
+        if (
+            normalized ===
+            "hiking"
+        ) {
+            return getText(
+                "hiking",
+                fallback.hiking
+            );
+        }
+
+        if (
+            normalized ===
+            "transport"
+        ) {
+            return getText(
+                "transport",
+                fallback.transport
+            );
         }
 
         return (
-            {
-                scenery:"viewpoint",
-                restaurant:"restaurant",
-                shrine:"shrine",
-                hiking:"hiking",
-                transport:"station-jr",
-                toilet:"toilet",
-                guide:"guide"
-            }[normalizeCategory(spot.category)] ||
+            fallback[normalized] ||
+            String(category ?? "")
+        );
+    }
+
+    // ============================================================
+    // 滞在時間
+    // ============================================================
+
+    function getTimeInMinutes(
+        value
+    ) {
+
+        const text =
+            String(
+                value ?? ""
+            ).trim();
+
+        if (
+            !text ||
+            text === "-"
+        ) {
+            return 0;
+        }
+
+        let total = 0;
+
+        const hourMatch =
+            text.match(
+                /(\d+(?:\.\d+)?)\s*(?:時間|hour|hours|시간|小时)/i
+            );
+
+        const minuteMatch =
+            text.match(
+                /(\d+(?:\.\d+)?)\s*(?:分|minutes?|분|分钟)/i
+            );
+
+        if (hourMatch) {
+            total +=
+                Number(
+                    hourMatch[1]
+                ) * 60;
+        }
+
+        if (minuteMatch) {
+            total +=
+                Number(
+                    minuteMatch[1]
+                );
+        }
+
+        if (total === 0) {
+
+            const numeric =
+                text.match(
+                    /\d+/
+                );
+
+            if (numeric) {
+                total =
+                    Number(
+                        numeric[0]
+                    );
+            }
+        }
+
+        return Number.isFinite(total)
+            ? Math.round(total)
+            : 0;
+    }
+
+    function formatTime(
+        minutes
+    ) {
+
+        const value =
+            Math.max(
+                0,
+                Math.round(
+                    Number(minutes) || 0
+                )
+            );
+
+        if (
+            value < 60
+        ) {
+            return `${value}分`;
+        }
+
+        const hours =
+            Math.floor(
+                value / 60
+            );
+
+        const remaining =
+            value % 60;
+
+        if (
+            remaining === 0
+        ) {
+            return `${hours}時間`;
+        }
+
+        return (
+            `${hours}時間${remaining}分`
+        );
+    }
+
+    // ============================================================
+    // 選択状態
+    // ============================================================
+
+    function loadSelectedIDs() {
+
+        try {
+
+            const saved =
+                localStorage.getItem(
+                    SELECTED_STORAGE_KEY
+                );
+
+            if (!saved) {
+                return [];
+            }
+
+            const ids =
+                JSON.parse(saved);
+
+            return Array.isArray(ids)
+                ? ids
+                : [];
+
+        } catch (error) {
+
+            console.error(
+                "選択スポットの復元に失敗しました",
+                error
+            );
+
+            return [];
+        }
+    }
+
+    function saveSelectedIDs() {
+
+        localStorage.setItem(
+            SELECTED_STORAGE_KEY,
+            JSON.stringify(
+                selectedSpots.map(
+                    function (spot) {
+                        return spot.id;
+                    }
+                )
+            )
+        );
+    }
+
+    function isSpotSelected(
+        spot
+    ) {
+
+        return selectedSpots.some(
+            function (selected) {
+
+                return (
+                    String(
+                        selected.id
+                    ) ===
+                    String(
+                        spot.id
+                    )
+                );
+            }
+        );
+    }
+
+    // ============================================================
+    // JSON読み込み
+    // ============================================================
+
+    async function loadJSON(
+        paths
+    ) {
+
+        let lastError = null;
+
+        for (
+            const path of paths
+        ) {
+
+            try {
+
+                const response =
+                    await fetch(path);
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        `${path}: ${response.status}`
+                    );
+                }
+
+                return {
+                    data:
+                        await response.json(),
+                    path:
+                        path
+                };
+
+            } catch (error) {
+
+                lastError = error;
+            }
+        }
+
+        throw (
+            lastError ||
+            new Error(
+                "JSONを読み込めませんでした。"
+            )
+        );
+    }
+
+    // ============================================================
+    // Liquid Glass CSS
+    // ============================================================
+
+    function injectLiquidGlassCSS() {
+
+        if (
+            document.getElementById(
+                "plannerV11GlassCSS"
+            )
+        ) {
+            return;
+        }
+
+        const style =
+            document.createElement(
+                "style"
+            );
+
+        style.id =
+            "plannerV11GlassCSS";
+
+        style.textContent = `
+
+            :root {
+                --planner-glass-bg:
+                    rgba(255,255,255,.66);
+
+                --planner-glass-border:
+                    rgba(255,255,255,.86);
+
+                --planner-glass-shadow:
+                    0 18px 45px rgba(0,0,0,.12);
+            }
+
+            #map {
+                position: relative;
+                isolation: isolate;
+                overflow: hidden;
+                background: #ededed;
+            }
+
+            #map,
+            .leaflet-container {
+                border-radius: 24px;
+            }
+
+            .leaflet-control-layers,
+            .leaflet-bar a {
+                border:
+                    1px solid
+                    var(--planner-glass-border)
+                    !important;
+
+                background:
+                    var(--planner-glass-bg)
+                    !important;
+
+                backdrop-filter:
+                    blur(18px)
+                    saturate(1.08);
+
+                -webkit-backdrop-filter:
+                    blur(18px)
+                    saturate(1.08);
+
+                box-shadow:
+                    0 10px 28px rgba(0,0,0,.10),
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.95);
+            }
+
+            .leaflet-control-layers {
+                border-radius:
+                    15px
+                    !important;
+
+                overflow: hidden;
+            }
+
+            .leaflet-control-layers-toggle {
+                width: 42px
+                    !important;
+
+                height: 42px
+                    !important;
+            }
+
+            .planner-v11-search-glass {
+                border-radius:
+                    999px
+                    !important;
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.88)
+                    !important;
+
+                background:
+                    rgba(255,255,255,.70)
+                    !important;
+
+                box-shadow:
+                    0 10px 28px rgba(0,0,0,.08),
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.96);
+
+                backdrop-filter:
+                    blur(18px)
+                    saturate(1.12);
+
+                -webkit-backdrop-filter:
+                    blur(18px)
+                    saturate(1.12);
+            }
+
+            .planner-v11-category-glass {
+                border-radius:
+                    20px;
+
+                padding: 7px;
+
+                background:
+                    rgba(255,255,255,.44);
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.70);
+
+                box-shadow:
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.90),
+                    0 9px 23px
+                    rgba(0,0,0,.07);
+
+                backdrop-filter:
+                    blur(20px)
+                    saturate(1.12);
+
+                -webkit-backdrop-filter:
+                    blur(20px)
+                    saturate(1.12);
+            }
+
+            .category {
+                border:
+                    1px solid
+                    rgba(255,255,255,.78)
+                    !important;
+
+                background:
+                    rgba(255,255,255,.48)
+                    !important;
+
+                color:
+                    #36363b
+                    !important;
+
+                border-radius:
+                    999px
+                    !important;
+
+                transition:
+                    transform .22s
+                    cubic-bezier(.16,1,.3,1),
+
+                    background .22s ease,
+
+                    box-shadow .22s ease;
+            }
+
+            .category:hover {
+                transform:
+                    translateY(-1px);
+
+                background:
+                    rgba(255,255,255,.72)
+                    !important;
+
+                box-shadow:
+                    0 8px 19px
+                    rgba(0,0,0,.07),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.95);
+            }
+
+            .category.active {
+                color:
+                    #fff
+                    !important;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,75,0,.94),
+                        rgba(220,58,8,.80)
+                    )
+                    !important;
+
+                border-color:
+                    rgba(255,255,255,.74)
+                    !important;
+
+                box-shadow:
+                    0 8px 19px
+                    rgba(255,75,0,.20),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.30);
+            }
+
+            .planner-spot {
+                border-radius:
+                    19px
+                    !important;
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.76)
+                    !important;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,255,255,.76),
+                        rgba(255,255,255,.48)
+                    )
+                    !important;
+
+                box-shadow:
+                    0 9px 24px
+                    rgba(0,0,0,.07),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.94);
+
+                backdrop-filter:
+                    blur(18px)
+                    saturate(1.08);
+
+                -webkit-backdrop-filter:
+                    blur(18px)
+                    saturate(1.08);
+
+                transition:
+                    transform .22s
+                    cubic-bezier(.16,1,.3,1),
+
+                    box-shadow .22s ease,
+
+                    border-color .22s ease;
+            }
+
+            .planner-spot:hover {
+                transform:
+                    translateY(-2px);
+
+                box-shadow:
+                    0 13px 30px
+                    rgba(0,0,0,.10),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.96);
+            }
+
+            .planner-spot.selected {
+                border-color:
+                    rgba(255,75,0,.32)
+                    !important;
+
+                box-shadow:
+                    0 14px 30px
+                    rgba(0,0,0,.12),
+
+                    0 0 0 2px
+                    rgba(255,75,0,.07),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.96);
+            }
+
+            .selected-spot {
+                border-radius:
+                    16px
+                    !important;
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.78)
+                    !important;
+
+                background:
+                    rgba(255,255,255,.58)
+                    !important;
+
+                box-shadow:
+                    0 7px 20px
+                    rgba(0,0,0,.06),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.94);
+
+                backdrop-filter:
+                    blur(16px);
+
+                -webkit-backdrop-filter:
+                    blur(16px);
+            }
+
+            .planner-v11-map-panel {
+                position:
+                    absolute;
+
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+
+                z-index: 1000;
+
+                display: flex;
+                justify-content:
+                    center;
+
+                pointer-events:
+                    none;
+            }
+
+            .planner-v11-nav-card {
+                width:
+                    min(
+                        460px,
+                        calc(100% - 12px)
+                    );
+
+                padding:
+                    12px 14px;
+
+                border-radius:
+                    20px;
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.86);
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,255,255,.82),
+                        rgba(255,255,255,.58)
+                    );
+
+                box-shadow:
+                    0 20px 50px
+                    rgba(0,0,0,.15),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.98);
+
+                backdrop-filter:
+                    blur(24px)
+                    saturate(1.13);
+
+                -webkit-backdrop-filter:
+                    blur(24px)
+                    saturate(1.13);
+
+                color: #202024;
+
+                pointer-events:
+                    auto;
+            }
+
+            .planner-v11-nav-card.is-hidden {
+                display: none;
+            }
+
+            .planner-v11-nav-top {
+                display: flex;
+                align-items:
+                    center;
+                justify-content:
+                    space-between;
+
+                gap: 14px;
+
+                margin-bottom:
+                    6px;
+            }
+
+            .planner-v11-nav-kicker {
+                font-size:
+                    10px;
+
+                letter-spacing:
+                    .16em;
+
+                font-weight:
+                    800;
+
+                color:
+                    #727278;
+
+                text-transform:
+                    uppercase;
+            }
+
+            .planner-v11-nav-status {
+                font-size:
+                    11px;
+
+                font-weight:
+                    700;
+
+                color:
+                    #7b7b82;
+            }
+
+            .planner-v11-nav-title {
+                margin: 0;
+
+                font-size:
+                    16px;
+
+                line-height:
+                    1.3;
+
+                font-weight:
+                    800;
+
+                letter-spacing:
+                    -.02em;
+            }
+
+            .planner-v11-nav-meta {
+                display:
+                    flex;
+
+                flex-wrap:
+                    wrap;
+
+                gap: 8px;
+
+                margin-top:
+                    10px;
+            }
+
+            .planner-v11-nav-chip {
+                display:
+                    inline-flex;
+
+                align-items:
+                    center;
+
+                gap: 5px;
+
+                padding:
+                    6px 10px;
+
+                border-radius:
+                    999px;
+
+                background:
+                    rgba(255,255,255,.60);
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.75);
+
+                box-shadow:
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.96);
+
+                color:
+                    #44444a;
+
+                font-size:
+                    11px;
+
+                font-weight:
+                    700;
+            }
+
+            .planner-v11-nav-actions {
+                display:
+                    flex;
+
+                flex-wrap:
+                    wrap;
+
+                gap: 8px;
+
+                margin-top:
+                    9px;
+            }
+
+            .planner-v11-button {
+                border:
+                    1px solid
+                    rgba(255,255,255,.86);
+
+                border-radius:
+                    999px;
+
+                padding:
+                    8px 12px;
+
+                font: inherit;
+
+                font-size:
+                    11px;
+
+                font-weight:
+                    800;
+
+                cursor:
+                    pointer;
+
+                background:
+                    rgba(255,255,255,.62);
+
+                box-shadow:
+                    0 8px 18px
+                    rgba(0,0,0,.06),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.98);
+
+                color:
+                    #2a2a2e;
+
+                transition:
+                    transform .2s ease,
+
+                    background .2s ease;
+            }
+
+            .planner-v11-button:hover {
+                transform:
+                    translateY(-1px);
+            }
+
+            .planner-v11-button.primary {
+                color:
+                    #fff;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,75,0,.96),
+                        rgba(221,59,8,.82)
+                    );
+
+                box-shadow:
+                    0 10px 22px
+                    rgba(255,75,0,.19),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.30);
+            }
+
+            .planner-v11-arrival {
+                margin-top:
+                    11px;
+
+                padding:
+                    10px 12px;
+
+                border-radius:
+                    15px;
+
+                border:
+                    1px solid
+                    rgba(255,75,0,.18);
+
+                background:
+                    rgba(255,75,0,.07);
+
+                color:
+                    #7a3b28;
+
+                font-size:
+                    12px;
+
+                font-weight:
+                    800;
+
+                line-height:
+                    1.6;
+            }
+
+            .planner-v11-route-badge {
+                width:
+                    28px;
+
+                height:
+                    28px;
+
+                display:
+                    flex;
+
+                align-items:
+                    center;
+
+                justify-content:
+                    center;
+
+                border-radius:
+                    50%;
+
+                color:
+                    #fff;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        #ff5a1a,
+                        #d73f08
+                    );
+
+                border:
+                    2px solid
+                    rgba(255,255,255,.95);
+
+                box-shadow:
+                    0 6px 16px
+                    rgba(255,75,0,.24),
+
+                    0 0 0 2px
+                    rgba(255,75,0,.12);
+
+                font-size:
+                    11px;
+
+                font-weight:
+                    900;
+            }
+
+            .planner-v11-current-location {
+                width:
+                    20px;
+
+                height:
+                    20px;
+
+                border-radius:
+                    50%;
+
+                border:
+                    4px solid
+                    rgba(255,255,255,.96);
+
+                background:
+                    ${ROUTE_COLOR};
+
+                box-shadow:
+                    0 0 0 4px
+                    rgba(233,71,9,.18),
+
+                    0 8px 18px
+                    rgba(0,0,0,.18);
+
+                animation:
+                    plannerV11CurrentPulse
+                    1.8s
+                    ease-out
+                    infinite;
+            }
+
+            @keyframes plannerV11CurrentPulse {
+
+                0% {
+                    box-shadow:
+                        0 0 0 3px
+                        rgba(233,71,9,.24),
+
+                        0 8px 18px
+                        rgba(0,0,0,.18);
+                }
+
+                70% {
+                    box-shadow:
+                        0 0 0 13px
+                        rgba(233,71,9,0),
+
+                        0 8px 18px
+                        rgba(0,0,0,.18);
+                }
+
+                100% {
+                    box-shadow:
+                        0 0 0 3px
+                        rgba(233,71,9,.24),
+
+                        0 8px 18px
+                        rgba(0,0,0,.18);
+                }
+            }
+
+            @media (max-width: 700px) {
+                .planner-v11-map-panel {
+                    left: 6px;
+                    right: 6px;
+                    bottom: 6px;
+                }
+
+                .planner-v11-nav-card {
+                    width: min(100%, 430px);
+                    padding: 10px 12px;
+                    border-radius: 18px;
+                    max-height: 145px;
+                    overflow: hidden;
+                }
+
+                .planner-v11-nav-title {
+                    font-size: 15px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .planner-v11-nav-meta {
+                    gap: 5px;
+                    margin-top: 6px;
+                }
+
+                .planner-v11-nav-chip {
+                    padding: 4px 7px;
+                    font-size: 9px;
+                }
+
+                .planner-v11-nav-actions {
+                    gap: 6px;
+                    margin-top: 7px;
+                }
+
+                .planner-v11-button {
+                    padding: 7px 10px;
+                    font-size: 10px;
+                }
+            }
+        `;
+
+        document.head.appendChild(
+            style
+        );
+    }
+
+    injectLiquidGlassCSS();
+
+    // ============================================================
+    // 既存UIにLiquid Glassクラス
+    // ============================================================
+
+    function enhanceExistingUI() {
+
+        if (searchInput) {
+
+            searchInput.classList.add(
+                "planner-v11-search-glass"
+            );
+        }
+
+        categoryButtons.forEach(
+            function (button) {
+
+                button.classList.add(
+                    "planner-v11-category-glass-item"
+                );
+            }
+        );
+
+        if (
+            categoryButtons.length >
+            0
+        ) {
+
+            const parent =
+                categoryButtons[0]
+                    .parentElement;
+
+            if (parent) {
+
+                parent.classList.add(
+                    "planner-v11-category-glass"
+                );
+            }
+        }
+
+        [
+            createRouteBtn,
+            locationBtn,
+            clearBtn,
+            saveRouteBtn
+        ].forEach(
+            function (button) {
+
+                if (button) {
+
+                    button.classList.add(
+                        "planner-v11-button"
+                    );
+                }
+            }
+        );
+    }
+
+    enhanceExistingUI();
+
+    // ============================================================
+    // ナビカード
+    // ============================================================
+
+    const navPanel =
+        document.createElement(
+            "div"
+        );
+
+    navPanel.className =
+        "planner-v11-map-panel";
+
+    navPanel.innerHTML = `
+
+        <div
+            class="planner-v11-nav-card is-hidden"
+            id="plannerV11NavCard"
+        >
+
+            <div
+                class="planner-v11-nav-top"
+            >
+
+                <span
+                    class="planner-v11-nav-kicker"
+                    id="plannerV11NavKicker"
+                >
+                    ${escapeHTML(
+                        getNavigationLabel()
+                    )}
+                </span>
+
+                <span
+                    class="planner-v11-nav-status"
+                    id="plannerV11NavStatus"
+                >
+                    ルート準備中
+                </span>
+
+            </div>
+
+            <h3
+                class="planner-v11-nav-title"
+                id="plannerV11NavTitle"
+            >
+                次の目的地
+            </h3>
+
+            <div
+                class="planner-v11-nav-meta"
+                id="plannerV11NavMeta"
+            ></div>
+
+            <div
+                class="planner-v11-nav-actions"
+                id="plannerV11NavActions"
+            >
+
+                <button
+                    type="button"
+                    class="planner-v11-button primary"
+                    id="plannerV11StartButton"
+                >
+                    現在地からナビ開始
+                </button>
+
+                <button
+                    type="button"
+                    class="planner-v11-button"
+                    id="plannerV11StopButton"
+                >
+                    ナビ終了
+                </button>
+
+            </div>
+
+            <div
+                class="planner-v11-arrival"
+                id="plannerV11Arrival"
+                style="display:none;"
+            ></div>
+
+        </div>
+    `;
+
+    const mapContainer =
+        document.getElementById(
+            "map"
+        );
+
+    if (mapContainer) {
+        mapContainer.appendChild(
+            navPanel
+        );
+    }
+
+    const navCard =
+        document.getElementById(
+            "plannerV11NavCard"
+        );
+
+    const navStatus =
+        document.getElementById(
+            "plannerV11NavStatus"
+        );
+
+    const navTitle =
+        document.getElementById(
+            "plannerV11NavTitle"
+        );
+
+    const navMeta =
+        document.getElementById(
+            "plannerV11NavMeta"
+        );
+
+    const navStartButton =
+        document.getElementById(
+            "plannerV11StartButton"
+        );
+
+    const navStopButton =
+        document.getElementById(
+            "plannerV11StopButton"
+        );
+
+    const navArrival =
+        document.getElementById(
+            "plannerV11Arrival"
+        );
+
+    // ============================================================
+    // アイコン
+    // ============================================================
+
+    function normalizeIconType(
+        value
+    ) {
+
+        const raw =
+            String(value ?? "")
+                .trim()
+                .toLowerCase();
+
+        const aliases = {
+
+            "トイレ": "toilet",
+            toilet: "toilet",
+
+            "男性用トイレ":
+                "toilet-male",
+
+            "toilet-male":
+                "toilet-male",
+
+            male:
+                "toilet-male",
+
+            "女性用トイレ":
+                "toilet-female",
+
+            "toilet-female":
+                "toilet-female",
+
+            female:
+                "toilet-female",
+
+            "洋式":
+                "toilet-western",
+
+            "洋式トイレ":
+                "toilet-western",
+
+            western:
+                "toilet-western",
+
+            "和式":
+                "toilet-japanese",
+
+            "和式トイレ":
+                "toilet-japanese",
+
+            japanese:
+                "toilet-japanese",
+
+            "温水洗浄便座":
+                "washlet",
+
+            washlet:
+                "washlet",
+
+            "車いす":
+                "wheelchair",
+
+            "車椅子":
+                "wheelchair",
+
+            wheelchair:
+                "wheelchair",
+
+            "おむつ交換台":
+                "diaper-changing",
+
+            "diaper-changing":
+                "diaper-changing",
+
+            "ベビーチェア":
+                "baby-chair",
+
+            "baby-chair":
+                "baby-chair",
+
+            "着替え台":
+                "changing-table",
+
+            "changing-table":
+                "changing-table",
+
+            "オストメイト":
+                "ostomate",
+
+            ostomate:
+                "ostomate",
+
+            "JR駅":
+                "station-jr",
+
+            jr:
+                "station-jr",
+
+            "station-jr":
+                "station-jr",
+
+            "京阪駅":
+                "station-keihan",
+
+            keihan:
+                "station-keihan",
+
+            "station-keihan":
+                "station-keihan",
+
+            "鳥居":
+                "torii",
+
+            torii:
+                "torii",
+
+            "神社":
+                "shrine",
+
+            shrine:
+                "shrine",
+
+            "景色":
+                "viewpoint",
+
+            "景観":
+                "viewpoint",
+
+            "展望":
+                "viewpoint",
+
+            scenery:
+                "viewpoint",
+
+            viewpoint:
+                "viewpoint",
+
+            "登山":
+                "hiking",
+
+            hiking:
+                "hiking",
+
+            "飲食店":
+                "restaurant",
+
+            "グルメ":
+                "restaurant",
+
+            restaurant:
+                "restaurant",
+
+            "案内":
+                "guide",
+
+            guide:
+                "guide",
+
+            "喫煙所":
+                "smoking",
+
+            smoking:
+                "smoking",
+
+            "両替機":
+                "exchange",
+
+            exchange:
+                "exchange",
+
+            "公衆電話":
+                "public-phone",
+
+            "public-phone":
+                "public-phone",
+
+            "ごみ箱":
+                "trash-box",
+
+            "trash-box":
+                "trash-box",
+
+            "広域避難場所":
+                "evacuation-shelter",
+
+            "evacuation-shelter":
+                "evacuation-shelter",
+
+            "手荷物一時預かり所":
+                "baggage-storage",
+
+            "baggage-storage":
+                "baggage-storage",
+
+            "コインロッカー":
+                "coin-locker",
+
+            "coin-locker":
+                "coin-locker",
+
+            "休憩所":
+                "rest-area",
+
+            "rest-area":
+                "rest-area"
+        };
+
+        return (
+            aliases[raw] || raw
+        );
+    }
+
+    function getIconType(
+        spot
+    ) {
+
+        const explicit =
+            spot.iconType ||
+            spot.icon ||
+            spot.markerIcon;
+
+        if (explicit) {
+
+            const normalized =
+                normalizeIconType(
+                    explicit
+                );
+
+            if (normalized) {
+                return normalized;
+            }
+        }
+
+        if (
+            String(spot.id) ===
+            "7"
+        ) {
+            return "station-keihan";
+        }
+
+        if (
+            String(spot.id) ===
+            "8"
+        ) {
+            return "station-jr";
+        }
+
+        const category =
+            normalizeCategory(
+                spot.category
+            );
+
+        const categoryMap = {
+
+            toilet:
+                "toilet",
+
+            scenery:
+                "viewpoint",
+
+            shrine:
+                "shrine",
+
+            hiking:
+                "hiking",
+
+            restaurant:
+                "restaurant",
+
+            guide:
+                "guide"
+        };
+
+        if (
+            categoryMap[category]
+        ) {
+            return categoryMap[
+                category
+            ];
+        }
+
+        const otherMap = {
+
+            "喫煙所":
+                "smoking",
+
+            "両替機":
+                "exchange",
+
+            "公衆電話":
+                "public-phone",
+
+            "ごみ箱":
+                "trash-box",
+
+            "広域避難場所":
+                "evacuation-shelter",
+
+            "手荷物一時預かり所":
+                "baggage-storage",
+
+            "コインロッカー":
+                "coin-locker",
+
+            "休憩所":
+                "rest-area"
+        };
+
+        return (
+            otherMap[
+                String(
+                    spot.category ?? ""
+                ).trim()
+            ] ||
             "guide"
         );
     }
 
-    function iconPath(type,gray) {
-        return `${ICON_DIR}${type}${gray ? "-gray" : ""}.svg`;
+    function getIconFileName(
+        iconType,
+        selected
+    ) {
+
+        const type =
+            normalizeIconType(
+                iconType
+            );
+
+        if (!type) {
+
+            return selected
+                ? "guide.svg"
+                : "guide-gray.svg";
+        }
+
+        return selected
+            ? `${type}.svg`
+            : `${type}-gray.svg`;
     }
 
-    function markerZIndex(spot) {
-        const type = iconType(spot);
+    function getMarkerAccentColor(
+        spot
+    ) {
 
-        const facilities = [
+        const iconType =
+            getIconType(spot);
+
+        if (
+            ICON_COLOR_MAP[
+                iconType
+            ]
+        ) {
+            return ICON_COLOR_MAP[
+                iconType
+            ];
+        }
+
+        const category =
+            normalizeCategory(
+                spot.category
+            );
+
+        return (
+            ICON_COLOR_MAP[
+                category
+            ] ||
+            GRAY_COLOR
+        );
+    }
+
+    function getMarkerZIndexOffset(
+        spot
+    ) {
+
+        const iconType =
+            getIconType(spot);
+
+        const priorityIcons = [
+
             "toilet",
             "toilet-male",
             "toilet-female",
@@ -1317,480 +2275,1040 @@ document.addEventListener("DOMContentLoaded", () => {
             "diaper-changing",
             "baby-chair",
             "changing-table",
-            "ostomate",
-            "smoking",
-            "exchange",
-            "public-phone",
-            "trash-box",
-            "evacuation-shelter",
-            "baggage-storage",
-            "coin-locker",
-            "rest-area"
+            "ostomate"
         ];
 
-        if (facilities.includes(type)) {
+        if (
+            priorityIcons.includes(
+                iconType
+            )
+        ) {
             return 1400;
         }
 
         if (
-            type === "station-jr" ||
-            type === "station-keihan"
+            iconType ===
+                "station-jr" ||
+            iconType ===
+                "station-keihan"
         ) {
             return 1200;
         }
 
-        return 300;
+        return 100;
     }
 
-    /* ============================================================
-       DATA
-       ============================================================ */
+    // ============================================================
+    // ピン
+    // ============================================================
 
-    async function getJSON(url) {
-        const response = await fetch(
-            `${url}?v=${encodeURIComponent(BUILD_ID)}`,
-            {
-                cache:"no-store"
-            }
-        );
+    function createMarkerIcon(
+        spot,
+        selected
+    ) {
 
-        if (!response.ok) {
-            throw new Error(
-                `${url} の読み込みに失敗しました (${response.status})`
+        const iconType =
+            getIconType(spot);
+
+        const grayFile =
+            getIconFileName(
+                iconType,
+                false
+            );
+
+        const colorFile =
+            getIconFileName(
+                iconType,
+                true
+            );
+
+        const accentColor =
+            getMarkerAccentColor(
+                spot
+            );
+
+        const classes = [
+            "custom-map-marker"
+        ];
+
+        if (selected) {
+            classes.push(
+                "is-selected"
             );
         }
 
-        return response.json();
-    }
+        return L.divIcon({
 
-    async function loadData() {
-        const [
-            spotData,
-            routeData
-        ] = await Promise.all([
-            getJSON(SPOTS_URL),
-            getJSON(ROUTES_URL)
-        ]);
+            className:
+                "planner-custom-div-icon",
 
-        spots = (
-            Array.isArray(spotData)
-                ? spotData
-                : spotData.spots || []
-        )
-        .filter(
-            s =>
-                s &&
-                Number.isFinite(Number(s.lat)) &&
-                Number.isFinite(Number(s.lng))
-        );
-
-        routes = (
-            Array.isArray(routeData)
-                ? routeData
-                : routeData.routes || []
-        )
-        .map(route => {
-            const path = (
-                route.path || []
-            )
-            .map(p =>
-                Array.isArray(p)
-                    ? [
-                        Number(p[0]),
-                        Number(p[1])
-                    ]
-                    : [
-                        Number(p.lat),
-                        Number(p.lng)
-                    ]
-            )
-            .filter(
-                p =>
-                    Number.isFinite(p[0]) &&
-                    Number.isFinite(p[1])
-            );
-
-            if (
-                !route.from ||
-                !route.to ||
-                path.length < 2
-            ) {
-                return null;
-            }
-
-            return {
-                from:String(route.from),
-                to:String(route.to),
-                name:String(route.name || ""),
-                path,
-                meters:pathDistance(path)
-            };
-        })
-        .filter(Boolean);
-
-        console.log(
-            "routes source:",
-            ROUTES_URL
-        );
-
-        console.log(
-            `${BUILD_ID} routes loaded:`,
-            routes.length
-        );
-    }
-
-    /* ============================================================
-       SELECTION
-       ============================================================ */
-
-    function loadSelected() {
-        try {
-            const ids = JSON.parse(
-                localStorage.getItem(
-                    SELECTED_KEY
-                ) || "[]"
-            );
-
-            selectedSpots =
-                Array.isArray(ids)
-                    ? ids
-                        .map(
-                            id =>
-                                spots.find(
-                                    s =>
-                                        String(s.id) ===
-                                        String(id)
-                                )
-                        )
-                        .filter(Boolean)
-                    : [];
-        } catch (_) {
-            selectedSpots = [];
-        }
-    }
-
-    function saveSelected() {
-        localStorage.setItem(
-            SELECTED_KEY,
-            JSON.stringify(
-                selectedSpots.map(
-                    s => s.id
-                )
-            )
-        );
-    }
-
-    function isSelected(spot) {
-        return selectedSpots.some(
-            s =>
-                String(s.id) ===
-                String(spot.id)
-        );
-    }
-
-    function selectedText() {
-        const l = getLanguage();
-
-        if (l === "en") {
-            return "✓ Selected";
-        }
-
-        if (l === "zh") {
-            return "✓ 已选择";
-        }
-
-        if (l === "ko") {
-            return "✓ 선택됨";
-        }
-
-        return "✓ 選択中";
-    }
-
-    function toggleSpot(spot) {
-        const index =
-            selectedSpots.findIndex(
-                s =>
-                    String(s.id) ===
-                    String(spot.id)
-            );
-
-        if (index >= 0) {
-            selectedSpots.splice(
-                index,
-                1
-            );
-        } else {
-            selectedSpots.push(spot);
-        }
-
-        saveSelected();
-        renderCards();
-        updateSelectedList();
-        updateInfo();
-        refreshMarkers();
-        renderRouteNumbers();
-        updateNavigationPreview();
-    }
-
-    /* ============================================================
-       CARDS
-       ============================================================ */
-
-    /*
-       写真表示
-       ------------------------------------------------------------
-       以前は
-
-       photoAvailable === true
-       または
-       imageEnabled === true
-
-       という条件がありましたが、
-       spots.json には通常 image だけが入っているため、
-       その条件を完全に廃止しています。
-
-       image があれば ./images/ から読み込みます。
-    */
-
-    function photoHTML(spot,name) {
-        const image =
-            String(
-                spot?.image || ""
-            ).trim();
-
-        if (!image) {
-            return `
-                <div class="planner-spot-photo">
-                    PHOTO
-                </div>
-            `;
-        }
-
-        const src =
-            image.startsWith("http://") ||
-            image.startsWith("https://")
-                ? image
-                : `./images/${encodeURIComponent(image)}`;
-
-        return `
-            <div class="planner-spot-photo">
-                <img
-                    src="${escapeHTML(src)}"
-                    alt="${escapeHTML(name)}"
-                    loading="lazy"
-                    onerror="
-                        this.parentElement.innerHTML='PHOTO';
+            html: `
+                <div
+                    class="${classes.join(" ")}"
+                    style="
+                        --marker-pin-color:${PIN_COLOR};
+                        --marker-accent-color:${accentColor};
                     "
                 >
-            </div>
-        `;
+
+                    <div class="marker-pin">
+
+                        <span
+                            class="marker-accent"
+                            aria-hidden="true"
+                        ></span>
+
+                        <img
+                            class="icon-image icon-gray"
+                            src="${ICON_DIR}${grayFile}"
+                            alt=""
+                            aria-hidden="true"
+                            draggable="false"
+                        >
+
+                        <img
+                            class="icon-image icon-color"
+                            src="${ICON_DIR}${colorFile}"
+                            alt=""
+                            aria-hidden="true"
+                            draggable="false"
+                        >
+
+                    </div>
+
+                </div>
+            `,
+
+            iconSize: [
+                58,
+                68
+            ],
+
+            iconAnchor: [
+                29,
+                52
+            ],
+
+            popupAnchor: [
+                0,
+                -50
+            ]
+        });
     }
 
-    function filteredSpots() {
-        const q =
-            String(
-                els.search?.value || ""
+    function injectMarkerCSS() {
+
+        if (
+            document.getElementById(
+                "plannerV11MarkerCSS"
             )
-            .trim()
-            .toLowerCase();
-
-        const activeButton =
-            document.querySelector(
-                ".category.active"
-            );
-
-        const active =
-            normalizeCategory(
-                activeButton?.dataset?.category ||
-                activeButton?.textContent ||
-                "all"
-            );
-
-        return spots.filter(
-            spot => {
-                const name =
-                    localized(
-                        spot.name
-                    )
-                    .toLowerCase();
-
-                const desc =
-                    localized(
-                        spot.description
-                    )
-                    .toLowerCase();
-
-                const categoryName =
-                    normalizeCategory(
-                        spot.category
-                    );
-
-                const searchOK =
-                    !q ||
-                    name.includes(q) ||
-                    desc.includes(q) ||
-                    String(
-                        spot.category || ""
-                    )
-                    .toLowerCase()
-                    .includes(q);
-
-                const categoryOK =
-                    active === "all" ||
-                    categoryName === active;
-
-                return (
-                    searchOK &&
-                    categoryOK
-                );
-            }
-        );
-    }
-
-    function renderCards() {
-        if (!els.spotList) {
+        ) {
             return;
         }
 
-        const list =
-            filteredSpots();
+        const style =
+            document.createElement(
+                "style"
+            );
 
-        els.spotList.innerHTML = "";
+        style.id =
+            "plannerV11MarkerCSS";
 
-        if (!list.length) {
-            els.spotList.innerHTML = `
-                <p
-                    style="
-                        padding:12px;
-                        color:#777;
-                    "
-                >
-                    スポットが見つかりませんでした。
-                </p>
-            `;
+        style.textContent = `
+
+            .planner-custom-div-icon {
+                background:
+                    transparent
+                    !important;
+
+                border:
+                    0
+                    !important;
+
+                overflow:
+                    visible
+                    !important;
+            }
+
+            .custom-map-marker {
+                width:
+                    58px;
+
+                height:
+                    68px;
+
+                position:
+                    relative;
+
+                display:
+                    flex;
+
+                justify-content:
+                    center;
+
+                align-items:
+                    flex-start;
+
+                cursor:
+                    pointer;
+
+                perspective:
+                    1000px;
+
+                transform-origin:
+                    50% 78%;
+
+                user-select:
+                    none;
+            }
+
+            .custom-map-marker
+            .marker-pin {
+
+                width:
+                    50px;
+
+                height:
+                    50px;
+
+                margin-top:
+                    1px;
+
+                position:
+                    relative;
+
+                display:
+                    flex;
+
+                align-items:
+                    center;
+
+                justify-content:
+                    center;
+
+                border-radius:
+                    50%;
+
+                border:
+                    2px solid
+                    ${PIN_COLOR};
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,255,255,.97),
+                        rgba(255,247,243,.84)
+                    );
+
+                box-shadow:
+                    0 8px 20px rgba(0,0,0,.14),
+
+                    0 0 0 2px
+                    rgba(255,255,255,.86),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,1);
+
+                backdrop-filter:
+                    blur(15px)
+                    saturate(1.05);
+
+                -webkit-backdrop-filter:
+                    blur(15px)
+                    saturate(1.05);
+
+                transform-style:
+                    preserve-3d;
+
+                transition:
+                    transform .28s
+                    cubic-bezier(.16,1,.3,1),
+
+                    box-shadow .28s ease;
+
+                z-index:
+                    1;
+            }
+
+            .custom-map-marker
+            .marker-pin::after {
+
+                content:
+                    "";
+
+                position:
+                    absolute;
+
+                left:
+                    50%;
+
+                bottom:
+                    -7px;
+
+                width:
+                    16px;
+
+                height:
+                    16px;
+
+                transform:
+                    translateX(-50%)
+                    rotate(45deg);
+
+                border-right:
+                    2px solid
+                    ${PIN_COLOR};
+
+                border-bottom:
+                    2px solid
+                    ${PIN_COLOR};
+
+                background:
+                    rgba(255,247,243,.88);
+
+                z-index:
+                    -1;
+            }
+
+            .custom-map-marker
+            .marker-accent {
+
+                position:
+                    absolute;
+
+                left:
+                    50%;
+
+                top:
+                    8px;
+
+                width:
+                    34px;
+
+                height:
+                    34px;
+
+                transform:
+                    translateX(-50%);
+
+                border-radius:
+                    50%;
+
+                background:
+                    var(--marker-accent-color);
+
+                opacity:
+                    .07;
+
+                pointer-events:
+                    none;
+
+                transition:
+                    opacity .24s ease,
+
+                    transform .24s ease;
+
+                z-index:
+                    0;
+            }
+
+            .custom-map-marker
+            .icon-image {
+
+                position:
+                    absolute;
+
+                left:
+                    50%;
+
+                top:
+                    50%;
+
+                width:
+                    28px;
+
+                height:
+                    28px;
+
+                object-fit:
+                    contain;
+
+                transform:
+                    translate(-50%, -50%)
+                    scale(1);
+
+                transform-origin:
+                    center center;
+
+                user-select:
+                    none;
+
+                -webkit-user-drag:
+                    none;
+
+                filter:
+                    drop-shadow(
+                        0 2px 4px
+                        rgba(0,0,0,.12)
+                    );
+
+                transition:
+                    opacity .18s ease,
+
+                    transform .28s
+                    cubic-bezier(.16,1,.3,1),
+
+                    filter .24s ease;
+
+                z-index:
+                    2;
+            }
+
+            .custom-map-marker
+            .icon-gray {
+                opacity:
+                    1;
+            }
+
+            .custom-map-marker
+            .icon-color {
+                opacity:
+                    0;
+            }
+
+            .custom-map-marker:hover
+            .icon-gray {
+                opacity:
+                    0;
+            }
+
+            .custom-map-marker:hover
+            .icon-color {
+                opacity:
+                    1;
+
+                transform:
+                    translate(-50%, -50%)
+                    scale(1.18);
+
+                filter:
+                    drop-shadow(
+                        0 4px 8px
+                        rgba(0,0,0,.19)
+                    );
+            }
+
+            .custom-map-marker:hover
+            .marker-accent {
+                opacity:
+                    .16;
+
+                transform:
+                    translateX(-50%)
+                    scale(1.08);
+            }
+
+            .custom-map-marker:hover
+            .marker-pin {
+
+                transform:
+                    translateY(-3px)
+                    scale(1.08);
+
+                box-shadow:
+                    0 12px 24px
+                    rgba(0,0,0,.18),
+
+                    0 0 0 3px
+                    rgba(255,75,0,.11),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,1);
+
+                animation:
+                    plannerMarkerFrontBack
+                    1s
+                    cubic-bezier(.22,.72,.32,1);
+            }
+
+            .custom-map-marker.is-selected
+            .icon-gray {
+                opacity:
+                    0;
+            }
+
+            .custom-map-marker.is-selected
+            .icon-color {
+
+                opacity:
+                    1;
+
+                transform:
+                    translate(-50%, -50%)
+                    scale(1.23);
+
+                filter:
+                    drop-shadow(
+                        0 4px 9px
+                        rgba(0,0,0,.22)
+                    );
+            }
+
+            .custom-map-marker.is-selected
+            .marker-accent {
+
+                opacity:
+                    .24;
+
+                transform:
+                    translateX(-50%)
+                    scale(1.12);
+            }
+
+            .custom-map-marker.is-selected
+            .marker-pin {
+
+                transform:
+                    translateY(-3px)
+                    scale(1.13);
+
+                box-shadow:
+                    0 14px 28px
+                    rgba(0,0,0,.21),
+
+                    0 0 0 4px
+                    rgba(255,75,0,.20),
+
+                    0 0 0 7px
+                    rgba(255,75,0,.07),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,1);
+            }
+
+            @keyframes
+            plannerMarkerFrontBack {
+
+                0% {
+                    transform:
+                        translateY(-3px)
+                        rotateX(0deg)
+                        scale(1.08);
+                }
+
+                25% {
+                    transform:
+                        translateY(-3px)
+                        rotateX(-13deg)
+                        scale(1.08);
+                }
+
+                50% {
+                    transform:
+                        translateY(-3px)
+                        rotateX(11deg)
+                        scale(1.08);
+                }
+
+                75% {
+                    transform:
+                        translateY(-3px)
+                        rotateX(-6deg)
+                        scale(1.08);
+                }
+
+                100% {
+                    transform:
+                        translateY(-3px)
+                        rotateX(0deg)
+                        scale(1.08);
+                }
+            }
+        `;
+
+        document.head.appendChild(
+            style
+        );
+    }
+
+    injectMarkerCSS();
+
+    // ============================================================
+    // ポップアップCSS
+    // ============================================================
+
+    function injectPopupCSS() {
+
+        if (
+            document.getElementById(
+                "plannerV11PopupCSS"
+            )
+        ) {
+            return;
+        }
+
+        const style =
+            document.createElement(
+                "style"
+            );
+
+        style.id =
+            "plannerV11PopupCSS";
+
+        style.textContent = `
+
+            .planner-popup {
+
+                width:
+                    280px;
+
+                max-width:
+                    280px;
+
+                padding:
+                    3px 2px;
+
+                font-family:
+                    inherit;
+            }
+
+            .planner-popup
+            .popup-image {
+
+                display:
+                    block;
+
+                width:
+                    100%;
+
+                height:
+                    150px;
+
+                object-fit:
+                    cover;
+
+                border-radius:
+                    15px;
+
+                margin:
+                    0 0 13px;
+
+                box-shadow:
+                    0 7px 18px
+                    rgba(0,0,0,.12);
+            }
+
+            .planner-popup h3 {
+
+                margin:
+                    0 0 7px;
+
+                color:
+                    #151515;
+
+                font-size:
+                    17px;
+
+                line-height:
+                    1.4;
+
+                font-weight:
+                    700;
+            }
+
+            .planner-popup
+            .popup-category {
+
+                display:
+                    inline-block;
+
+                margin:
+                    0 0 10px;
+
+                padding:
+                    4px 10px;
+
+                border-radius:
+                    999px;
+
+                background:
+                    rgba(255,75,0,.09);
+
+                color:
+                    #B8491F;
+
+                font-size:
+                    11px;
+
+                font-weight:
+                    700;
+            }
+
+            .planner-popup
+            .popup-description {
+
+                margin:
+                    0 0 10px;
+
+                color:
+                    #555;
+
+                font-size:
+                    13px;
+
+                line-height:
+                    1.7;
+            }
+
+            .planner-popup
+            .popup-meta {
+
+                margin:
+                    0 0 13px;
+
+                color:
+                    #333;
+
+                font-size:
+                    12px;
+            }
+
+            .planner-popup
+            .popup-button {
+
+                width:
+                    100%;
+
+                padding:
+                    10px 14px;
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.88);
+
+                border-radius:
+                    999px;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,255,255,.94),
+                        rgba(255,255,255,.57)
+                    );
+
+                box-shadow:
+                    0 8px 22px
+                    rgba(0,0,0,.08),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.97);
+
+                backdrop-filter:
+                    blur(16px)
+                    saturate(1.15);
+
+                -webkit-backdrop-filter:
+                    blur(16px)
+                    saturate(1.15);
+
+                color:
+                    #222;
+
+                font:
+                    inherit;
+
+                font-size:
+                    13px;
+
+                font-weight:
+                    700;
+
+                cursor:
+                    pointer;
+            }
+
+            .planner-popup
+            .popup-button.is-selected {
+
+                color:
+                    #fff;
+
+                border-color:
+                    rgba(255,75,0,.34);
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        rgba(255,75,0,.96),
+                        rgba(196,54,8,.84)
+                    );
+            }
+
+            .planner-popup
+            .popup-url {
+
+                display:
+                    inline-block;
+
+                margin-top:
+                    10px;
+
+                color:
+                    #B8491F;
+
+                font-size:
+                    12px;
+
+                text-decoration:
+                    none;
+            }
+
+            .planner-popup
+            .popup-url:hover {
+
+                text-decoration:
+                    underline;
+            }
+
+            .leaflet-popup-content-wrapper,
+            .leaflet-popup-tip {
+
+                border:
+                    1px solid
+                    rgba(255,255,255,.86);
+
+                background:
+                    rgba(255,255,255,.72);
+
+                box-shadow:
+                    0 18px 45px
+                    rgba(0,0,0,.14),
+
+                    inset
+                    0 1px 0
+                    rgba(255,255,255,.96);
+
+                backdrop-filter:
+                    blur(22px)
+                    saturate(1.12);
+
+                -webkit-backdrop-filter:
+                    blur(22px)
+                    saturate(1.12);
+            }
+        `;
+
+        document.head.appendChild(
+            style
+        );
+    }
+
+    injectPopupCSS();
+
+    // ============================================================
+    // ポップアップボタン
+    // ============================================================
+
+    function bindPopupButton(
+        marker,
+        spot
+    ) {
+
+        const element =
+            marker.getPopup() &&
+            marker.getPopup().getElement();
+
+        if (!element) {
+            return;
+        }
+
+        const button =
+            element.querySelector(
+                ".popup-button"
+            );
+
+        if (!button) {
+            return;
+        }
+
+        button.onclick =
+            function (event) {
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                selectSpot(spot);
+
+                marker.setPopupContent(
+                    createPopupHTML(
+                        spot
+                    )
+                );
+
+                setTimeout(
+                    function () {
+
+                        bindPopupButton(
+                            marker,
+                            spot
+                        );
+
+                    },
+                    0
+                );
+            };
+    }
+
+    // ============================================================
+    // スポット一覧
+    // ============================================================
+
+    function displaySpots(
+        list
+    ) {
+
+        if (!spotList) {
+            return;
+        }
+
+        spotList.innerHTML = "";
+
+        if (
+            !Array.isArray(list) ||
+            list.length === 0
+        ) {
+
+            spotList.innerHTML =
+                "<p>スポットが見つかりませんでした。</p>";
 
             return;
         }
 
         list.forEach(
-            spot => {
-                const card =
-                    document.createElement(
-                        "article"
-                    );
-
-                card.className =
-                    `planner-spot-card${
-                        isSelected(spot)
-                            ? " selected"
-                            : ""
-                    }`;
-
-                card.dataset.spotId =
-                    String(spot.id);
+            function (spot) {
 
                 const name =
-                    localized(
+                    getLocalizedValue(
                         spot.name
                     );
 
-                const desc =
-                    localized(
+                const description =
+                    getLocalizedValue(
                         spot.description
                     );
 
-                const site =
-                    safeURL(
+                const category =
+                    getCategoryLabel(
+                        spot.category
+                    );
+
+                const time =
+                    spot.time || "-";
+
+                const image =
+                    spot.image || "";
+
+                const url =
+                    getSafeURL(
                         spot.url
                     );
 
-                card.innerHTML = `
-                    ${photoHTML(
-                        spot,
-                        name
-                    )}
+                const selected =
+                    isSpotSelected(
+                        spot
+                    );
 
-                    <div
-                        class="planner-spot-content"
-                    >
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+                card.className =
+                    "planner-spot";
+
+                card.dataset.id =
+                    String(spot.id);
+
+                if (selected) {
+
+                    card.classList.add(
+                        "selected"
+                    );
+                }
+
+                const imageHTML =
+                    image
+                        ? `
+                            <img
+                                src="./images/${encodeURIComponent(image)}"
+                                alt="${escapeHTML(name)}"
+                                class="spot-image"
+                                onerror="this.style.display='none';"
+                            >
+                        `
+                        : "";
+
+                const urlHTML =
+                    url
+                        ? `
+                            <a
+                                href="${escapeHTML(url)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="spot-url"
+                            >
+                                ${getOfficialSiteText()}
+                            </a>
+                        `
+                        : "";
+
+                const selectedHTML =
+                    selected
+                        ? `
+                            <span class="selected-label">
+                                ${getSelectedText()}
+                            </span>
+                        `
+                        : "";
+
+                card.innerHTML = `
+
+                    ${imageHTML}
+
+                    <div class="spot-content">
 
                         <h3>
-                            ${escapeHTML(
-                                name
-                            )}
+                            ${escapeHTML(name)}
                         </h3>
 
-                        <div
-                            class="planner-spot-category"
-                        >
-                            ${escapeHTML(
-                                categoryLabel(
-                                    spot.category
-                                )
-                            )}
-                        </div>
-
-                        <p
-                            class="planner-spot-description"
-                        >
-                            ${escapeHTML(
-                                desc
-                            )}
+                        <p class="spot-category">
+                            ${escapeHTML(category)}
                         </p>
 
-                        <p
-                            class="planner-spot-time"
-                        >
+                        <p>
+                            ${escapeHTML(description)}
+                        </p>
+
+                        <p class="spot-time">
                             ⏱
-                            ${escapeHTML(
-                                spot.time || "-"
-                            )}
+                            ${escapeHTML(time)}
                         </p>
 
-                        ${
-                            isSelected(spot)
-                                ? `
-                                    <span
-                                        class="
-                                            planner-selected-label
-                                        "
-                                    >
-                                        ${escapeHTML(
-                                            selectedText()
-                                        )}
-                                    </span>
-                                `
-                                : ""
-                        }
+                        ${selectedHTML}
 
-                        ${
-                            site
-                                ? `
-                                    <a
-                                        href="${escapeHTML(site)}"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style="
-                                            display:inline-block;
-                                            margin-top:9px;
-                                            color:#A9441F;
-                                            font-size:12px;
-                                            font-weight:800;
-                                            text-decoration:none;
-                                        "
-                                    >
-                                        公式サイトを見る
-                                    </a>
-                                `
-                                : ""
-                        }
+                        ${urlHTML}
 
                     </div>
                 `;
 
                 card.addEventListener(
                     "click",
-                    event => {
+                    function (event) {
+
                         if (
                             event.target.closest(
                                 "a"
@@ -1799,28 +3317,155 @@ document.addEventListener("DOMContentLoaded", () => {
                             return;
                         }
 
-                        toggleSpot(spot);
+                        selectSpot(
+                            spot
+                        );
                     }
                 );
 
-                els.spotList.appendChild(
+                spotList.appendChild(
                     card
                 );
             }
         );
     }
 
-    function updateSelectedList() {
-        if (!els.selectedList) {
+    function selectSpot(
+        spot
+    ) {
+
+        const index =
+            selectedSpots.findIndex(
+                function (selected) {
+
+                    return (
+                        String(
+                            selected.id
+                        ) ===
+                        String(
+                            spot.id
+                        )
+                    );
+                }
+            );
+
+        if (index !== -1) {
+
+            selectedSpots.splice(
+                index,
+                1
+            );
+
+        } else {
+
+            selectedSpots.push(
+                spot
+            );
+        }
+
+        saveSelectedIDs();
+        updateSelected();
+        updateInfo();
+        updateCardSelection();
+        updateMarkerSelection(
+            spot.id
+        );
+        updateRoutePreviewState();
+    }
+
+    function updateCardSelection() {
+
+        const cards =
+            document.querySelectorAll(
+                ".planner-spot"
+            );
+
+        cards.forEach(
+            function (card) {
+
+                const id =
+                    String(
+                        card.dataset.id
+                    );
+
+                const selected =
+                    selectedSpots.some(
+                        function (spot) {
+
+                            return (
+                                String(
+                                    spot.id
+                                ) === id
+                            );
+                        }
+                    );
+
+                card.classList.toggle(
+                    "selected",
+                    selected
+                );
+
+                const oldLabel =
+                    card.querySelector(
+                        ".selected-label"
+                    );
+
+                if (
+                    selected &&
+                    !oldLabel
+                ) {
+
+                    const content =
+                        card.querySelector(
+                            ".spot-content"
+                        );
+
+                    if (content) {
+
+                        const label =
+                            document.createElement(
+                                "span"
+                            );
+
+                        label.className =
+                            "selected-label";
+
+                        label.textContent =
+                            getSelectedText();
+
+                        content.appendChild(
+                            label
+                        );
+                    }
+                }
+
+                if (
+                    !selected &&
+                    oldLabel
+                ) {
+
+                    oldLabel.remove();
+                }
+            }
+        );
+    }
+
+    function updateSelected() {
+
+        if (!selectedList) {
             return;
         }
 
-        els.selectedList.innerHTML = "";
+        selectedList.innerHTML = "";
 
-        if (!selectedSpots.length) {
-            els.selectedList.innerHTML = `
+        if (
+            selectedSpots.length ===
+            0
+        ) {
+
+            selectedList.innerHTML = `
                 <p>
-                    スポットを選択してください。
+                    ${getNoSelectedText()}
                 </p>
             `;
 
@@ -1828,653 +3473,92 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         selectedSpots.forEach(
-            (spot,index) => {
-                const row =
+            function (
+                spot,
+                index
+            ) {
+
+                const item =
                     document.createElement(
                         "div"
                     );
 
-                row.style.cssText =
-                    `
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        padding:8px 0;
-                    `;
+                item.className =
+                    "selected-spot";
 
-                row.innerHTML = `
-                    <strong
-                        style="
-                            color:${COLOR.pin};
-                            font-size:18px;
-                        "
-                    >
-                        ${index + 1}
-                    </strong>
+                const name =
+                    getLocalizedValue(
+                        spot.name
+                    );
 
-                    <span
-                        style="
-                            flex:1;
-                            font-weight:800;
-                        "
-                    >
-                        ${escapeHTML(
-                            localized(
-                                spot.name
-                            )
-                        )}
+                item.innerHTML = `
+
+                    <span>
+                        ${index + 1}.
+                        ${escapeHTML(name)}
                     </span>
 
                     <button
                         type="button"
                         aria-label="選択解除"
-                        style="
-                            border:0;
-                            background:transparent;
-                            color:#888;
-                            font-size:20px;
-                            cursor:pointer;
-                        "
                     >
                         ×
                     </button>
                 `;
 
-                row
-                    .querySelector("button")
-                    .addEventListener(
-                        "click",
-                        event => {
-                            event.stopPropagation();
+                item.querySelector(
+                    "button"
+                ).addEventListener(
+                    "click",
+                    function (event) {
 
-                            selectedSpots =
-                                selectedSpots.filter(
-                                    item =>
+                        event.stopPropagation();
+
+                        selectedSpots =
+                            selectedSpots.filter(
+                                function (
+                                    selected
+                                ) {
+
+                                    return (
                                         String(
-                                            item.id
+                                            selected.id
                                         ) !==
                                         String(
                                             spot.id
                                         )
-                                );
-
-                            saveSelected();
-                            renderCards();
-                            updateSelectedList();
-                            updateInfo();
-                            refreshMarkers();
-                            renderRouteNumbers();
-                            updateNavigationPreview();
-                        }
-                    );
-
-                els.selectedList.appendChild(
-                    row
-                );
-            }
-        );
-    }
-
-    function updateInfo() {
-        if (els.count) {
-            els.count.textContent =
-                getLanguage() === "en"
-                    ? `${selectedSpots.length} spots`
-                    : `${selectedSpots.length}か所`;
-        }
-
-        if (els.stay) {
-            const stay =
-                selectedSpots.reduce(
-                    (sum,s) =>
-                        sum +
-                        stayMinutes(
-                            s.time
-                        ),
-                    0
-                );
-
-            els.stay.textContent =
-                formatMinutes(stay);
-        }
-    }
-
-    /* ============================================================
-       MARKERS
-       ============================================================ */
-
-    function markerHTML(spot) {
-        const type =
-            iconType(spot);
-
-        const selected =
-            isSelected(spot);
-
-        return `
-            <div
-                class="
-                    planner-marker-root
-                    ${selected ? "selected" : ""}
-                "
-                data-marker-id="${escapeHTML(
-                    String(spot.id)
-                )}"
-                role="button"
-                tabindex="0"
-                aria-label="${escapeHTML(
-                    localized(spot.name)
-                )}"
-            >
-
-                <div
-                    class="planner-marker-pin"
-                >
-
-                    <img
-                        class="
-                            planner-marker-icon
-                            gray
-                        "
-                        src="${escapeHTML(
-                            iconPath(
-                                type,
-                                true
-                            )
-                        )}"
-                        alt=""
-                        draggable="false"
-                    >
-
-                    <img
-                        class="
-                            planner-marker-icon
-                            color
-                        "
-                        src="${escapeHTML(
-                            iconPath(
-                                type,
-                                false
-                            )
-                        )}"
-                        alt=""
-                        draggable="false"
-                    >
-
-                </div>
-
-            </div>
-        `;
-    }
-
-    function popupHTML(spot) {
-        const selected =
-            isSelected(spot);
-
-        const name =
-            localized(
-                spot.name
-            );
-
-        const desc =
-            localized(
-                spot.description
-            );
-
-        return `
-            <div class="planner-popup">
-
-                ${photoHTML(
-                    spot,
-                    name
-                )}
-
-                <h3>
-                    ${escapeHTML(
-                        name
-                    )}
-                </h3>
-
-                <div
-                    class="
-                        planner-popup-category
-                    "
-                >
-                    ${escapeHTML(
-                        categoryLabel(
-                            spot.category
-                        )
-                    )}
-                </div>
-
-                <p>
-                    ${escapeHTML(
-                        desc
-                    )}
-                </p>
-
-                <p>
-                    ⏱
-                    ${escapeHTML(
-                        spot.time || "-"
-                    )}
-                </p>
-
-                <button
-                    type="button"
-                    class="
-                        planner-popup-select
-                        ${selected ? "selected" : ""}
-                    "
-                    data-popup-select="${escapeHTML(
-                        String(spot.id)
-                    )}"
-                >
-                    ${
-                        escapeHTML(
-                            selected
-                                ? selectedText()
-                                : getLanguage() === "en"
-                                    ? "Select this spot"
-                                    : getLanguage() === "zh"
-                                        ? "选择此景点"
-                                        : getLanguage() === "ko"
-                                            ? "이 장소 선택"
-                                            : "このスポットを選択"
-                        )
-                    }
-                </button>
-
-            </div>
-        `;
-    }
-
-    function createMarker(spot) {
-        const marker =
-            L.marker(
-                pointOfSpot(spot),
-                {
-                    pane:
-                        "plannerMarkerPane",
-
-                    icon:
-                        L.divIcon({
-                            className:
-                                "planner-marker-icon",
-
-                            html:
-                                markerHTML(
-                                    spot
-                                ),
-
-                            iconSize:
-                                [
-                                    58,
-                                    68
-                                ],
-
-                            iconAnchor:
-                                [
-                                    29,
-                                    52
-                                ],
-
-                            popupAnchor:
-                                [
-                                    0,
-                                    -50
-                                ]
-                        }),
-
-                    zIndexOffset:
-                        markerZIndex(
-                            spot
-                        ),
-
-                    interactive:
-                        true,
-
-                    bubblingMouseEvents:
-                        false,
-
-                    riseOnHover:
-                        true
-                }
-            );
-
-        marker.bindPopup(
-            popupHTML(
-                spot
-            ),
-            {
-                className:
-                    "planner-liquid-popup",
-
-                maxWidth:
-                    340,
-
-                minWidth:
-                    250,
-
-                autoPan:
-                    true,
-
-                closeButton:
-                    true,
-
-                closeOnClick:
-                    false,
-
-                autoClose:
-                    true
-            }
-        );
-
-        marker.on(
-            "popupopen",
-            () => {
-                bindPopupButton(
-                    marker,
-                    spot
-                );
-            }
-        );
-
-        marker.on(
-            "click",
-            event => {
-                if (
-                    event?.originalEvent
-                ) {
-                    event
-                        .originalEvent
-                        .preventDefault?.();
-
-                    event
-                        .originalEvent
-                        .stopPropagation?.();
-                }
-
-                marker.openPopup();
-            }
-        );
-
-        marker.on(
-            "add",
-            () => {
-                requestAnimationFrame(
-                    () =>
-                        attachNativeMarkerEvents(
-                            marker,
-                            spot
-                        )
-                );
-            }
-        );
-
-        return marker;
-    }
-
-    function attachNativeMarkerEvents(
-        marker,
-        spot
-    ) {
-        const host =
-            marker.getElement();
-
-        if (!host) {
-            return;
-        }
-
-        if (
-            host.dataset.plannerBound === "1"
-        ) {
-            return;
-        }
-
-        host.dataset.plannerBound =
-            "1";
-
-        host.style.pointerEvents =
-            "auto";
-
-        host.style.touchAction =
-            "manipulation";
-
-        const root =
-            host.querySelector(
-                `[data-marker-id="${CSS.escape(
-                    String(spot.id)
-                )}"]`
-            );
-
-        if (!root) {
-            return;
-        }
-
-        const open =
-            event => {
-                event.preventDefault?.();
-                event.stopPropagation?.();
-                marker.openPopup();
-            };
-
-        root.addEventListener(
-            "click",
-            open,
-            {
-                passive:false
-            }
-        );
-
-        root.addEventListener(
-            "touchend",
-            open,
-            {
-                passive:false
-            }
-        );
-
-        root.addEventListener(
-            "pointerup",
-            open,
-            {
-                passive:false
-            }
-        );
-
-        root.addEventListener(
-            "keydown",
-            event => {
-                if (
-                    event.key === "Enter" ||
-                    event.key === " "
-                ) {
-                    open(event);
-                }
-            }
-        );
-    }
-
-    /*
-       Leafletのイベントだけに頼らず、
-       Map DOMをcaptureで監視して
-       実際に押されたピン要素から
-       スポットを直接取得する。
-    */
-
-    let lastDelegatedOpen = 0;
-
-    function delegatedMarkerOpen(
-        event
-    ) {
-        const target =
-            event.target;
-
-        if (
-            !target ||
-            typeof target.closest !==
-                "function"
-        ) {
-            return;
-        }
-
-        const root =
-            target.closest(
-                ".planner-marker-root"
-            );
-
-        if (!root) {
-            return;
-        }
-
-        const id =
-            root.getAttribute(
-                "data-marker-id"
-            );
-
-        const spot =
-            spots.find(
-                s =>
-                    String(s.id) ===
-                    String(id)
-            );
-
-        const marker =
-            markers.get(
-                String(id)
-            );
-
-        if (!spot || !marker) {
-            return;
-        }
-
-        const now =
-            Date.now();
-
-        if (
-            now -
-            lastDelegatedOpen <
-            220
-        ) {
-            return;
-        }
-
-        lastDelegatedOpen =
-            now;
-
-        event.preventDefault?.();
-        event.stopPropagation?.();
-
-        marker.openPopup();
-    }
-
-    map
-        .getContainer()
-        .addEventListener(
-            "pointerup",
-            delegatedMarkerOpen,
-            {
-                capture:true,
-                passive:false
-            }
-        );
-
-    map
-        .getContainer()
-        .addEventListener(
-            "click",
-            delegatedMarkerOpen,
-            {
-                capture:true,
-                passive:false
-            }
-        );
-
-    map
-        .getContainer()
-        .addEventListener(
-            "touchend",
-            delegatedMarkerOpen,
-            {
-                capture:true,
-                passive:false
-            }
-        );
-
-    function bindPopupButton(
-        marker,
-        spot
-    ) {
-        const popupEl =
-            marker
-                .getPopup()
-                ?.getElement();
-
-        if (!popupEl) {
-            return;
-        }
-
-        const button =
-            popupEl.querySelector(
-                `[data-popup-select="${CSS.escape(
-                    String(spot.id)
-                )}"]`
-            );
-
-        if (!button) {
-            return;
-        }
-
-        if (
-            button.dataset.bound ===
-            "1"
-        ) {
-            return;
-        }
-
-        button.dataset.bound =
-            "1";
-
-        button.addEventListener(
-            "click",
-            event => {
-                event.preventDefault();
-                event.stopPropagation();
-
-                toggleSpot(spot);
-
-                requestAnimationFrame(
-                    () => {
-                        const next =
-                            markers.get(
-                                String(
-                                    spot.id
-                                )
+                                    );
+                                }
                             );
 
-                        if (next) {
-                            next.openPopup();
-
-                            requestAnimationFrame(
-                                () =>
-                                    bindPopupButton(
-                                        next,
-                                        spot
-                                    )
-                            );
-                        }
+                        saveSelectedIDs();
+                        updateSelected();
+                        updateInfo();
+                        updateCardSelection();
+                        updateMarkerSelection(
+                            spot.id
+                        );
+                        updateRoutePreviewState();
                     }
+                );
+
+                selectedList.appendChild(
+                    item
                 );
             }
         );
     }
 
-    function refreshMarkers() {
+    // ============================================================
+    // マーカー
+    // ============================================================
+
+    function createMarkers(
+        list
+    ) {
+
         markers.forEach(
-            marker => {
-                try {
-                    marker.closePopup();
-                } catch (_) {}
+            function (marker) {
 
                 map.removeLayer(
                     marker
@@ -2482,1502 +3566,1390 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         );
 
-        markers.clear();
+        markers = [];
+        markerMap = new Map();
 
-        filteredSpots().forEach(
-            spot => {
+        list.forEach(
+            function (spot) {
+
                 const marker =
-                    createMarker(
-                        spot
+                    L.marker(
+                        [
+                            Number(
+                                spot.lat
+                            ),
+                            Number(
+                                spot.lng
+                            )
+                        ],
+                        {
+                            icon:
+                                createMarkerIcon(
+                                    spot,
+                                    isSpotSelected(
+                                        spot
+                                    )
+                                ),
+
+                            keyboard:
+                                true,
+
+                            title:
+                                getLocalizedValue(
+                                    spot.name
+                                ),
+
+                            zIndexOffset:
+                                getMarkerZIndexOffset(
+                                    spot
+                                )
+                        }
                     );
+
+                marker.bindPopup(
+                    createPopupHTML(
+                        spot
+                    ),
+                    {
+                        className:
+                            "planner-liquid-popup",
+
+                        maxWidth:
+                            350,
+
+                        minWidth:
+                            250,
+
+                        closeButton:
+                            true,
+
+                        autoPan:
+                            true
+                    }
+                );
+
+                marker.on(
+                    "popupopen",
+                    function () {
+
+                        bindPopupButton(
+                            marker,
+                            spot
+                        );
+                    }
+                );
 
                 marker.addTo(map);
 
-                markers.set(
-                    String(spot.id),
+                markers.push(
                     marker
                 );
 
-                requestAnimationFrame(
-                    () =>
-                        attachNativeMarkerEvents(
-                            marker,
-                            spot
+                markerMap.set(
+                    String(
+                        spot.id
+                    ),
+                    marker
+                );
+            }
+        );
+    }
+
+    function updateMarkerSelection(
+        changedSpotId
+    ) {
+
+        const marker =
+            markerMap.get(
+                String(
+                    changedSpotId
+                )
+            );
+
+        if (!marker) {
+            return;
+        }
+
+        const spot =
+            spots.find(
+                function (item) {
+
+                    return (
+                        String(
+                            item.id
+                        ) ===
+                        String(
+                            changedSpotId
                         )
-                );
-            }
-        );
-    }
-
-    /* ============================================================
-       CURRENT LOCATION
-       ============================================================ */
-
-    function currentLocationIcon() {
-        return L.divIcon({
-            className:
-                "planner-current-icon",
-
-            html:
-                `
-                    <div
-                        class="planner-current"
-                    >
-
-                        <span
-                            class="
-                                planner-current-pulse
-                            "
-                        ></span>
-
-                        <span
-                            class="
-                                planner-current-pulse
-                                delay
-                            "
-                        ></span>
-
-                        <span
-                            class="
-                                planner-current-core
-                            "
-                        ></span>
-
-                    </div>
-                `,
-
-            iconSize:
-                [
-                    46,
-                    46
-                ],
-
-            iconAnchor:
-                [
-                    23,
-                    23
-                ]
-        });
-    }
-
-    function setCurrentLocation(
-        location,
-        center = false
-    ) {
-        currentLocation =
-            location;
-
-        const latlng =
-            [
-                location.lat,
-                location.lng
-            ];
-
-        if (
-            !currentLocationMarker
-        ) {
-            currentLocationMarker =
-                L.marker(
-                    latlng,
-                    {
-                        pane:
-                            "plannerCurrentPane",
-
-                        icon:
-                            currentLocationIcon(),
-
-                        interactive:
-                            false
-                    }
-                )
-                .addTo(map);
-        } else {
-            currentLocationMarker
-                .setLatLng(
-                    latlng
-                );
-        }
-
-        if (
-            currentAccuracyCircle
-        ) {
-            map.removeLayer(
-                currentAccuracyCircle
-            );
-        }
-
-        currentAccuracyCircle =
-            null;
-
-        if (
-            Number(
-                location.accuracy
-            ) > 0
-        ) {
-            currentAccuracyCircle =
-                L.circle(
-                    latlng,
-                    {
-                        pane:
-                            "plannerCurrentPane",
-
-                        radius:
-                            Math.min(
-                                Math.max(
-                                    Number(
-                                        location.accuracy
-                                    ),
-                                    8
-                                ),
-                                80
-                            ),
-
-                        color:
-                            COLOR.pin,
-
-                        weight:
-                            1,
-
-                        opacity:
-                            .23,
-
-                        fillColor:
-                            COLOR.pin,
-
-                        fillOpacity:
-                            .05,
-
-                        interactive:
-                            false
-                    }
-                )
-                .addTo(map);
-        }
-
-        if (center) {
-            map.setView(
-                latlng,
-                Math.max(
-                    map.getZoom(),
-                    17
-                ),
-                {
-                    animate:
-                        true
+                    );
                 }
             );
+
+        if (!spot) {
+            return;
         }
 
-        updateNavigationPreview();
-
-        if (
-            navigationActive
-        ) {
-            updateNavigationProgress();
-        }
-    }
-
-    function getCurrentLocation(
-        center = false,
-        silent = false
-    ) {
-        if (
-            !navigator.geolocation
-        ) {
-            if (!silent) {
-                alert(
-                    "このブラウザでは現在地を利用できません。"
-                );
-            }
-
-            return Promise.reject(
-                new Error(
-                    "Geolocation unsupported"
+        marker.setIcon(
+            createMarkerIcon(
+                spot,
+                isSpotSelected(
+                    spot
                 )
-            );
-        }
-
-        if (
-            locationPromise
-        ) {
-            return locationPromise;
-        }
-
-        locationPromise =
-            new Promise(
-                (
-                    resolve,
-                    reject
-                ) => {
-                    navigator.geolocation
-                        .getCurrentPosition(
-                            position => {
-                                const location =
-                                    {
-                                        lat:
-                                            position
-                                                .coords
-                                                .latitude,
-
-                                        lng:
-                                            position
-                                                .coords
-                                                .longitude,
-
-                                        accuracy:
-                                            position
-                                                .coords
-                                                .accuracy
-                                    };
-
-                                setCurrentLocation(
-                                    location,
-                                    center
-                                );
-
-                                resolve(
-                                    location
-                                );
-                            },
-
-                            error => {
-                                console.warn(
-                                    "現在地取得エラー:",
-                                    error
-                                );
-
-                                if (
-                                    !silent
-                                ) {
-                                    alert(
-                                        "現在地を取得できませんでした。ブラウザの位置情報許可を確認してください。"
-                                    );
-                                }
-
-                                reject(
-                                    error
-                                );
-                            },
-
-                            {
-                                enableHighAccuracy:
-                                    true,
-
-                                timeout:
-                                    12000,
-
-                                maximumAge:
-                                    30000
-                            }
-                        );
-                }
             )
-            .finally(
-                () =>
-                    locationPromise =
-                        null
-            );
-
-        return locationPromise;
-    }
-
-    function startWatch() {
-        if (
-            watchId !== null ||
-            !navigator.geolocation
-        ) {
-            return;
-        }
-
-        watchId =
-            navigator.geolocation
-                .watchPosition(
-                    position =>
-                        setCurrentLocation(
-                            {
-                                lat:
-                                    position
-                                        .coords
-                                        .latitude,
-
-                                lng:
-                                    position
-                                        .coords
-                                        .longitude,
-
-                                accuracy:
-                                    position
-                                        .coords
-                                        .accuracy
-                            },
-                            false
-                        ),
-
-                    error =>
-                        console.warn(
-                            "位置追跡エラー:",
-                            error
-                        ),
-
-                    {
-                        enableHighAccuracy:
-                            true,
-
-                        timeout:
-                            15000,
-
-                        maximumAge:
-                            5000
-                    }
-                );
-    }
-
-    function stopWatch() {
-        if (
-            watchId === null
-        ) {
-            return;
-        }
-
-        navigator.geolocation.clearWatch(
-            watchId
         );
 
-        watchId = null;
+        if (
+            marker.isPopupOpen()
+        ) {
+
+            marker.setPopupContent(
+                createPopupHTML(
+                    spot
+                )
+            );
+
+            setTimeout(
+                function () {
+
+                    bindPopupButton(
+                        marker,
+                        spot
+                    );
+
+                },
+                0
+            );
+        }
     }
 
-    /* ============================================================
-       GRAPH ROUTING
-       ============================================================ */
+    // ============================================================
+    // 検索
+    // ============================================================
+
+    function filterSpots() {
+
+        const keyword =
+            searchInput
+                ? searchInput.value
+                    .trim()
+                    .toLowerCase()
+                : "";
+
+        const activeButton =
+            document.querySelector(
+                ".category.active"
+            );
+
+        const selectedCategory =
+            activeButton
+                ? (
+                    activeButton.dataset.category ||
+                    activeButton.textContent.trim()
+                )
+                : "all";
+
+        const targetCategory =
+            normalizeCategory(
+                selectedCategory
+            );
+
+        const filtered =
+            spots.filter(
+                function (spot) {
+
+                    const name =
+                        getLocalizedValue(
+                            spot.name
+                        )
+                        .toLowerCase();
+
+                    const description =
+                        getLocalizedValue(
+                            spot.description
+                        )
+                        .toLowerCase();
+
+                    const categoryText =
+                        String(
+                            spot.category ??
+                            ""
+                        )
+                        .toLowerCase();
+
+                    const matchesSearch =
+                        !keyword ||
+                        name.includes(
+                            keyword
+                        ) ||
+                        description.includes(
+                            keyword
+                        ) ||
+                        categoryText.includes(
+                            keyword
+                        );
+
+                    const matchesCategory =
+                        targetCategory ===
+                            "all" ||
+                        normalizeCategory(
+                            spot.category
+                        ) ===
+                            targetCategory;
+
+                    return (
+                        matchesSearch &&
+                        matchesCategory
+                    );
+                }
+            );
+
+        displaySpots(
+            filtered
+        );
+
+        createMarkers(
+            filtered
+        );
+
+        renderRouteNumberMarkers();
+    }
+
+    if (searchInput) {
+
+        searchInput.addEventListener(
+            "input",
+            filterSpots
+        );
+    }
+
+    categoryButtons.forEach(
+        function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    categoryButtons.forEach(
+                        function (item) {
+
+                            item.classList.remove(
+                                "active"
+                            );
+                        }
+                    );
+
+                    button.classList.add(
+                        "active"
+                    );
+
+                    filterSpots();
+                }
+            );
+        }
+    );
+
+    // ============================================================
+    // routes.json 正規化
+    // ============================================================
+
+    function normalizeRouteObject(
+        route,
+        index
+    ) {
+
+        if (
+            !route ||
+            typeof route !==
+                "object"
+        ) {
+            return null;
+        }
+
+        const from =
+            String(
+                route.from ??
+                ""
+            ).trim();
+
+        const to =
+            String(
+                route.to ??
+                ""
+            ).trim();
+
+        if (
+            !from ||
+            !to
+        ) {
+            return null;
+        }
+
+        if (
+            !Array.isArray(
+                route.path
+            )
+        ) {
+            return null;
+        }
+
+        const path =
+            route.path
+                .map(
+                    function (point) {
+
+                        const lat =
+                            Number(
+                                point?.lat
+                            );
+
+                        const lng =
+                            Number(
+                                point?.lng
+                            );
+
+                        if (
+                            !Number.isFinite(
+                                lat
+                            ) ||
+                            !Number.isFinite(
+                                lng
+                            )
+                        ) {
+                            return null;
+                        }
+
+                        return [
+                            lat,
+                            lng
+                        ];
+                    }
+                )
+                .filter(Boolean);
+
+        if (
+            path.length < 2
+        ) {
+            return null;
+        }
+
+        return {
+
+            from:
+                from,
+
+            to:
+                to,
+
+            name:
+                String(
+                    route.name ||
+                    `${from} → ${to}`
+                ),
+
+            path:
+                path,
+
+            index:
+                index,
+
+            priority:
+                Number.isFinite(
+                    Number(
+                        route.priority
+                    )
+                )
+                    ? Number(
+                        route.priority
+                    )
+                    : 0,
+
+            type:
+                String(
+                    route.type ||
+                    ""
+                )
+                .trim()
+                .toLowerCase()
+        };
+    }
+
+    function routePathDistanceKm(
+        path
+    ) {
+
+        if (
+            !Array.isArray(path) ||
+            path.length < 2
+        ) {
+            return Infinity;
+        }
+
+        let totalMeters = 0;
+
+        for (
+            let i = 0;
+            i < path.length - 1;
+            i++
+        ) {
+
+            totalMeters +=
+                map.distance(
+                    path[i],
+                    path[i + 1]
+                );
+        }
+
+        return (
+            totalMeters / 1000
+        );
+    }
+
+    function prepareRouteGraph() {
+
+        routes =
+            routes
+                .map(
+                    normalizeRouteObject
+                )
+                .filter(Boolean);
+
+        console.log(
+            "V11 routes loaded:",
+            routes.length
+        );
+    }
+
+    function getEdgeCost(
+        route
+    ) {
+
+        const distanceKm =
+            routePathDistanceKm(
+                route.path
+            );
+
+        let cost =
+            distanceKm;
+
+        if (
+            route.priority > 0
+        ) {
+
+            cost *= Math.max(
+                0.75,
+                1 -
+                Math.min(
+                    route.priority,
+                    100
+                ) / 1000
+            );
+        }
+
+        const routeName =
+            route.name.toLowerCase();
+
+        if (
+            route.type ===
+                "main" ||
+            route.type ===
+                "shrine" ||
+            route.type ===
+                "mountain" ||
+            routeName.includes(
+                "gis実測"
+            ) ||
+            routeName.includes(
+                "実測"
+            )
+        ) {
+
+            cost *= 0.995;
+        }
+
+        return cost;
+    }
 
     function buildGraph() {
+
         const graph =
             new Map();
 
-        const add =
-            (
-                id,
-                edge
-            ) => {
-                const key =
-                    String(id);
+        routes.forEach(
+            function (route) {
 
                 if (
-                    !graph.has(key)
+                    !graph.has(
+                        route.from
+                    )
                 ) {
+
                     graph.set(
-                        key,
+                        route.from,
                         []
                     );
                 }
 
-                graph
-                    .get(key)
-                    .push(edge);
-            };
+                if (
+                    !graph.has(
+                        route.to
+                    )
+                ) {
 
-        routes.forEach(
-            route => {
-                add(
-                    route.from,
-                    {
-                        from:
-                            route.from,
+                    graph.set(
+                        route.to,
+                        []
+                    );
+                }
 
-                        to:
-                            route.to,
+                graph.get(
+                    route.from
+                ).push({
 
-                        path:
-                            route.path,
+                    from:
+                        route.from,
 
-                        meters:
-                            route.meters
-                    }
-                );
+                    to:
+                        route.to,
 
-                add(
-                    route.to,
-                    {
-                        from:
-                            route.to,
+                    path:
+                        route.path,
 
-                        to:
-                            route.from,
+                    cost:
+                        getEdgeCost(
+                            route
+                        ),
 
-                        path:
-                            route.path
-                                .slice()
-                                .reverse(),
+                    route:
+                        route,
 
-                        meters:
-                            route.meters
-                    }
-                );
+                    reversed:
+                        false
+                });
+
+                graph.get(
+                    route.to
+                ).push({
+
+                    from:
+                        route.to,
+
+                    to:
+                        route.from,
+
+                    path:
+                        route.path
+                            .slice()
+                            .reverse(),
+
+                    cost:
+                        getEdgeCost(
+                            route
+                        ),
+
+                    route:
+                        route,
+
+                    reversed:
+                        true
+                });
             }
         );
 
         return graph;
     }
 
-    function edgeCost(
-        edge,
-        targetId
-    ) {
-        let cost =
-            edge.meters;
+    // ============================================================
+    // 最適ルート探索
+    // ============================================================
 
-        /*
-           山頂(5)を目的地以外で
-           中継に使う場合は大きな追加コスト。
-           無駄な大回りを防ぐ。
-        */
-
-        if (
-            String(edge.to) === "5" &&
-            String(targetId) !== "5"
-        ) {
-            cost += 1200;
-        }
-
-        if (
-            String(edge.from) === "5" &&
-            String(targetId) !== "5"
-        ) {
-            cost += 350;
-        }
-
-        return cost;
-    }
-
-    function dijkstra(
+    function findGraphRoute(
         fromId,
         toId
     ) {
-        const graph =
-            buildGraph();
 
         const start =
-            String(fromId);
+            String(
+                fromId
+            );
 
-        const target =
-            String(toId);
+        const goal =
+            String(
+                toId
+            );
 
         if (
-            start === target
+            start === goal
         ) {
+
             return {
-                edges:[],
-                meters:0
+
+                coordinates:
+                    [],
+
+                distanceKm:
+                    0,
+
+                legs:
+                    []
             };
         }
 
+        const graph =
+            buildGraph();
+
         if (
             !graph.has(start) ||
-            !graph.has(target)
+            !graph.has(goal)
         ) {
+
             return null;
         }
 
-        const dist =
+        const distances =
             new Map();
 
-        const prev =
+        const previous =
             new Map();
 
-        const open =
-            new Set(
-                graph.keys()
-            );
+        const visited =
+            new Set();
+
+        const queue = [];
 
         graph.forEach(
-            (_,id) =>
-                dist.set(
-                    id,
+            function (
+                _,
+                node
+            ) {
+
+                distances.set(
+                    node,
                     Infinity
-                )
+                );
+            }
         );
 
-        dist.set(
+        distances.set(
             start,
             0
         );
 
+        queue.push({
+
+            node:
+                start,
+
+            distance:
+                0
+        });
+
         while (
-            open.size
+            queue.length > 0
         ) {
-            let current =
-                null;
 
-            let best =
-                Infinity;
+            queue.sort(
+                function (
+                    a,
+                    b
+                ) {
 
-            open.forEach(
-                id => {
-                    const value =
-                        dist.get(
-                            id
-                        );
+                    return (
+                        a.distance -
+                        b.distance
+                    );
+                }
+            );
+
+            const current =
+                queue.shift();
+
+            if (!current) {
+                break;
+            }
+
+            const node =
+                current.node;
+
+            if (
+                visited.has(
+                    node
+                )
+            ) {
+                continue;
+            }
+
+            visited.add(
+                node
+            );
+
+            if (
+                node === goal
+            ) {
+                break;
+            }
+
+            const edges =
+                graph.get(
+                    node
+                ) || [];
+
+            edges.forEach(
+                function (
+                    edge
+                ) {
 
                     if (
-                        value < best
+                        visited.has(
+                            edge.to
+                        )
                     ) {
-                        best =
-                            value;
+                        return;
+                    }
 
-                        current =
-                            id;
+                    const nextDistance =
+                        current.distance +
+                        edge.cost;
+
+                    if (
+                        nextDistance <
+                        (
+                            distances.get(
+                                edge.to
+                            ) ??
+                            Infinity
+                        )
+                    ) {
+
+                        distances.set(
+                            edge.to,
+                            nextDistance
+                        );
+
+                        previous.set(
+                            edge.to,
+                            {
+
+                                previousNode:
+                                    node,
+
+                                edge:
+                                    edge
+                            }
+                        );
+
+                        queue.push({
+
+                            node:
+                                edge.to,
+
+                            distance:
+                                nextDistance
+                        });
                     }
                 }
             );
-
-            if (
-                current === null ||
-                best === Infinity
-            ) {
-                break;
-            }
-
-            if (
-                current === target
-            ) {
-                break;
-            }
-
-            open.delete(
-                current
-            );
-
-            for (
-                const edge
-                of graph.get(
-                    current
-                ) || []
-            ) {
-                if (
-                    !open.has(
-                        String(
-                            edge.to
-                        )
-                    )
-                ) {
-                    continue;
-                }
-
-                const alt =
-                    best +
-                    edgeCost(
-                        edge,
-                        target
-                    );
-
-                if (
-                    alt <
-                    dist.get(
-                        String(
-                            edge.to
-                        )
-                    )
-                ) {
-                    dist.set(
-                        String(
-                            edge.to
-                        ),
-                        alt
-                    );
-
-                    prev.set(
-                        String(
-                            edge.to
-                        ),
-                        {
-                            from:
-                                current,
-
-                            edge:
-                                edge
-                        }
-                    );
-                }
-            }
         }
 
         if (
-            !prev.has(
-                target
+            !previous.has(
+                goal
             )
         ) {
             return null;
         }
 
-        const edges =
-            [];
-
-        let cursor =
-            target;
+        const pathEdges = [];
+        let cursor = goal;
 
         while (
             cursor !== start
         ) {
-            const item =
-                prev.get(
+
+            const record =
+                previous.get(
                     cursor
                 );
 
-            if (!item) {
+            if (!record) {
                 return null;
             }
 
-            edges.unshift(
-                item.edge
+            pathEdges.push(
+                record.edge
             );
 
             cursor =
-                item.from;
+                record.previousNode;
         }
 
-        return {
-            edges,
-            meters:
-                edges.reduce(
-                    (sum,e) =>
-                        sum +
-                        e.meters,
-                    0
-                )
-        };
-    }
+        pathEdges.reverse();
 
-    function graphRoute(
-        fromSpot,
-        toSpot
-    ) {
-        const result =
-            dijkstra(
-                fromSpot.id,
-                toSpot.id
-            );
+        const coordinates = [];
+        let totalDistanceKm = 0;
 
-        if (!result) {
-            return null;
-        }
+        pathEdges.forEach(
+            function (
+                edge,
+                index
+            ) {
 
-        let coordinates =
-            [];
+                const points =
+                    edge.path.slice();
 
-        result.edges.forEach(
-            edge => {
-                coordinates =
-                    mergePath(
-                        coordinates,
+                if (
+                    index > 0
+                ) {
+                    points.shift();
+                }
+
+                coordinates.push(
+                    ...points
+                );
+
+                totalDistanceKm +=
+                    routePathDistanceKm(
                         edge.path
                     );
             }
         );
 
-        if (
-            coordinates.length < 2
-        ) {
+        return {
+
+            coordinates:
+                coordinates,
+
+            distanceKm:
+                totalDistanceKm,
+
+            legs:
+                pathEdges
+        };
+    }
+
+    // ============================================================
+    // スポット検索
+    // ============================================================
+
+    function findSpotById(
+        id
+    ) {
+
+        return (
+            spots.find(
+                function (spot) {
+
+                    return (
+                        String(
+                            spot.id
+                        ) ===
+                        String(id)
+                    );
+                }
+            ) ||
+            null
+        );
+    }
+
+    // ============================================================
+    // 現在地から最寄りのroutes.json接続地点
+    // ============================================================
+
+    function findNearestGraphSpot(
+        lat,
+        lng
+    ) {
+
+        const connectedIds =
+            new Set();
+
+        routes.forEach(
+            function (route) {
+
+                connectedIds.add(
+                    String(
+                        route.from
+                    )
+                );
+
+                connectedIds.add(
+                    String(
+                        route.to
+                    )
+                );
+            }
+        );
+
+        let nearest = null;
+        let nearestDistance =
+            Infinity;
+
+        connectedIds.forEach(
+            function (id) {
+
+                const spot =
+                    findSpotById(
+                        id
+                    );
+
+                if (!spot) {
+                    return;
+                }
+
+                const meters =
+                    map.distance(
+                        [
+                            lat,
+                            lng
+                        ],
+                        [
+                            spot.lat,
+                            spot.lng
+                        ]
+                    );
+
+                if (
+                    meters <
+                    nearestDistance
+                ) {
+
+                    nearestDistance =
+                        meters;
+
+                    nearest =
+                        spot;
+                }
+            }
+        );
+
+        if (!nearest) {
             return null;
         }
 
         return {
-            coordinates,
-            meters:
-                pathDistance(
-                    coordinates
-                ),
-            source:
-                "ROUTES",
-            edges:
-                result.edges
+
+            spot:
+                nearest,
+
+            distanceMeters:
+                nearestDistance
         };
     }
 
-    /* ============================================================
-       OSRM
-       ============================================================ */
+    // ============================================================
+    // OSRM
+    // ============================================================
 
-    async function osrmRoute(
-        from,
-        to
+    async function getOSRMRoute(
+        fromPoint,
+        toPoint
     ) {
-        const coords =
-            `${from.lng},${from.lat};${to.lng},${to.lat}`;
 
         const url =
-            `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+            "https://router.project-osrm.org/route/v1/foot/" +
+            `${fromPoint.lng},${fromPoint.lat};` +
+            `${toPoint.lng},${toPoint.lat}` +
+            "?overview=full&geometries=geojson";
 
         const response =
-            await fetch(
-                url,
-                {
-                    cache:
-                        "no-store"
-                }
-            );
+            await fetch(url);
 
         if (
             !response.ok
         ) {
+
             throw new Error(
-                `OSRM HTTP ${response.status}`
+                `OSRM API error: ${response.status}`
             );
         }
 
         const data =
             await response.json();
 
-        const route =
-            data?.routes?.[0];
-
         if (
-            !route?.geometry?.coordinates?.length
+            data.code !== "Ok" ||
+            !Array.isArray(
+                data.routes
+            ) ||
+            data.routes.length === 0 ||
+            !data.routes[0].geometry ||
+            !Array.isArray(
+                data.routes[0]
+                    .geometry
+                    .coordinates
+            )
         ) {
+
             throw new Error(
-                "OSRM徒歩ルートが見つかりませんでした。"
+                "徒歩ルートが見つかりませんでした。"
             );
         }
 
-        const coordinates =
-            route
+        return (
+            data.routes[0]
                 .geometry
                 .coordinates
                 .map(
-                    c => [
-                        Number(c[1]),
-                        Number(c[0])
-                    ]
-                );
+                    function (coord) {
 
-        return {
-            coordinates,
-            meters:
-                Number(
-                    route.distance
-                ) ||
-                pathDistance(
-                    coordinates
-                ),
-            source:
-                "OSRM"
-        };
-    }
-
-    function nearbyNetworkSpots(
-        target
-    ) {
-        if (
-            !currentLocation
-        ) {
-            return [];
-        }
-
-        const graph =
-            buildGraph();
-
-        const current =
-            [
-                currentLocation.lat,
-                currentLocation.lng
-            ];
-
-        return Array
-            .from(
-                graph.keys()
-            )
-            .map(
-                id =>
-                    spots.find(
-                        s =>
-                            String(
-                                s.id
-                            ) ===
-                            String(
-                                id
-                            )
-                    )
-            )
-            .filter(Boolean)
-            .filter(
-                s =>
-                    String(
-                        s.id
-                    ) !==
-                    String(
-                        target.id
-                    )
-            )
-            .map(
-                s => ({
-                    spot:
-                        s,
-
-                    distance:
-                        map.distance(
-                            current,
-                            pointOfSpot(
-                                s
-                            )
-                        )
-                })
-            )
-            .filter(
-                x =>
-                    x.distance <=
-                    CONFIG.hybridRadius
-            )
-            .sort(
-                (a,b) =>
-                    a.distance -
-                    b.distance
-            )
-            .slice(
-                0,
-                CONFIG.hybridCandidates
-            );
-    }
-
-    async function currentToFirst(
-        target
-    ) {
-        const start = {
-            lat:
-                currentLocation.lat,
-
-            lng:
-                currentLocation.lng
-        };
-
-        let direct =
-            null;
-
-        try {
-            direct =
-                await osrmRoute(
-                    start,
-                    {
-                        lat:
+                        return [
                             Number(
-                                target.lat
+                                coord[1]
                             ),
-
-                        lng:
                             Number(
-                                target.lng
+                                coord[0]
                             )
+                        ];
                     }
-                );
-        } catch (error) {
-            console.warn(
-                "現在地からのOSRM取得失敗:",
-                error
-            );
-        }
-
-        let bestHybrid =
-            null;
-
-        for (
-            const candidate
-            of nearbyNetworkSpots(
-                target
-            )
-        ) {
-            try {
-                const network =
-                    graphRoute(
-                        candidate.spot,
-                        target
-                    );
-
-                if (!network) {
-                    continue;
-                }
-
-                const access =
-                    await osrmRoute(
-                        start,
-                        {
-                            lat:
-                                Number(
-                                    candidate
-                                        .spot
-                                        .lat
-                                ),
-
-                            lng:
-                                Number(
-                                    candidate
-                                        .spot
-                                        .lng
-                                )
-                        }
-                    );
-
-                const combined =
-                    mergePath(
-                        access.coordinates,
-                        network.coordinates
-                    );
-
-                const meters =
-                    pathDistance(
-                        combined
-                    );
-
-                if (
-                    !bestHybrid ||
-                    meters <
-                        bestHybrid.meters
-                ) {
-                    bestHybrid = {
-                        coordinates:
-                            combined,
-
-                        meters:
-                            meters,
-
-                        source:
-                            "HYBRID"
-                    };
-                }
-            } catch (error) {
-                console.warn(
-                    "Hybrid候補失敗:",
-                    candidate.spot.id,
-                    error
-                );
-            }
-        }
-
-        if (
-            bestHybrid &&
-            direct
-        ) {
-            const ratio =
-                bestHybrid.meters /
-                Math.max(
-                    1,
-                    direct.meters
-                );
-
-            if (
-                ratio <= 1.45 ||
-                ![
-                    "7",
-                    "8"
-                ].includes(
-                    String(
-                        target.id
-                    )
                 )
-            ) {
-                return bestHybrid;
-            }
-
-            return direct;
-        }
-
-        if (
-            bestHybrid
-        ) {
-            return bestHybrid;
-        }
-
-        if (
-            direct
-        ) {
-            return direct;
-        }
-
-        throw new Error(
-            "現在地から最初の目的地へのルートを取得できませんでした。"
         );
     }
 
-    async function spotToSpot(
+    // ============================================================
+    // スポット間ルート
+    // ============================================================
+
+    async function getWalkingRoute(
         from,
         to
     ) {
-        const network =
-            graphRoute(
-                from,
-                to
+
+        const graphRoute =
+            findGraphRoute(
+                from.id,
+                to.id
             );
-
-        if (network) {
-            return network;
-        }
-
-        return osrmRoute(
-            {
-                lat:
-                    Number(
-                        from.lat
-                    ),
-
-                lng:
-                    Number(
-                        from.lng
-                    )
-            },
-            {
-                lat:
-                    Number(
-                        to.lat
-                    ),
-
-                lng:
-                    Number(
-                        to.lng
-                    )
-            }
-        );
-    }
-
-    async function buildNavigationLegs() {
-        if (
-            !selectedSpots.length
-        ) {
-            throw new Error(
-                "1か所以上のスポットを選択してください。"
-            );
-        }
 
         if (
-            !currentLocation
+            graphRoute &&
+            graphRoute.coordinates
+                .length >= 2
         ) {
-            throw new Error(
-                "現在地を取得できていません。"
-            );
+
+            return {
+
+                coordinates:
+                    graphRoute.coordinates,
+
+                source:
+                    "routes.json",
+
+                legs:
+                    graphRoute.legs
+            };
         }
 
-        const legs =
-            [];
-
-        legs.push(
-            {
-                target:
-                    selectedSpots[0],
-
-                ...(
-                    await currentToFirst(
-                        selectedSpots[0]
-                    )
-                )
-            }
-        );
-
-        for (
-            let i = 0;
-            i <
-                selectedSpots.length - 1;
-            i++
-        ) {
-            legs.push(
+        const osrmCoordinates =
+            await getOSRMRoute(
                 {
-                    target:
-                        selectedSpots[
-                            i + 1
-                        ],
+                    lat:
+                        Number(
+                            from.lat
+                        ),
 
-                    ...(
-                        await spotToSpot(
-                            selectedSpots[i],
-                            selectedSpots[
-                                i + 1
-                            ]
+                    lng:
+                        Number(
+                            from.lng
                         )
-                    )
+                },
+                {
+                    lat:
+                        Number(
+                            to.lat
+                        ),
+
+                    lng:
+                        Number(
+                            to.lng
+                        )
                 }
             );
-        }
 
-        return legs;
+        return {
+
+            coordinates:
+                osrmCoordinates,
+
+            source:
+                "OSRM",
+
+            legs:
+                []
+        };
     }
 
-    /* ============================================================
-       ROUTE DISPLAY
-       ============================================================ */
+    // ============================================================
+    // 現在地→目的地
+    // ============================================================
 
-    function clearRouteVisuals() {
-        if (
-            routeLine
-        ) {
-            map.removeLayer(
-                routeLine
-            );
-        }
-
-        routeLine =
-            null;
-
-        if (
-            arrowLayer
-        ) {
-            map.removeLayer(
-                arrowLayer
-            );
-        }
-
-        arrowLayer =
-            null;
-
-        routeNumberMarkers.forEach(
-            marker =>
-                map.removeLayer(
-                    marker
-                )
-        );
-
-        routeNumberMarkers =
-            [];
-    }
-
-    function bearing(
-        a,
-        b
+    async function getLocationToSpotRoute(
+        location,
+        target
     ) {
-        const lat1 =
-            a[0] *
-            Math.PI /
-            180;
 
-        const lat2 =
-            b[0] *
-            Math.PI /
-            180;
+        const nearest =
+            findNearestGraphSpot(
+                location.lat,
+                location.lng
+            );
 
-        const dLng =
-            (b[1] - a[1]) *
-            Math.PI /
-            180;
-
-        const y =
-            Math.sin(dLng) *
-            Math.cos(lat2);
-
-        const x =
-            Math.cos(lat1) *
-                Math.sin(lat2) -
-            Math.sin(lat1) *
-                Math.cos(lat2) *
-                Math.cos(dLng);
-
-        return (
-            Math.atan2(
-                y,
-                x
-            ) *
-            180 /
-            Math.PI +
-            360
-        ) % 360;
-    }
-
-    function routeArrowPoints(
-        path
-    ) {
-        const points =
-            [];
-
-        let traveled =
-            0;
-
-        let next =
-            CONFIG.arrowSpacing;
-
-        for (
-            let i = 0;
-            i <
-                path.length - 1;
-            i++
+        if (
+            nearest &&
+            nearest.distanceMeters <=
+                800
         ) {
-            const a =
-                path[i];
 
-            const b =
-                path[i + 1];
-
-            const segment =
-                map.distance(
-                    a,
-                    b
+            const graphRoute =
+                findGraphRoute(
+                    nearest.spot.id,
+                    target.id
                 );
 
             if (
-                segment <= 0
+                graphRoute &&
+                graphRoute.coordinates
+                    .length >= 2
             ) {
-                continue;
-            }
 
-            while (
-                traveled +
-                    segment >=
-                next
-            ) {
-                const ratio =
-                    (
-                        next -
-                        traveled
-                    ) /
-                    segment;
+                let approach = [];
 
-                points.push(
-                    {
-                        point:
+                try {
+
+                    approach =
+                        await getOSRMRoute(
+                            {
+                                lat:
+                                    location.lat,
+
+                                lng:
+                                    location.lng
+                            },
+                            {
+                                lat:
+                                    nearest.spot.lat,
+
+                                lng:
+                                    nearest.spot.lng
+                            }
+                        );
+
+                } catch (error) {
+
+                    console.warn(
+                        "現在地→routes.json接続地点のOSRMに失敗しました。",
+                        error
+                    );
+                }
+
+                const combined =
+                    approach.length > 0
+                        ? approach.slice()
+                        : [
                             [
-                                a[0] +
-                                    (
-                                        b[0] -
-                                        a[0]
-                                    ) *
-                                    ratio,
+                                location.lat,
+                                location.lng
+                            ]
+                        ];
 
-                                a[1] +
-                                    (
-                                        b[1] -
-                                        a[1]
-                                    ) *
-                                    ratio
-                            ],
+                if (
+                    combined.length >
+                    0
+                ) {
 
-                        angle:
-                            bearing(
-                                a,
-                                b
-                            )
+                    const firstRoutePoint =
+                        graphRoute
+                            .coordinates[0];
+
+                    const lastApproachPoint =
+                        combined[
+                            combined.length - 1
+                        ];
+
+                    if (
+                        !lastApproachPoint ||
+                        map.distance(
+                            lastApproachPoint,
+                            firstRoutePoint
+                        ) > 1
+                    ) {
+
+                        combined.push(
+                            firstRoutePoint
+                        );
                     }
+                }
+
+                combined.push(
+                    ...graphRoute
+                        .coordinates
+                        .slice(1)
                 );
 
-                next +=
-                    CONFIG.arrowSpacing;
-            }
+                return {
 
-            traveled +=
-                segment;
+                    coordinates:
+                        combined,
+
+                    source:
+                        "HYBRID",
+
+                    legs:
+                        graphRoute.legs
+                };
+            }
         }
 
-        return points;
+        const direct =
+            await getOSRMRoute(
+                {
+                    lat:
+                        location.lat,
+
+                    lng:
+                        location.lng
+                },
+                {
+                    lat:
+                        target.lat,
+
+                    lng:
+                        target.lng
+                }
+            );
+
+        return {
+
+            coordinates:
+                direct,
+
+            source:
+                "OSRM",
+
+            legs:
+                []
+        };
     }
 
-    function drawRoute(
-        legs
+    // ============================================================
+    // 距離計算
+    // ============================================================
+
+    function calculateDistance(
+        points
     ) {
-        clearRouteVisuals();
 
-        let coordinates =
-            [];
+        let totalMeters = 0;
 
-        legs.forEach(
-            leg =>
-                coordinates =
-                    mergePath(
-                        coordinates,
-                        leg.coordinates
-                    )
-        );
-
-        if (
-            coordinates.length < 2
+        for (
+            let i = 0;
+            i < points.length - 1;
+            i++
         ) {
-            throw new Error(
-                "ルート座標が不足しています。"
-            );
+
+            totalMeters +=
+                map.distance(
+                    points[i],
+                    points[i + 1]
+                );
         }
 
-        routeLine =
-            L.polyline(
-                coordinates,
-                {
-                    pane:
-                        "plannerRoutePane",
+        return (
+            totalMeters /
+            1000
+        );
+    }
 
-                    color:
-                        COLOR.route,
+    // ============================================================
+    // ルート番号
+    // ============================================================
 
-                    weight:
-                        6,
+    function clearRouteNumberMarkers() {
 
-                    opacity:
-                        .92,
+        routeNumberMarkers.forEach(
+            function (marker) {
 
-                    lineCap:
-                        "round",
+                map.removeLayer(
+                    marker
+                );
+            }
+        );
 
-                    lineJoin:
-                        "round",
+        routeNumberMarkers = [];
+    }
 
-                    interactive:
-                        false
-                }
-            )
-            .addTo(map);
+    function createRouteNumberIcon(
+        number
+    ) {
 
-        arrowLayer =
-            L.layerGroup()
-                .addTo(map);
+        return L.divIcon({
 
-        routeArrowPoints(
-            coordinates
-        )
-        .forEach(
-            item => {
+            className:
+                "planner-v11-route-number-icon",
+
+            html: `
+                <div
+                    class="planner-v11-route-badge"
+                >
+                    ${escapeHTML(
+                        number
+                    )}
+                </div>
+            `,
+
+            iconSize: [
+                28,
+                28
+            ],
+
+            iconAnchor: [
+                14,
+                14
+            ],
+
+            pane:
+                "plannerNumberPane"
+        });
+    }
+
+    function renderRouteNumberMarkers() {
+
+        clearRouteNumberMarkers();
+
+        selectedSpots.forEach(
+            function (
+                spot,
+                index
+            ) {
+
                 const marker =
                     L.marker(
-                        item.point,
+                        [
+                            spot.lat,
+                            spot.lng
+                        ],
                         {
-                            pane:
-                                "plannerArrowPane",
+
+                            icon:
+                                createRouteNumberIcon(
+                                    index + 1
+                                ),
 
                             interactive:
                                 false,
 
-                            icon:
-                                L.divIcon(
-                                    {
-                                        className:
-                                            "planner-route-arrow-icon",
+                            keyboard:
+                                false,
 
-                                        html:
-                                            `
-                                                <span
-                                                    class="
-                                                        planner-route-arrow
-                                                    "
-                                                    style="
-                                                        transform:
-                                                            rotate(
-                                                                ${item.angle}deg
-                                                            );
-                                                    "
-                                                ></span>
-                                            `,
+                            zIndexOffset:
+                                3000,
 
-                                        iconSize:
-                                            [
-                                                10,
-                                                14
-                                            ],
-
-                                        iconAnchor:
-                                            [
-                                                5,
-                                                7
-                                            ]
-                                    }
-                                )
+                            pane:
+                                "plannerNumberPane"
                         }
                     );
 
-                arrowLayer.addLayer(
-                    marker
+                marker.addTo(
+                    map
                 );
-            }
-        );
-
-        renderRouteNumbers();
-
-        if (
-            routeLine
-                .getBounds()
-                .isValid()
-        ) {
-            map.fitBounds(
-                routeLine.getBounds(),
-                {
-                    padding:
-                        [
-                            45,
-                            45
-                        ]
-                }
-            );
-        }
-
-        const total =
-            pathDistance(
-                coordinates
-            );
-
-        if (
-            els.distance
-        ) {
-            els.distance.textContent =
-                formatDistance(
-                    total
-                );
-        }
-
-        if (
-            els.walk
-        ) {
-            els.walk.textContent =
-                formatMinutes(
-                    total /
-                        CONFIG.walkSpeed
-                );
-        }
-    }
-
-    function renderRouteNumbers() {
-        routeNumberMarkers.forEach(
-            marker =>
-                map.removeLayer(
-                    marker
-                )
-        );
-
-        routeNumberMarkers =
-            [];
-
-        selectedSpots.forEach(
-            (spot,index) => {
-                const marker =
-                    L.marker(
-                        pointOfSpot(
-                            spot
-                        ),
-                        {
-                            pane:
-                                "plannerNumberPane",
-
-                            interactive:
-                                false,
-
-                            icon:
-                                L.divIcon(
-                                    {
-                                        className:
-                                            "planner-route-number-icon",
-
-                                        html:
-                                            `
-                                                <div
-                                                    class="
-                                                        planner-route-number
-                                                    "
-                                                >
-                                                    ${index + 1}
-                                                </div>
-                                            `,
-
-                                        iconSize:
-                                            [
-                                                31,
-                                                31
-                                            ],
-
-                                        iconAnchor:
-                                            [
-                                                15.5,
-                                                15.5
-                                            ]
-                                    }
-                                )
-                        }
-                    )
-                    .addTo(map);
 
                 routeNumberMarkers.push(
                     marker
@@ -3986,367 +4958,926 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    /* ============================================================
-       NAVIGATION
-       ============================================================ */
+    // ============================================================
+    // ナビパネル
+    // ============================================================
 
-    function updateProgressUI() {
-        nav.progress.innerHTML =
-            "";
+    function showNavCard() {
 
-        const start =
-            document.createElement(
-                "span"
+        if (navCard) {
+
+            navCard.classList.remove(
+                "is-hidden"
             );
-
-        start.className =
-            `planner-nav-step${
-                navigationActive
-                    ? ""
-                    : " current"
-            }`;
-
-        start.textContent =
-            "現在地";
-
-        nav.progress.appendChild(
-            start
-        );
-
-        selectedSpots.forEach(
-            (
-                spot,
-                index
-            ) => {
-                const arrow =
-                    document.createElement(
-                        "span"
-                    );
-
-                arrow.textContent =
-                    "↓";
-
-                arrow.style.color =
-                    "#999";
-
-                nav.progress.appendChild(
-                    arrow
-                );
-
-                const step =
-                    document.createElement(
-                        "span"
-                    );
-
-                step.className =
-                    "planner-nav-step";
-
-                step.textContent =
-                    `${index + 1} ${localized(
-                        spot.name
-                    )}`;
-
-                if (
-                    navigationActive &&
-                    index ===
-                        navigationLegIndex
-                ) {
-                    step.classList.add(
-                        "current"
-                    );
-                }
-
-                if (
-                    navigationActive &&
-                    index <
-                        navigationLegIndex
-                ) {
-                    step.classList.add(
-                        "done"
-                    );
-                }
-
-                nav.progress.appendChild(
-                    step
-                );
-            }
-        );
+        }
     }
 
-    function updateNavigationPreview() {
-        if (
-            !selectedSpots.length
-        ) {
-            hideNavigation();
+    function hideNavCard() {
+
+        if (navCard) {
+
+            navCard.classList.add(
+                "is-hidden"
+            );
+        }
+    }
+
+    function setNavMeta(
+        items
+    ) {
+
+        if (!navMeta) {
             return;
         }
 
-        showNavigation();
+        navMeta.innerHTML =
+            items.map(
+                function (item) {
+
+                    return `
+                        <span
+                            class="planner-v11-nav-chip"
+                        >
+                            ${escapeHTML(
+                                item
+                            )}
+                        </span>
+                    `;
+                }
+            ).join("");
+    }
+
+    function updateNavPanelForRoute() {
+
+        if (
+            !selectedSpots.length
+        ) {
+
+            hideNavCard();
+            return;
+        }
+
+        showNavCard();
+
+        if (navTitle) {
+
+            navTitle.textContent =
+                "現在地からルートを開始できます";
+        }
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                `全${selectedSpots.length}か所`;
+        }
+
+        setNavMeta(
+            [
+                `${selectedSpots.length}スポット`,
+
+                currentLocation
+                    ? "現在地あり"
+                    : "現在地を取得してください"
+            ]
+        );
+
+        if (navArrival) {
+
+            navArrival.style.display =
+                "none";
+
+            navArrival.textContent =
+                "";
+        }
+    }
+
+    function updateRoutePreviewState() {
+
+        renderRouteNumberMarkers();
 
         if (
             !navigationActive
         ) {
-            nav.status.textContent =
-                currentLocation
-                    ? "現在地取得済み"
-                    : "現在地未取得";
 
-            nav.title.textContent =
-                localized(
-                    selectedSpots[0].name
-                );
-
-            if (
-                currentLocation
-            ) {
-                const d =
-                    map.distance(
-                        [
-                            currentLocation
-                                .lat,
-
-                            currentLocation
-                                .lng
-                        ],
-                        pointOfSpot(
-                            selectedSpots[0]
-                        )
-                    );
-
-                nav.meta.innerHTML =
-                    `
-                        <span
-                            class="
-                                planner-nav-chip
-                            "
-                        >
-                            現在地から
-                            約${escapeHTML(
-                                formatDistance(
-                                    d
-                                )
-                            )}
-                        </span>
-                    `;
-            } else {
-                nav.meta.innerHTML =
-                    `
-                        <span
-                            class="
-                                planner-nav-chip
-                            "
-                        >
-                            現在地を取得してください
-                        </span>
-                    `;
-            }
+            updateNavPanelForRoute();
         }
-
-        updateProgressUI();
-
-        nav.start.disabled =
-            !currentLocation ||
-            navigationActive;
     }
 
-    function nearestOnSegment(
-        point,
-        a,
-        b
-    ) {
-        const latScale =
-            111320 *
-            Math.cos(
-                point[0] *
-                    Math.PI /
-                    180
-            );
+    // ============================================================
+    // ルート作成
+    // ============================================================
 
-        const lngScale =
-            110540;
+    async function ensureCurrentLocation() {
 
-        const px =
-            point[1] *
-            latScale;
-
-        const py =
-            point[0] *
-            lngScale;
-
-        const ax =
-            a[1] *
-            latScale;
-
-        const ay =
-            a[0] *
-            lngScale;
-
-        const bx =
-            b[1] *
-            latScale;
-
-        const by =
-            b[0] *
-            lngScale;
-
-        const dx =
-            bx - ax;
-
-        const dy =
-            by - ay;
-
-        const denom =
-            dx * dx +
-            dy * dy;
-
-        if (!denom) {
-            return {
-                t:0,
-                distance:
-                    map.distance(
-                        point,
-                        a
-                    )
-            };
-        }
-
-        const t =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    (
-                        (px - ax) * dx +
-                        (py - ay) * dy
-                    ) /
-                    denom
-                )
-            );
-
-        const nearest =
-            [
-                a[0] +
-                    (
-                        b[0] -
-                        a[0]
-                    ) *
-                    t,
-
-                a[1] +
-                    (
-                        b[1] -
-                        a[1]
-                    ) *
-                    t
-            ];
-
-        return {
-            t,
-            distance:
-                map.distance(
-                    point,
-                    nearest
-                )
-        };
-    }
-
-    function remainingAlongPath(
-        path,
-        current
-    ) {
         if (
-            !current ||
-            path.length < 2
+            currentLocation
         ) {
-            return pathDistance(
-                path
+            return currentLocation;
+        }
+
+        if (
+            !navigator.geolocation
+        ) {
+
+            throw new Error(
+                "このブラウザでは現在地機能を利用できません。"
             );
         }
 
-        let best =
-            {
-                segment:
-                    0,
-
-                t:
-                    0,
-
-                distance:
-                    Infinity
-            };
-
-        for (
-            let i = 0;
-            i <
-                path.length - 1;
-            i++
-        ) {
-            const candidate =
-                nearestOnSegment(
-                    current,
-                    path[i],
-                    path[i + 1]
-                );
-
-            if (
-                candidate.distance <
-                best.distance
+        return new Promise(
+            function (
+                resolve,
+                reject
             ) {
-                best = {
-                    segment:
-                        i,
 
-                    t:
-                        candidate.t,
+                navigator.geolocation.getCurrentPosition(
 
-                    distance:
-                        candidate.distance
-                };
-            }
-        }
+                    function (
+                        position
+                    ) {
 
-        let total =
-            map.distance(
-                path[
-                    best.segment
-                ],
-                path[
-                    best.segment + 1
-                ]
-            ) *
-            (
-                1 -
-                best.t
-            );
+                        const value =
+                            {
 
-        for (
-            let i =
-                best.segment + 1;
-            i <
-                path.length - 1;
-            i++
-        ) {
-            total +=
-                map.distance(
-                    path[i],
-                    path[i + 1]
+                                lat:
+                                    position.coords.latitude,
+
+                                lng:
+                                    position.coords.longitude,
+
+                                accuracy:
+                                    Number(
+                                        position.coords.accuracy ||
+                                        0
+                                    )
+                            };
+
+                        setCurrentLocation(
+                            value
+                        );
+
+                        resolve(
+                            value
+                        );
+                    },
+
+                    function (error) {
+
+                        reject(
+                            error
+                        );
+                    },
+
+                    {
+
+                        enableHighAccuracy:
+                            true,
+
+                        timeout:
+                            12000,
+
+                        maximumAge:
+                            30000
+                    }
                 );
-        }
-
-        return Math.max(
-            0,
-            total
+            }
         );
     }
 
-    function updateNavigationProgress() {
+    async function createRoute() {
+
         if (
-            !navigationActive ||
-            !navigationLegs[
-                navigationLegIndex
-            ]
+            selectedSpots.length ===
+            0
         ) {
-            updateNavigationPreview();
+
+            alert(
+                "まずスポットを1か所以上選択してください。"
+            );
+
+            return;
+        }
+
+        if (
+            routeLine
+        ) {
+
+            map.removeLayer(
+                routeLine
+            );
+
+            routeLine = null;
+        }
+
+        clearRouteNumberMarkers();
+
+        if (
+            routeArrowLayer
+        ) {
+
+            map.removeLayer(
+                routeArrowLayer
+            );
+
+            routeArrowLayer =
+                null;
+        }
+
+        routeSegments = [];
+
+        let startLocation = null;
+
+        try {
+
+            startLocation =
+                await ensureCurrentLocation();
+
+        } catch (error) {
+
+            console.warn(
+                "現在地を取得できませんでした。選択スポット同士のルートを作成します。",
+                error
+            );
+        }
+
+        const allCoordinates =
+            [];
+
+        const legs =
+            [];
+
+        try {
+
+            if (
+                startLocation
+            ) {
+
+                const firstTarget =
+                    selectedSpots[0];
+
+                const firstRoute =
+                    await getLocationToSpotRoute(
+                        startLocation,
+                        firstTarget
+                    );
+
+                if (
+                    firstRoute.coordinates
+                        .length < 2
+                ) {
+
+                    throw new Error(
+                        "現在地から最初のスポットへのルートが空です。"
+                    );
+                }
+
+                routeSegments.push(
+                    firstRoute
+                );
+
+                legs.push(
+
+                    {
+
+                        from:
+                            {
+
+                                lat:
+                                    startLocation.lat,
+
+                                lng:
+                                    startLocation.lng,
+
+                                name:
+                                    "現在地"
+                            },
+
+                        to:
+                            firstTarget,
+
+                        coordinates:
+                            firstRoute
+                                .coordinates,
+
+                        source:
+                            firstRoute.source
+                    }
+                );
+
+                allCoordinates.push(
+                    ...firstRoute.coordinates
+                );
+            }
+
+            for (
+                let i = 0;
+                i <
+                    selectedSpots.length - 1;
+                i++
+            ) {
+
+                const from =
+                    selectedSpots[i];
+
+                const to =
+                    selectedSpots[
+                        i + 1
+                    ];
+
+                const route =
+                    await getWalkingRoute(
+                        from,
+                        to
+                    );
+
+                if (
+                    !route ||
+                    route.coordinates
+                        .length < 2
+                ) {
+
+                    throw new Error(
+                        `${from.id} → ${to.id} のルートが取得できませんでした。`
+                    );
+                }
+
+                routeSegments.push(
+                    route
+                );
+
+                legs.push(
+
+                    {
+
+                        from:
+                            from,
+
+                        to:
+                            to,
+
+                        coordinates:
+                            route.coordinates,
+
+                        source:
+                            route.source
+                    }
+                );
+
+                const points =
+                    route.coordinates
+                        .slice();
+
+                if (
+                    allCoordinates.length >
+                    0
+                ) {
+
+                    points.shift();
+                }
+
+                allCoordinates.push(
+                    ...points
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "V11ルート取得エラー:",
+                error
+            );
+
+            alert(
+                "徒歩ルートを取得できませんでした。\n" +
+                "routes.json / OSRM の接続を確認してください。"
+            );
+
+            return;
+        }
+
+        if (
+            allCoordinates.length <
+            2
+        ) {
+
+            alert(
+                "ルートを作成できませんでした。"
+            );
+
+            return;
+        }
+
+        routeLine =
+            L.polyline(
+                allCoordinates,
+                {
+
+                    pane:
+                        "plannerRoutePane",
+
+                    color:
+                        ROUTE_COLOR,
+
+                    weight:
+                        6,
+
+                    opacity:
+                        0.88,
+
+                    lineCap:
+                        "round",
+
+                    lineJoin:
+                        "round"
+                }
+            )
+            .addTo(
+                map
+            );
+
+        addRouteDirectionArrows(
+            allCoordinates
+        );
+
+        map.fitBounds(
+            routeLine.getBounds(),
+            {
+                padding:
+                    [
+                        40,
+                        40
+                    ]
+            }
+        );
+
+        renderRouteNumberMarkers();
+
+        const routeDistance =
+            calculateDistance(
+                allCoordinates
+            );
+
+        if (distance) {
+
+            distance.textContent =
+                `${routeDistance.toFixed(2)} km`;
+        }
+
+        const walkingMinutes =
+            Math.ceil(
+                routeDistance *
+                1000 /
+                80
+            );
+
+        if (walkTime) {
+
+            walkTime.textContent =
+                formatTime(
+                    walkingMinutes
+                );
+        }
+
+        navigationLegs =
+            legs;
+
+        navigationLegIndex =
+            0;
+
+        showNavCard();
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                startLocation
+                    ? "現在地から作成"
+                    : "ルート作成完了";
+        }
+
+        if (navTitle) {
+
+            navTitle.textContent =
+                `次の目的地：${getLocalizedValue(
+                    selectedSpots[0].name
+                )}`;
+        }
+
+        setNavMeta(
+            [
+                `${selectedSpots.length}スポット`,
+
+                `${routeDistance.toFixed(2)} km`,
+
+                formatTime(
+                    walkingMinutes
+                )
+            ]
+        );
+
+        if (navArrival) {
+
+            navArrival.style.display =
+                "none";
+
+            navArrival.textContent =
+                "";
+        }
+
+        updateNavigationPanel();
+    }
+
+    if (createRouteBtn) {
+
+        createRouteBtn.addEventListener(
+            "click",
+            createRoute
+        );
+    }
+
+    // ============================================================
+    // ルート方向矢印
+    // ============================================================
+
+    function addRouteDirectionArrows(
+        points
+    ) {
+
+        if (
+            routeArrowLayer
+        ) {
+
+            map.removeLayer(
+                routeArrowLayer
+            );
+        }
+
+        routeArrowLayer =
+            L.layerGroup();
+
+        if (
+            !Array.isArray(points) ||
+            points.length < 3
+        ) {
+
+            routeArrowLayer.addTo(
+                map
+            );
+
+            return;
+        }
+
+        const step =
+            Math.max(
+                12,
+                Math.floor(
+                    points.length /
+                    14
+                )
+            );
+
+        for (
+            let i = step;
+            i < points.length - 1;
+            i += step
+        ) {
+
+            const current =
+                points[i];
+
+            const next =
+                points[
+                    Math.min(
+                        i + 2,
+                        points.length - 1
+                    )
+                ];
+
+            const angle =
+                Math.atan2(
+                    next[1] -
+                        current[1],
+                    next[0] -
+                        current[0]
+                ) *
+                180 /
+                Math.PI;
+
+            const arrow =
+                L.marker(
+                    current,
+                    {
+
+                        pane:
+                            "plannerRoutePane",
+
+                        interactive:
+                            false,
+
+                        keyboard:
+                            false,
+
+                        icon:
+                            L.divIcon(
+
+                                {
+
+                                    className:
+                                        "planner-v11-route-arrow-icon",
+
+                                    html:
+                                        `
+                                            <span
+                                                style="
+                                                    display:block;
+                                                    color:${ROUTE_COLOR};
+                                                    font-size:17px;
+                                                    font-weight:900;
+                                                    text-shadow:
+                                                        0 1px 4px rgba(255,255,255,.98);
+                                                    transform:
+                                                        rotate(${angle}deg);
+                                                "
+                                            >
+                                                ▶
+                                            </span>
+                                        `,
+
+                                    iconSize:
+                                        [
+                                            20,
+                                            20
+                                        ],
+
+                                    iconAnchor:
+                                        [
+                                            10,
+                                            10
+                                        ]
+                                }
+                            )
+                    }
+                );
+
+            routeArrowLayer.addLayer(
+                arrow
+            );
+        }
+
+        routeArrowLayer.addTo(
+            map
+        );
+    }
+
+    // ============================================================
+    // ナビ開始
+    // ============================================================
+
+    function startNavigation() {
+
+        if (
+            selectedSpots.length ===
+            0
+        ) {
+
+            alert(
+                "先にスポットを選択してルートを作成してください。"
+            );
+
+            return;
+        }
+
+        if (
+            navigationActive
+        ) {
+            return;
+        }
+
+        if (
+            !navigator.geolocation
+        ) {
+
+            alert(
+                "このブラウザでは現在地ナビを利用できません。"
+            );
+
+            return;
+        }
+
+        navigationActive =
+            true;
+
+        navigationLegIndex =
+            0;
+
+        showNavCard();
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                "ナビ中";
+        }
+
+        if (navStartButton) {
+
+            navStartButton.textContent =
+                "ナビゲーション中";
+
+            navStartButton.disabled =
+                true;
+
+            navStartButton.style.opacity =
+                ".65";
+        }
+
+        if (navStopButton) {
+
+            navStopButton.disabled =
+                false;
+        }
+
+        navigationWatchId =
+            navigator.geolocation.watchPosition(
+
+                function (position) {
+
+                    const value =
+                        {
+
+                            lat:
+                                position.coords.latitude,
+
+                            lng:
+                                position.coords.longitude,
+
+                            accuracy:
+                                Number(
+                                    position.coords.accuracy ||
+                                    0
+                                )
+                        };
+
+                    setCurrentLocation(
+                        value,
+                        false
+                    );
+
+                    updateNavigationByLocation(
+                        value
+                    );
+                },
+
+                function (error) {
+
+                    console.error(
+                        "ナビ位置情報エラー:",
+                        error
+                    );
+
+                    if (navStatus) {
+
+                        navStatus.textContent =
+                            "位置情報エラー";
+                    }
+                },
+
+                {
+
+                    enableHighAccuracy:
+                        true,
+
+                    timeout:
+                        12000,
+
+                    maximumAge:
+                        5000
+                }
+            );
+    }
+
+    function stopNavigation() {
+
+        navigationActive =
+            false;
+
+        if (
+            navigationWatchId !==
+            null
+        ) {
+
+            navigator.geolocation.clearWatch(
+                navigationWatchId
+            );
+
+            navigationWatchId =
+                null;
+        }
+
+        if (navStartButton) {
+
+            navStartButton.disabled =
+                false;
+
+            navStartButton.style.opacity =
+                "";
+
+            navStartButton.textContent =
+                "現在地からナビ開始";
+        }
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                "ナビ終了";
+        }
+
+        if (navArrival) {
+
+            navArrival.style.display =
+                "none";
+        }
+
+        updateNavigationPanel();
+    }
+
+    function updateNavigationPanel() {
+
+        if (
+            !navigationLegs.length
+        ) {
+
+            updateNavPanelForRoute();
+            return;
+        }
+
+        const leg =
+            navigationLegs[
+                Math.min(
+                    navigationLegIndex,
+                    navigationLegs.length - 1
+                )
+            ];
+
+        if (!leg) {
+            return;
+        }
+
+        if (navTitle) {
+
+            navTitle.textContent =
+                `次の目的地：${getLocalizedValue(
+                    leg.to.name
+                )}`;
+        }
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                navigationActive
+                    ? "ナビ中"
+                    : `次 ${navigationLegIndex + 1}/${navigationLegs.length}`;
+        }
+
+        const legDistance =
+            calculateDistance(
+                leg.coordinates
+            );
+
+        const minutes =
+            Math.ceil(
+                legDistance *
+                1000 /
+                80
+            );
+
+        setNavMeta(
+            [
+                `${legDistance.toFixed(2)} km`,
+
+                formatTime(
+                    minutes
+                ),
+
+                leg.source ===
+                    "routes.json"
+                    ? "参道・山道"
+
+                    : leg.source ===
+                        "HYBRID"
+
+                        ? "道路＋参道"
+
+                        : "一般道路"
+            ]
+        );
+    }
+
+    function updateNavigationByLocation(
+        location
+    ) {
+
+        if (
+            !navigationActive
+        ) {
             return;
         }
 
@@ -4355,478 +5886,570 @@ document.addEventListener("DOMContentLoaded", () => {
                 navigationLegIndex
             ];
 
-        const current =
-            currentLocation
-                ? [
-                    currentLocation.lat,
-                    currentLocation.lng
-                ]
-                : null;
+        if (!leg) {
 
-        const remaining =
-            remainingAlongPath(
-                leg.coordinates,
-                current
-            );
-
-        if (current) {
-            const d =
-                map.distance(
-                    current,
-                    pointOfSpot(
-                        leg.target
-                    )
-                );
-
-            if (
-                d <=
-                CONFIG.arrivalRadius
-            ) {
-                handleArrival();
-                return;
-            }
-        }
-
-        nav.status.textContent =
-            "ナビ中";
-
-        nav.title.textContent =
-            localized(
-                leg.target.name
-            );
-
-        nav.meta.innerHTML =
-            `
-                <span
-                    class="
-                        planner-nav-chip
-                    "
-                >
-                    残り
-                    ${escapeHTML(
-                        formatDistance(
-                            remaining
-                        )
-                    )}
-                </span>
-
-                <span
-                    class="
-                        planner-nav-chip
-                    "
-                >
-                    徒歩 約
-                    ${escapeHTML(
-                        formatMinutes(
-                            remaining /
-                                CONFIG.walkSpeed
-                        )
-                    )}
-                </span>
-
-                <span
-                    class="
-                        planner-nav-chip
-                    "
-                >
-                    ${escapeHTML(
-                        leg.source ===
-                            "ROUTES"
-                            ? "参道ネットワーク"
-                            : leg.source ===
-                                "HYBRID"
-                                ? "ハイブリッド"
-                                : "一般道路"
-                    )}
-                </span>
-            `;
-
-        updateProgressUI();
-    }
-
-    async function createRoute() {
-        if (
-            !selectedSpots.length
-        ) {
-            alert(
-                "1か所以上のスポットを選択してください。"
-            );
-            return;
-        }
-
-        if (
-            !currentLocation
-        ) {
-            try {
-                await getCurrentLocation(
-                    false,
-                    false
-                );
-            } catch (_) {
-                return;
-            }
-        }
-
-        const token =
-            ++routeToken;
-
-        showNavigation();
-
-        nav.status.textContent =
-            "ルート計算中";
-
-        nav.title.textContent =
-            "次の目的地";
-
-        nav.meta.innerHTML =
-            `
-                <span
-                    class="
-                        planner-nav-chip
-                    "
-                >
-                    現在地から計算しています
-                </span>
-            `;
-
-        try {
-            const legs =
-                await buildNavigationLegs();
-
-            if (
-                token !==
-                routeToken
-            ) {
-                return;
-            }
-
-            navigationLegs =
-                legs;
-
-            navigationLegIndex =
-                0;
-
-            drawRoute(
-                legs
-            );
-
-            updateNavigationPreview();
-
-        } catch (error) {
-            console.error(
-                "ルート作成エラー:",
-                error
-            );
-
-            alert(
-                error.message ||
-                "徒歩ルートを作成できませんでした。"
-            );
-        }
-    }
-
-    async function startNavigation() {
-        if (
-            !selectedSpots.length
-        ) {
-            alert(
-                "先にスポットを選択してください。"
-            );
-            return;
-        }
-
-        if (
-            !navigationLegs.length
-        ) {
-            await createRoute();
-
-            if (
-                !navigationLegs.length
-            ) {
-                return;
-            }
-        }
-
-        navigationActive =
-            true;
-
-        navigationLegIndex =
-            0;
-
-        startWatch();
-
-        updateNavigationProgress();
-
-        renderRouteNumbers();
-
-        nav.start.disabled =
-            true;
-
-        nav.stop.disabled =
-            false;
-    }
-
-    function handleArrival() {
-        const arrived =
-            navigationLegs[
-                navigationLegIndex
-            ]?.target;
-
-        if (!arrived) {
-            return;
-        }
-
-        nav.arrival.style.display =
-            "block";
-
-        nav.arrival.innerHTML =
-            `
-                <strong>
-                    ${escapeHTML(
-                        localized(
-                            arrived.name
-                        )
-                    )}
-                    に到着
-                </strong>
-
-                目的地へ到着しました。
-            `;
-
-        navigationLegIndex +=
-            1;
-
-        if (
-            navigationLegIndex >=
-            navigationLegs.length
-        ) {
             completeNavigation();
             return;
         }
 
-        renderRouteNumbers();
+        const targetLat =
+            Number(
+                leg.to.lat
+            );
 
-        setTimeout(
-            () => {
-                nav.arrival.style.display =
-                    "none";
+        const targetLng =
+            Number(
+                leg.to.lng
+            );
 
-                nav.arrival.innerHTML =
-                    "";
+        const remainingToTarget =
+            map.distance(
+                [
+                    location.lat,
+                    location.lng
+                ],
+                [
+                    targetLat,
+                    targetLng
+                ]
+            );
 
-                updateNavigationProgress();
-            },
-            450
+        const progress =
+            getRemainingRouteDistance(
+                location,
+                leg.coordinates
+            );
+
+        const remainingMeters =
+            Math.max(
+                0,
+                progress > 0
+                    ? progress
+                    : remainingToTarget
+            );
+
+        if (navTitle) {
+
+            navTitle.textContent =
+                `次の目的地：${getLocalizedValue(
+                    leg.to.name
+                )}`;
+        }
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                `ナビ中 · 残り ${Math.round(
+                    remainingMeters
+                )} m`;
+        }
+
+        const remainingMinutes =
+            Math.ceil(
+                remainingMeters /
+                80
+            );
+
+        setNavMeta(
+            [
+                `${Math.round(
+                    remainingMeters
+                )} m`,
+
+                formatTime(
+                    remainingMinutes
+                ),
+
+                `${navigationLegIndex + 1}/${navigationLegs.length}`
+            ]
         );
-    }
-
-    function getGoogleFormURL() {
-        return (
-            safeURL(
-                document.body
-                    ?.dataset
-                    ?.googleFormUrl ||
-                FORM_URL
-            ) ||
-            FORM_URL
-        );
-    }
-
-    function openGoogleForm() {
-        const url =
-            getGoogleFormURL();
-
-        window.location.href =
-            url;
-    }
-
-    function completeNavigation() {
-        navigationActive =
-            false;
-
-        stopWatch();
-
-        navigationLegIndex =
-            navigationLegs.length;
-
-        renderRouteNumbers();
-
-        nav.status.textContent =
-            "ルート完了";
-
-        nav.title.textContent =
-            "ルート完了";
-
-        nav.meta.innerHTML =
-            `
-                <span
-                    class="
-                        planner-nav-chip
-                    "
-                >
-                    ${selectedSpots.length}地点を巡りました
-                </span>
-            `;
-
-        updateProgressUI();
-
-        nav.arrival.style.display =
-            "block";
-
-        nav.arrival.innerHTML =
-            `
-                <strong>
-                    ルート完了
-                </strong>
-
-                アンケートへ進みます。
-            `;
-
-        setTimeout(
-            openGoogleForm,
-            650
-        );
-    }
-
-    function stopNavigation(
-        openForm = true
-    ) {
-        navigationActive =
-            false;
-
-        stopWatch();
-
-        navigationLegIndex =
-            0;
-
-        nav.arrival.style.display =
-            "none";
-
-        nav.arrival.innerHTML =
-            "";
-
-        updateNavigationPreview();
 
         if (
-            openForm
+            remainingToTarget <= 35
         ) {
-            openGoogleForm();
+
+            navigationLegIndex += 1;
+
+            if (
+                navigationLegIndex >=
+                navigationLegs.length
+            ) {
+
+                completeNavigation();
+                return;
+            }
+
+            updateNavigationPanel();
         }
     }
 
-    /* ============================================================
-       EVENTS
-       ============================================================ */
-
-    nav.start.addEventListener(
-        "click",
-        startNavigation
-    );
-
-    nav.stop.addEventListener(
-        "click",
-        () =>
-            stopNavigation(
-                true
-            )
-    );
-
-    if (
-        els.location
+    function getRemainingRouteDistance(
+        location,
+        points
     ) {
-        els.location.addEventListener(
-            "click",
-            () =>
-                getCurrentLocation(
-                    true,
-                    false
-                ).catch(
-                    () => {}
-                )
-        );
-    }
 
-    if (
-        els.create
-    ) {
-        els.create.addEventListener(
-            "click",
-            createRoute
-        );
-    }
+        if (
+            !Array.isArray(points) ||
+            points.length < 2
+        ) {
+            return 0;
+        }
 
-    if (
-        els.clear
-    ) {
-        els.clear.addEventListener(
-            "click",
-            () => {
-                routeToken +=
-                    1;
+        let nearestIndex =
+            0;
 
-                stopNavigation(
-                    false
+        let nearestDistance =
+            Infinity;
+
+        for (
+            let i = 0;
+            i < points.length;
+            i++
+        ) {
+
+            const meters =
+                map.distance(
+                    [
+                        location.lat,
+                        location.lng
+                    ],
+                    points[i]
                 );
 
-                clearRouteVisuals();
+            if (
+                meters <
+                nearestDistance
+            ) {
 
-                navigationLegs =
-                    [];
+                nearestDistance =
+                    meters;
 
-                navigationLegIndex =
-                    0;
+                nearestIndex =
+                    i;
+            }
+        }
 
-                selectedSpots =
-                    [];
+        let totalMeters =
+            nearestDistance;
 
-                saveSelected();
+        for (
+            let i = nearestIndex;
+            i < points.length - 1;
+            i++
+        ) {
 
-                renderCards();
+            totalMeters +=
+                map.distance(
+                    points[i],
+                    points[i + 1]
+                );
+        }
 
-                updateSelectedList();
+        return totalMeters;
+    }
 
-                updateInfo();
+    function completeNavigation() {
 
-                refreshMarkers();
+        navigationActive =
+            false;
 
-                hideNavigation();
+        if (
+            navigationWatchId !==
+            null
+        ) {
+
+            navigator.geolocation.clearWatch(
+                navigationWatchId
+            );
+
+            navigationWatchId =
+                null;
+        }
+
+        if (navStatus) {
+
+            navStatus.textContent =
+                "到着";
+        }
+
+        if (navTitle) {
+
+            navTitle.textContent =
+                "ルート完了";
+        }
+
+        if (navArrival) {
+
+            navArrival.style.display =
+                "block";
+
+            if (
+                GOOGLE_FORM_URL
+            ) {
+
+                navArrival.innerHTML = `
+
+                    到着しました！<br>
+
+                    旅の感想をアンケートで教えてください。
+
+                    <br>
+
+                    <button
+                        type="button"
+                        class="planner-v11-button primary"
+                        id="plannerV11SurveyButton"
+                        style="margin-top:8px;"
+                    >
+                        アンケートへ
+                    </button>
+                `;
+
+                const surveyButton =
+                    document.getElementById(
+                        "plannerV11SurveyButton"
+                    );
+
+                if (surveyButton) {
+
+                    surveyButton.addEventListener(
+                        "click",
+                        function () {
+
+                            window.open(
+                                GOOGLE_FORM_URL,
+                                "_blank",
+                                "noopener,noreferrer"
+                            );
+                        }
+                    );
+                }
+
+            } else {
+
+                navArrival.textContent =
+                    "到着しました！ GoogleフォームのURLを設定すると、ここからアンケートへ進めます。";
+            }
+        }
+
+        if (navStartButton) {
+
+            navStartButton.disabled =
+                false;
+
+            navStartButton.style.opacity =
+                "";
+
+            navStartButton.textContent =
+                "もう一度ナビ開始";
+        }
+    }
+
+    if (navStartButton) {
+
+        navStartButton.addEventListener(
+            "click",
+            async function () {
+
+                if (
+                    !routeLine
+                ) {
+
+                    try {
+
+                        await createRoute();
+
+                    } catch (error) {
+
+                        console.error(
+                            error
+                        );
+
+                        return;
+                    }
+                }
+
+                startNavigation();
             }
         );
     }
 
-    if (
-        els.save
-    ) {
-        els.save.addEventListener(
+    if (navStopButton) {
+
+        navStopButton.addEventListener(
             "click",
-            () => {
-                if (
-                    !selectedSpots.length
-                ) {
+            function () {
+
+                stopNavigation();
+            }
+        );
+    }
+
+    // ============================================================
+    // 現在地
+    // ============================================================
+
+    function setCurrentLocation(
+        value,
+        centerMap = true
+    ) {
+
+        currentLocation =
+            value;
+
+        if (
+            currentLocationMarker
+        ) {
+
+            map.removeLayer(
+                currentLocationMarker
+            );
+        }
+
+        currentLocationMarker =
+            L.marker(
+                [
+                    value.lat,
+                    value.lng
+                ],
+                {
+
+                    pane:
+                        "plannerCurrentPane",
+
+                    interactive:
+                        true,
+
+                    keyboard:
+                        false,
+
+                    icon:
+                        L.divIcon(
+                            {
+
+                                className:
+                                    "planner-v11-current-location-icon",
+
+                                html:
+                                    `
+                                        <div
+                                            class="planner-v11-current-location"
+                                        ></div>
+                                    `,
+
+                                iconSize:
+                                    [
+                                        20,
+                                        20
+                                    ],
+
+                                iconAnchor:
+                                    [
+                                        10,
+                                        10
+                                    ]
+                            }
+                        ),
+
+                    zIndexOffset:
+                        5000
+                }
+            )
+            .addTo(
+                map
+            )
+            .bindPopup(
+                `現在地${
+                    value.accuracy
+                        ? `（精度 約${Math.round(
+                            value.accuracy
+                        )}m）`
+                        : ""
+                }`
+            );
+
+        if (
+            centerMap
+        ) {
+
+            map.setView(
+                [
+                    value.lat,
+                    value.lng
+                ],
+                18,
+                {
+                    animate:
+                        true
+                }
+            );
+        }
+
+        updateNavPanelForRoute();
+    }
+
+    if (locationBtn) {
+
+        locationBtn.addEventListener(
+            "click",
+            async function () {
+
+                try {
+
+                    const location =
+                        await ensureCurrentLocation();
+
+                    map.setView(
+                        [
+                            location.lat,
+                            location.lng
+                        ],
+                        18,
+                        {
+                            animate:
+                                true
+                        }
+                    );
+
+                    if (
+                        currentLocationMarker
+                    ) {
+
+                        currentLocationMarker.openPopup();
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "現在地取得エラー:",
+                        error
+                    );
+
                     alert(
-                        "保存するにはスポットを選択してください。"
+                        "現在地を取得できませんでした。\n" +
+                        "ブラウザの位置情報許可を確認してください。"
+                    );
+                }
+            }
+        );
+    }
+
+    // ============================================================
+    // 情報表示
+    // ============================================================
+
+    function updateInfo() {
+
+        if (spotCount) {
+
+            const language =
+                getCurrentLanguage();
+
+            if (
+                language === "en"
+            ) {
+
+                spotCount.textContent =
+                    `${selectedSpots.length} spots`;
+
+            } else if (
+                language === "zh"
+            ) {
+
+                spotCount.textContent =
+                    `${selectedSpots.length}个景点`;
+
+            } else if (
+                language === "ko"
+            ) {
+
+                spotCount.textContent =
+                    `${selectedSpots.length}곳`;
+
+            } else {
+
+                spotCount.textContent =
+                    `${selectedSpots.length}か所`;
+            }
+        }
+
+        let totalStay = 0;
+
+        selectedSpots.forEach(
+            function (spot) {
+
+                totalStay +=
+                    getTimeInMinutes(
+                        spot.time
+                    );
+            }
+        );
+
+        if (stayTime) {
+
+            stayTime.textContent =
+                formatTime(
+                    totalStay
+                );
+        }
+
+        if (
+            selectedSpots.length <
+            2
+        ) {
+
+            if (distance) {
+                distance.textContent =
+                    "0 km";
+            }
+
+            if (walkTime) {
+                walkTime.textContent =
+                    "0分";
+            }
+        }
+    }
+
+    // ============================================================
+    // 保存
+    // ============================================================
+
+    if (saveRouteBtn) {
+
+        saveRouteBtn.addEventListener(
+            "click",
+            function () {
+
+                if (
+                    selectedSpots.length <
+                    1
+                ) {
+
+                    alert(
+                        "保存するには1か所以上のスポットを選択してください。"
                     );
 
                     return;
                 }
 
+                const routeData = {
+
+                    createdAt:
+                        new Date()
+                            .toISOString(),
+
+                    spots:
+                        selectedSpots.map(
+                            function (spot) {
+                                return spot.id;
+                            }
+                        )
+                };
+
                 localStorage.setItem(
                     SAVED_ROUTE_KEY,
                     JSON.stringify(
-                        {
-                            createdAt:
-                                new Date()
-                                    .toISOString(),
-
-                            start:
-                                "currentLocation",
-
-                            spots:
-                                selectedSpots.map(
-                                    s =>
-                                        s.id
-                                )
-                        }
+                        routeData
                     )
                 );
 
@@ -4837,715 +6460,356 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    if (
-        els.search
-    ) {
-        els.search.addEventListener(
-            "input",
-            () => {
-                renderCards();
-                refreshMarkers();
+    // ============================================================
+    // 消去
+    // ============================================================
+
+    if (clearBtn) {
+
+        clearBtn.addEventListener(
+            "click",
+            function () {
+
+                stopNavigation();
+
+                selectedSpots = [];
+
+                saveSelectedIDs();
+
+                if (routeLine) {
+
+                    map.removeLayer(
+                        routeLine
+                    );
+
+                    routeLine = null;
+                }
+
+                if (
+                    routeArrowLayer
+                ) {
+
+                    map.removeLayer(
+                        routeArrowLayer
+                    );
+
+                    routeArrowLayer =
+                        null;
+                }
+
+                routeSegments = [];
+
+                navigationLegs = [];
+
+                navigationLegIndex =
+                    0;
+
+                clearRouteNumberMarkers();
+
+                updateSelected();
+                updateInfo();
+                updateCardSelection();
+
+                if (distance) {
+                    distance.textContent =
+                        "0 km";
+                }
+
+                if (walkTime) {
+                    walkTime.textContent =
+                        "0分";
+                }
+
+                markerMap.forEach(
+                    function (
+                        marker,
+                        id
+                    ) {
+
+                        const spot =
+                            spots.find(
+                                function (
+                                    item
+                                ) {
+
+                                    return (
+                                        String(
+                                            item.id
+                                        ) ===
+                                        String(
+                                            id
+                                        )
+                                    );
+                                }
+                            );
+
+                        if (spot) {
+
+                            marker.setIcon(
+                                createMarkerIcon(
+                                    spot,
+                                    false
+                                )
+                            );
+                        }
+                    }
+                );
+
+                hideNavCard();
             }
         );
     }
 
-    categoryButtons.forEach(
-        button => {
-            button.addEventListener(
-                "click",
-                () => {
-                    categoryButtons.forEach(
-                        item =>
-                            item.classList.remove(
-                                "active"
-                            )
-                    );
+    // ============================================================
+    // JSONロード
+    // ============================================================
 
-                    button.classList.add(
-                        "active"
-                    );
+    Promise.all(
+        [
 
-                    renderCards();
-                    refreshMarkers();
-                }
-            );
-        }
-    );
+            loadJSON(
+                [
+                    DATA_URL,
+                    "./spots.json"
+                ]
+            ),
 
-    window.addEventListener(
-        "languagechange",
-        () => {
-            renderCards();
-            refreshMarkers();
-            updateSelectedList();
-            updateInfo();
-            updateNavigationPreview();
-        }
-    );
+            loadJSON(
+                ROUTE_URLS
+            )
+        ]
+    )
+    .then(
+        function (results) {
 
-    window.addEventListener(
-        "storage",
-        event => {
+            const spotResult =
+                results[0];
+
+            const routeResult =
+                results[1];
+
             if (
-                event.key ===
-                "language"
+                !Array.isArray(
+                    spotResult.data
+                )
             ) {
-                renderCards();
-                refreshMarkers();
-                updateSelectedList();
-                updateInfo();
-                updateNavigationPreview();
+
+                throw new Error(
+                    "spots.jsonの形式が正しくありません。"
+                );
             }
-        }
-    );
 
-    /* ============================================================
-       INIT
-       ============================================================ */
+            spots =
+                spotResult.data;
 
-    async function initialize() {
-        try {
-            await loadData();
+            const savedIDs =
+                loadSelectedIDs();
 
-            loadSelected();
+            selectedSpots =
+                savedIDs
+                    .map(
+                        function (id) {
 
-            renderCards();
+                            return spots.find(
+                                function (
+                                    spot
+                                ) {
 
-            updateSelectedList();
+                                    return (
+                                        String(
+                                            spot.id
+                                        ) ===
+                                        String(
+                                            id
+                                        )
+                                    );
+                                }
+                            );
+                        }
+                    )
+                    .filter(Boolean);
 
-            updateInfo();
-
-            refreshMarkers();
-
-            updateNavigationPreview();
-
-            getCurrentLocation(
-                false,
-                true
-            ).catch(
-                () => {
-                    nav.status.textContent =
-                        "現在地未取得";
-                }
-            );
+            routes =
+                Array.isArray(
+                    routeResult.data
+                )
+                    ? routeResult.data
+                    : [];
 
             console.log(
-                `[Fushimi Inari Smart Guide] ${BUILD_ID} initialized`,
-                {
-                    spots:
-                        spots.length,
-
-                    routes:
-                        routes.length
-                }
+                "routes source:",
+                routeResult.path
             );
 
-        } catch (error) {
+            prepareRouteGraph();
+
+            displaySpots(
+                spots
+            );
+
+            createMarkers(
+                spots
+            );
+
+            updateSelected();
+
+            updateInfo();
+
+            renderRouteNumberMarkers();
+
+            updateNavPanelForRoute();
+
+        }
+    )
+    .catch(
+        function (error) {
+
             console.error(
                 "planner初期化エラー:",
                 error
             );
 
-            if (
-                els.spotList
-            ) {
-                els.spotList.innerHTML =
-                    `
-                        <p
-                            style="
-                                padding:16px;
-                                color:#777;
-                                line-height:1.7;
-                            "
-                        >
-                            Plannerの読み込みに失敗しました。<br>
-                            Live Serverで開いているか確認してください。
-                        </p>
-                    `;
+            if (spotList) {
+
+                spotList.innerHTML = `
+
+                    <p
+                        style="
+                            color:#b33;
+                            line-height:1.7;
+                        "
+                    >
+                        データを読み込めませんでした。<br>
+
+                        Live Serverで開いているか、<br>
+
+                        data/spots.json と
+                        data/routes.json
+                        を確認してください。
+                    </p>
+                `;
             }
         }
+    );
+
+    // ============================================================
+    // language.js 連動
+    // ============================================================
+
+    window.addEventListener(
+        "languagechange",
+        function () {
+
+            const visibleSpots =
+                getCurrentlyVisibleSpots();
+
+            displaySpots(
+                visibleSpots
+            );
+
+            createMarkers(
+                visibleSpots
+            );
+
+            updateSelected();
+
+            updateInfo();
+
+            renderRouteNumberMarkers();
+
+            if (
+                navCard &&
+                !navCard.classList.contains(
+                    "is-hidden"
+                )
+            ) {
+
+                updateNavigationPanel();
+            }
+        }
+    );
+
+    function getCurrentlyVisibleSpots() {
+
+        const keyword =
+            searchInput
+                ? searchInput.value
+                    .trim()
+                    .toLowerCase()
+                : "";
+
+        const activeButton =
+            document.querySelector(
+                ".category.active"
+            );
+
+        const categoryValue =
+            activeButton
+                ? (
+                    activeButton.dataset.category ||
+                    activeButton.textContent.trim()
+                )
+                : "all";
+
+        const targetCategory =
+            normalizeCategory(
+                categoryValue
+            );
+
+        return spots.filter(
+            function (spot) {
+
+                const name =
+                    getLocalizedValue(
+                        spot.name
+                    )
+                    .toLowerCase();
+
+                const description =
+                    getLocalizedValue(
+                        spot.description
+                    )
+                    .toLowerCase();
+
+                const categoryText =
+                    String(
+                        spot.category ?? ""
+                    )
+                    .toLowerCase();
+
+                const matchesSearch =
+                    !keyword ||
+                    name.includes(
+                        keyword
+                    ) ||
+                    description.includes(
+                        keyword
+                    ) ||
+                    categoryText.includes(
+                        keyword
+                    );
+
+                const matchesCategory =
+                    targetCategory ===
+                        "all" ||
+
+                    normalizeCategory(
+                        spot.category
+                    ) ===
+                        targetCategory;
+
+                return (
+                    matchesSearch &&
+                    matchesCategory
+                );
+            }
+        );
     }
 
-    initialize();
+    // ============================================================
+    // 初期更新
+    // ============================================================
+
+    updateInfo();
+
 });
-/* ============================================================
-   V11.8 MOBILE MAP CONTROL FIX
-   ×ボタンとLeafletレイヤー切替ボタンの重なりを解消
-   ============================================================ */
-
-(() => {
-    "use strict";
-
-    function findMap() {
-        return document.getElementById("map");
-    }
-
-    function findLayerControl(mapEl) {
-        if (!mapEl) return null;
-
-        return mapEl.querySelector(
-            ".leaflet-control-layers"
-        );
-    }
-
-    function findCloseButton(mapEl) {
-        if (!mapEl) return null;
-
-        const elements = mapEl.querySelectorAll(
-            "button, a, [role='button']"
-        );
-
-        let result = null;
-
-        elements.forEach(el => {
-            if (result) return;
-
-            if (
-                el.closest(".leaflet-control-layers") ||
-                el.closest(".leaflet-control-zoom")
-            ) {
-                return;
-            }
-
-            const text =
-                String(
-                    el.textContent || ""
-                ).trim();
-
-            const aria =
-                String(
-                    el.getAttribute("aria-label") || ""
-                ).trim();
-
-            const title =
-                String(
-                    el.getAttribute("title") || ""
-                ).trim();
-
-            const className =
-                String(
-                    el.className || ""
-                );
-
-            const html =
-                String(
-                    el.innerHTML || ""
-                );
-
-            const isCloseText =
-                text === "×" ||
-                text === "✕" ||
-                text === "✖" ||
-                text === "x";
-
-            const isCloseLabel =
-                /閉じる|close/i.test(aria) ||
-                /閉じる|close/i.test(title);
-
-            const isCloseClass =
-                /planner-map-close|map-close|close-map/i.test(
-                    className
-                );
-
-            const isCloseHTML =
-                html.includes("×") ||
-                html.includes("✕") ||
-                html.includes("✖");
-
-            if (
-                isCloseText ||
-                isCloseLabel ||
-                isCloseClass ||
-                isCloseHTML
-            ) {
-                result = el;
-            }
-        });
-
-        return result;
-    }
-
-    function applyMobileMapControlFix() {
-        const mapEl = findMap();
-
-        if (!mapEl) {
-            return;
-        }
-
-        const width =
-            window.innerWidth ||
-            document.documentElement.clientWidth ||
-            0;
-
-        const height =
-            window.innerHeight ||
-            document.documentElement.clientHeight ||
-            0;
-
-        const rect =
-            mapEl.getBoundingClientRect();
-
-        const computed =
-            window.getComputedStyle(mapEl);
-
-        const isNativeFullscreen =
-            document.fullscreenElement === mapEl;
-
-        const isFixed =
-            computed.position === "fixed";
-
-        const fillsScreen =
-            height > 0 &&
-            rect.height >= height * 0.88;
-
-        const mobile =
-            width <= 760;
-
-        const safe =
-            mobile &&
-            (
-                isNativeFullscreen ||
-                isFixed ||
-                fillsScreen
-            );
-
-        const layerControl =
-            findLayerControl(mapEl);
-
-        const closeButton =
-            findCloseButton(mapEl);
-
-        /*
-         * --------------------------------------------------------
-         * Leaflet レイヤー切替
-         * --------------------------------------------------------
-         */
-
-        if (layerControl) {
-
-            layerControl.style.setProperty(
-                "z-index",
-                "1500",
-                "important"
-            );
-
-            layerControl.style.setProperty(
-                "pointer-events",
-                "auto",
-                "important"
-            );
-
-            if (safe) {
-
-                /*
-                 * 右上固定
-                 * ×ボタンはその左側へ配置
-                 */
-
-                layerControl.style.setProperty(
-                    "position",
-                    "absolute",
-                    "important"
-                );
-
-                layerControl.style.setProperty(
-                    "top",
-                    "10px",
-                    "important"
-                );
-
-                layerControl.style.setProperty(
-                    "right",
-                    "10px",
-                    "important"
-                );
-
-                layerControl.style.setProperty(
-                    "left",
-                    "auto",
-                    "important"
-                );
-
-                layerControl.style.setProperty(
-                    "bottom",
-                    "auto",
-                    "important"
-                );
-
-                layerControl.style.setProperty(
-                    "margin",
-                    "0",
-                    "important"
-                );
-
-                const toggle =
-                    layerControl.querySelector(
-                        ".leaflet-control-layers-toggle"
-                    );
-
-                if (toggle) {
-
-                    toggle.style.setProperty(
-                        "width",
-                        "52px",
-                        "important"
-                    );
-
-                    toggle.style.setProperty(
-                        "height",
-                        "52px",
-                        "important"
-                    );
-
-                    toggle.style.setProperty(
-                        "min-width",
-                        "52px",
-                        "important"
-                    );
-
-                    toggle.style.setProperty(
-                        "min-height",
-                        "52px",
-                        "important"
-                    );
-
-                    toggle.style.setProperty(
-                        "touch-action",
-                        "manipulation",
-                        "important"
-                    );
-
-                    toggle.style.setProperty(
-                        "pointer-events",
-                        "auto",
-                        "important"
-                    );
-                }
-
-            } else {
-
-                /*
-                 * 通常時はLeaflet本来の位置に戻す
-                 */
-
-                layerControl.style.removeProperty(
-                    "position"
-                );
-
-                layerControl.style.removeProperty(
-                    "top"
-                );
-
-                layerControl.style.removeProperty(
-                    "right"
-                );
-
-                layerControl.style.removeProperty(
-                    "left"
-                );
-
-                layerControl.style.removeProperty(
-                    "bottom"
-                );
-
-                layerControl.style.removeProperty(
-                    "margin"
-                );
-            }
-        }
-
-        /*
-         * --------------------------------------------------------
-         * ×ボタン
-         * --------------------------------------------------------
-         */
-
-        if (closeButton) {
-
-            closeButton.style.setProperty(
-                "pointer-events",
-                "auto",
-                "important"
-            );
-
-            closeButton.style.setProperty(
-                "touch-action",
-                "manipulation",
-                "important"
-            );
-
-            if (safe) {
-
-                /*
-                 * レイヤー切替の左隣
-                 *
-                 * ×  ｜ レイヤー
-                 */
-
-                closeButton.style.setProperty(
-                    "position",
-                    "absolute",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "top",
-                    "10px",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "right",
-                    "72px",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "left",
-                    "auto",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "bottom",
-                    "auto",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "width",
-                    "52px",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "height",
-                    "52px",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "min-width",
-                    "52px",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "min-height",
-                    "52px",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "margin",
-                    "0",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "z-index",
-                    "1600",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "display",
-                    "flex",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "align-items",
-                    "center",
-                    "important"
-                );
-
-                closeButton.style.setProperty(
-                    "justify-content",
-                    "center",
-                    "important"
-                );
-
-            } else {
-
-                closeButton.style.removeProperty(
-                    "position"
-                );
-
-                closeButton.style.removeProperty(
-                    "top"
-                );
-
-                closeButton.style.removeProperty(
-                    "right"
-                );
-
-                closeButton.style.removeProperty(
-                    "left"
-                );
-
-                closeButton.style.removeProperty(
-                    "bottom"
-                );
-
-                closeButton.style.removeProperty(
-                    "width"
-                );
-
-                closeButton.style.removeProperty(
-                    "height"
-                );
-
-                closeButton.style.removeProperty(
-                    "min-width"
-                );
-
-                closeButton.style.removeProperty(
-                    "min-height"
-                );
-
-                closeButton.style.removeProperty(
-                    "margin"
-                );
-
-                closeButton.style.removeProperty(
-                    "z-index"
-                );
-
-                closeButton.style.removeProperty(
-                    "display"
-                );
-
-                closeButton.style.removeProperty(
-                    "align-items"
-                );
-
-                closeButton.style.removeProperty(
-                    "justify-content"
-                );
-            }
-        }
-    }
-
-    function scheduleFix() {
-
-        requestAnimationFrame(() => {
-            applyMobileMapControlFix();
-        });
-    }
-
-    function init() {
-
-        const mapEl =
-            findMap();
-
-        if (!mapEl) {
-            return;
-        }
-
-        /*
-         * 最初の適用
-         */
-
-        scheduleFix();
-
-        /*
-         * 画面サイズ変更
-         */
-
-        window.addEventListener(
-            "resize",
-            scheduleFix,
-            {
-                passive: true
-            }
-        );
-
-        /*
-         * スマホ縦横回転
-         */
-
-        window.addEventListener(
-            "orientationchange",
-            () => {
-
-                setTimeout(
-                    scheduleFix,
-                    150
-                );
-
-            },
-            {
-                passive: true
-            }
-        );
-
-        /*
-         * ブラウザのFullscreen変化
-         */
-
-        document.addEventListener(
-            "fullscreenchange",
-            scheduleFix
-        );
-
-        /*
-         * Leafletが後からボタンを生成しても対応
-         */
-
-        const observer =
-            new MutationObserver(
-                () => {
-                    scheduleFix();
-                }
-            );
-
-        observer.observe(
-            mapEl,
-            {
-                childList: true,
-                subtree: true
-            }
-        );
-
-        /*
-         * Leafletの初期描画後にも再確認
-         */
-
-        setTimeout(
-            scheduleFix,
-            100
-        );
-
-        setTimeout(
-            scheduleFix,
-            500
-        );
-
-        setTimeout(
-            scheduleFix,
-            1000
-        );
-    }
-
-    /*
-     * planner.js 自体がDOMContentLoaded内で
-     * 実行される場合にも対応
-     */
-
-    if (
-        document.readyState ===
-        "loading"
-    ) {
-        document.addEventListener(
-            "DOMContentLoaded",
-            init,
-            {
-                once: true
-            }
-        );
-    } else {
-        init();
-    }
-
-})();
