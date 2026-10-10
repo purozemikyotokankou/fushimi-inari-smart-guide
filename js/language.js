@@ -28,7 +28,7 @@ const translations = {
         // ホーム
         heroTitle: "伏見稲荷をもっと楽しく。",
         heroDescription: "AI観光ルート × GPSマップ × 多言語対応",
-        makePlan: "ルート作成",
+        makePlan: "ルートを作る",
 
         menuTitle: "メニュー",
         spotsDescription: "伏見稲荷のおすすめスポットを探す",
