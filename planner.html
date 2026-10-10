@@ -7,7 +7,7 @@
     <title>Fushimi Inari Smart Guide - ルート作成</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=13-mobile-galaxy">
+    <link rel="stylesheet" href="css/planner.css?v=14-swipe">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -53,8 +53,9 @@
                 type="button"
                 id="plannerSheetHandle"
                 class="planner-sheet-handle"
-                aria-expanded="false"
+                aria-expanded="true"
                 aria-controls="plannerSheetContent"
+                aria-label="上にスワイプで展開、下にスワイプで収納"
             >
                 <span class="planner-sheet-grabber" aria-hidden="true"></span>
                 <span class="planner-sheet-handle-text">スポット一覧</span>
@@ -158,7 +159,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=13-mobile-galaxy"></script>
+<script src="js/planner.js?v=14-swipe"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
