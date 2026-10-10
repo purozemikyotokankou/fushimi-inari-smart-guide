@@ -2635,7 +2635,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             aria-hidden="true"
                         ></span>
 
-                        <span class="marker-fallback" aria-hidden="true">${getSpotSymbol(spot)}</span>
+                        <span class="marker-fallback" aria-hidden="true">no icon</span>
 
                         <img
                             class="icon-image icon-gray"
@@ -3561,7 +3561,11 @@ document.addEventListener("DOMContentLoaded", function () {
             const selectedHTML = selected
                 ? `<span class="selected-label">${escapeHTML(getSelectedText())}</span>`
                 : "";
-            const symbol = getSpotSymbol(spot);
+            const iconType = getIconType(spot);
+            const customIconFile = iconType ? `${ICON_DIR}${iconType}.svg` : "";
+            const symbol = customIconFile
+                ? `<img class="spot-custom-icon" src="${customIconFile}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'no-icon',textContent:'no icon'}));">`
+                : `<span class="no-icon">no icon</span>`;
 
             card.innerHTML = `
                 ${imageHTML}
@@ -4111,6 +4115,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 : "all";
 
         const targetCategory = selectedCategory === "施設" ? "facility" : normalizeCategory(selectedCategory);
+        const foodFilterButton = document.querySelector(".food-subcategory.active");
+        const foodFilter = foodFilterButton ? foodFilterButton.dataset.foodFilter : "all";
 
         const filtered =
             spots.filter(
@@ -4145,11 +4151,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     const matchesCategory = targetCategory === "all" ||
                         (targetCategory === "facility" && ["toilet", "guide", "施設", "トイレ", "案内"].includes(normalizedSpotCategory)) ||
                         normalizedSpotCategory === targetCategory;
-
-                    return (
-                        matchesSearch &&
-                        matchesCategory
-                    );
+                    const foodText = [spot.name, spot.category, spot.description, spot.tags, spot.keywords, spot.keyword].map(getLocalizedValue).join(" ").toLowerCase();
+                    const matchesFood = targetCategory !== normalizeCategory("グルメ") || foodFilter === "all" ||
+                        (foodFilter === "buy" && /買|土産|土みやげ|shop|souvenir|shopping|売店|物販|기념품|쇼핑|购物|纪念品/i.test(foodText)) ||
+                        (foodFilter === "eat" && /食|飲|料理|カフェ|レストラン|food|eat|restaurant|cafe|餐|吃|식당|음식/i.test(foodText));
+                    return matchesSearch && matchesCategory && matchesFood;
                 }
             );
 
@@ -4174,6 +4180,14 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    const foodSubcategories = document.getElementById("foodSubcategories");
+    document.querySelectorAll(".food-subcategory").forEach(function (button) {
+        button.addEventListener("click", function () {
+            document.querySelectorAll(".food-subcategory").forEach(b => b.classList.toggle("active", b === button));
+            filterSpots();
+        });
+    });
+
     categoryButtons.forEach(
         function (button) {
 
@@ -4194,6 +4208,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         "active"
                     );
 
+                    if (foodSubcategories) foodSubcategories.hidden = (button.dataset.category !== "グルメ");
                     filterSpots();
                 }
             );

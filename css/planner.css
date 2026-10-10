@@ -2677,3 +2677,22 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .planner-category-grid .category-button { transition: none !important; }
 }
+
+/* V24: category bar stays visible; no redundant sheet title/count */
+.planner-sheet-handle-text,.planner-sheet-count,.spot-list-window > .sheet-section-heading { display:none !important; }
+.planner-category-tray { position:sticky !important; top:0; z-index:30; padding-top:5px !important; }
+.food-subcategories { display:flex; gap:8px; justify-content:center; padding:5px 0 9px; }
+.food-subcategories[hidden] { display:none !important; }
+.food-subcategory { border:1px solid rgba(255,255,255,.85); border-radius:999px; padding:7px 16px; background:rgba(255,255,255,.62); color:#58615a; font-weight:700; }
+.food-subcategory.active { background:#d84d43; color:#fff; border-color:#d84d43; }
+.spot-custom-icon { width:24px; height:24px; object-fit:contain; display:block; }
+.no-icon { display:inline-block; font-size:9px; font-weight:700; color:#777; text-transform:lowercase; }
+.spot-card-category-dot:has(.no-icon) { background:rgba(255,255,255,.7); }
+/* Fix: selected/hovered pins must show the colored artwork, not the gray version. */
+.custom-map-marker .icon-image { filter:none !important; transition:opacity .18s ease, transform .18s ease !important; }
+.custom-map-marker .icon-gray { opacity:1 !important; }
+.custom-map-marker .icon-color { opacity:0 !important; }
+.custom-map-marker:hover .icon-gray,
+.custom-map-marker.is-selected .icon-gray { opacity:0 !important; }
+.custom-map-marker:hover .icon-color,
+.custom-map-marker.is-selected .icon-color { opacity:1 !important; transform:translate(-50%,-50%) scale(1.12) !important; }
