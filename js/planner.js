@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V21-PLATINUM-INSPIRED-GSI";
-    console.log("[Fushimi Inari Smart Guide] planner.js V21-PLATINUM-INSPIRED-GSI loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V22-METAMAP-GLASS-CATEGORIES";
+    console.log("[Fushimi Inari Smart Guide] planner.js V22-METAMAP-GLASS-CATEGORIES loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -25,6 +25,20 @@ document.addEventListener("DOMContentLoaded", function () {
     // ⑫ 現在地追跡ナビ
     // ⑬ 最終到着時にGoogleフォームへ進める準備
     // ============================================================
+
+
+    // V22: category labels follow the selected UI language, including the short helper line.
+    function refreshPlannerCategoryLanguage() {
+        const lang = (document.getElementById("languageSelect")?.value || document.documentElement.lang || "ja").toLowerCase();
+        document.querySelectorAll(".planner-category-grid .category-label, .planner-category-grid .category-description").forEach(function (el) {
+            const value = el.dataset[lang] || el.dataset.ja;
+            if (value) el.textContent = value;
+        });
+    }
+    refreshPlannerCategoryLanguage();
+    document.getElementById("languageSelect")?.addEventListener("change", function () {
+        setTimeout(refreshPlannerCategoryLanguage, 0);
+    });
 
     const DATA_URL = "./data/spots.json";
 
@@ -2642,17 +2656,17 @@ document.addEventListener("DOMContentLoaded", function () {
                         >
 
                     </div>
-
+                    <span class="marker-name-glass">${escapeHTML(getLocalizedValue(spot.name))}</span>
                 </div>
             `,
 
             iconSize: [
-                48,
-                48
+                150,
+                68
             ],
 
             iconAnchor: [
-                24,
+                75,
                 24
             ],
 
@@ -4096,10 +4110,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 )
                 : "all";
 
-        const targetCategory =
-            normalizeCategory(
-                selectedCategory
-            );
+        const targetCategory = selectedCategory === "施設" ? "facility" : normalizeCategory(selectedCategory);
 
         const filtered =
             spots.filter(
@@ -4130,13 +4141,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     const matchesSearch =
                         !keyword || searchableText.includes(keyword);
 
-                    const matchesCategory =
-                        targetCategory ===
-                            "all" ||
-                        normalizeCategory(
-                            spot.category
-                        ) ===
-                            targetCategory;
+                    const normalizedSpotCategory = normalizeCategory(spot.category);
+                    const matchesCategory = targetCategory === "all" ||
+                        (targetCategory === "facility" && ["toilet", "guide", "施設", "トイレ", "案内"].includes(normalizedSpotCategory)) ||
+                        normalizedSpotCategory === targetCategory;
 
                     return (
                         matchesSearch &&
