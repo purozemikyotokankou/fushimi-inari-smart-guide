@@ -16,7 +16,7 @@ const translations = {
         // 共通
         home: "ホーム",
         map: "観光マップ",
-        planner: "ルート作成",
+        planner: "ルート",
         spots: "スポット",
         around: "周辺施設",
         support: "サポート",
@@ -78,7 +78,7 @@ const translations = {
         // Common
         home: "Home",
         map: "Map",
-        planner: "Route Planner",
+        planner: "Route",
         spots: "Spots",
         around: "Nearby",
         support: "Support",
@@ -140,7 +140,7 @@ const translations = {
         // 通用
         home: "首页",
         map: "观光地图",
-        planner: "路线规划",
+        planner: "路线",
         spots: "景点",
         around: "周边设施",
         support: "帮助",
@@ -202,7 +202,7 @@ const translations = {
         // 공통
         home: "홈",
         map: "관광 지도",
-        planner: "루트 만들기",
+        planner: "루트",
         spots: "관광지",
         around: "주변 시설",
         support: "도움말",
