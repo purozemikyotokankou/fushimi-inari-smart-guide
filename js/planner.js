@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V25-SWIPE-CATEGORIES-RAIL-ICON";
-    console.log("[Fushimi Inari Smart Guide] planner.js V25-SWIPE-CATEGORIES-RAIL-ICON loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V27-METAMAP-SPOT-DETAIL-SHEET";
+    console.log("[Fushimi Inari Smart Guide] planner.js V27-METAMAP-SPOT-DETAIL-SHEET loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -38,6 +38,9 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshPlannerCategoryLanguage();
     document.getElementById("languageSelect")?.addEventListener("change", function () {
         setTimeout(refreshPlannerCategoryLanguage, 0);
+        if (currentDetailSpot) setTimeout(function () {
+            renderMapSpotDetail(currentDetailSpot, mapSpotDetail?.classList.contains("is-expanded"));
+        }, 0);
     });
 
     const DATA_URL = "./data/spots.json";
@@ -128,6 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let spots = [];
     let routes = [];
     let selectedSpots = [];
+    let currentDetailSpot = null;
 
     let markers = [];
     let markerMap = new Map();
@@ -201,6 +205,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const googleFormButton =
         document.getElementById("googleFormButton");
+
+    const plannerWorkspace = document.querySelector(".planner-workspace");
+    const mapSpotDetail = document.getElementById("mapSpotDetail");
+    const mapSpotDetailContent = document.getElementById("mapSpotDetailContent");
+    const mapSpotDetailHandle = document.getElementById("mapSpotDetailHandle");
+    const closeMapSpotDetailButton = document.getElementById("closeMapSpotDetail");
+    const openMapSearchButton = document.getElementById("openMapSearchBtn");
+    const mapSearchPopover = document.getElementById("mapSearchPopover");
+    const closeMapSearchButton = document.getElementById("closeMapSearchBtn");
 
     // ============================================================
     // Leaflet地図
@@ -609,6 +622,10 @@ document.addEventListener("DOMContentLoaded", function () {
             plannerBottomSheet.classList.add("is-collapsed");
         } else if (state === "expanded") {
             plannerBottomSheet.classList.add("is-expanded");
+        }
+
+        if (plannerWorkspace) {
+            plannerWorkspace.classList.toggle("planner-sheet-expanded", state === "expanded");
         }
 
         if (plannerSheetHandle) {
@@ -3712,33 +3729,149 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            const rect = plannerBottomSheet.getBoundingClientRect();
+            const detailIsVisible = mapSpotDetail && !mapSpotDetail.hidden;
+            const obstruction = detailIsVisible ? mapSpotDetail : plannerBottomSheet;
+            const rect = obstruction.getBoundingClientRect();
             const visibleSheetHeight = Math.min(
                 Math.max(0, rect.height),
-                window.innerHeight * 0.62
+                window.innerHeight * 0.72
             );
 
             if (visibleSheetHeight > 0) {
                 map.panBy(
-                    [0, -Math.round(visibleSheetHeight * 0.24)],
-                    {
-                        animate: true,
-                        duration: 0.35
-                    }
+                    [0, -Math.round(visibleSheetHeight * 0.30)],
+                    { animate: true, duration: 0.35 }
                 );
             }
         }, 620);
     }
 
-    function showSpotOnMap(spot) {
-        focusSpotOnMap(spot);
-        window.setTimeout(function () {
-            const marker = markerMap.get(String(spot?.id));
-            if (marker && map.hasLayer(marker)) {
-                marker.openPopup();
-            }
-        }, 650);
+    function renderMapSpotDetail(spot, expanded) {
+        if (!spot || !mapSpotDetail || !mapSpotDetailContent) return;
+        currentDetailSpot = spot;
+        const name = getLocalizedValue(spot.name);
+        const description = getLocalizedValue(spot.description) || "説明はまだ登録されていません。";
+        const category = getCategoryLabel(spot.category);
+        const time = spot.time || "";
+        const url = getSafeURL(spot.url);
+        const image = typeof spot.image === "string" ? spot.image.trim() : "";
+        const imageHtml = image
+            ? `<img class="map-spot-detail-image" src="./images/${encodeURIComponent(image)}" alt="${escapeHTML(name)}" onerror="this.hidden=true; this.parentElement.classList.add('has-no-photo'); this.parentElement.querySelector('.map-spot-detail-photo-fallback').hidden=false;">`
+            : "";
+        const urlHtml = url
+            ? `<a class="map-spot-detail-url" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(getOfficialSiteText())} ↗</a>`
+            : `<p class="map-spot-detail-no-url">公式サイトのURLは登録されていません。</p>`;
+        const timeHtml = time ? `<p class="map-spot-detail-meta">滞在目安：${escapeHTML(time)}</p>` : "";
+        const addressValue = getLocalizedValue(spot.address || "");
+        const addressHtml = addressValue ? `<p class="map-spot-detail-meta">${escapeHTML(addressValue)}</p>` : "";
+        const accessValue = getLocalizedValue(spot.access || "");
+        const accessHtml = accessValue ? `<h3>アクセス</h3><p class="map-spot-detail-full-description">${escapeHTML(accessValue)}</p>` : "";
+        const selected = isSpotSelected(spot);
+
+        mapSpotDetailContent.innerHTML = `
+            <div class="map-spot-detail-summary">
+                <div class="map-spot-detail-photo${image ? "" : " has-no-photo"}">
+                    ${imageHtml}
+                    <div class="map-spot-detail-photo-fallback" ${image ? "hidden" : ""}>no photo</div>
+                </div>
+                <div class="map-spot-detail-title-row">
+                    <div class="map-spot-detail-title-copy">
+                        <p class="map-spot-detail-category">${escapeHTML(category)}</p>
+                        <h2>${escapeHTML(name)}</h2>
+                    </div>
+                </div>
+                <p class="map-spot-detail-short-description">${escapeHTML(description)}</p>
+            </div>
+            <div class="map-spot-detail-body">
+                <div class="map-spot-detail-divider"></div>
+                <h3>スポットについて</h3>
+                <p class="map-spot-detail-full-description">${escapeHTML(description)}</p>
+                ${timeHtml}
+                ${addressHtml}
+                ${accessHtml}
+                ${urlHtml}
+                <button type="button" class="map-spot-detail-route-button ${selected ? "is-selected" : ""}">${escapeHTML(selected ? getRemoveRouteText() : getAddRouteText())}</button>
+            </div>
+        `;
+
+        mapSpotDetail.hidden = false;
+        mapSpotDetail.classList.toggle("is-expanded", Boolean(expanded));
+        mapSpotDetail.classList.toggle("is-compact", !expanded);
+        plannerWorkspace?.classList.add("has-spot-detail");
+
+        const routeButton = mapSpotDetailContent.querySelector(".map-spot-detail-route-button");
+        routeButton?.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            selectSpot(spot);
+            renderMapSpotDetail(spot, true);
+        });
     }
+
+    function hideSpotDetail() {
+        if (!mapSpotDetail) return;
+        mapSpotDetail.hidden = true;
+        mapSpotDetail.classList.remove("is-expanded", "is-compact");
+        plannerWorkspace?.classList.remove("has-spot-detail");
+        currentDetailSpot = null;
+    }
+
+    function showSpotOnMap(spot) {
+        if (!spot) return;
+        closeMapSearch();
+        renderMapSpotDetail(spot, false);
+        focusSpotOnMap(spot);
+    }
+
+    closeMapSpotDetailButton?.addEventListener("click", function (event) {
+        event.preventDefault();
+        hideSpotDetail();
+    });
+
+    // The grip/summary can be dragged up to expand the sheet and down to return to preview.
+    let detailDragStart = null;
+    let detailDragMoved = false;
+    function handleDetailPointerDown(event) {
+        if (event.button !== undefined && event.button !== 0) return;
+        detailDragStart = { y: event.clientY, id: event.pointerId };
+        detailDragMoved = false;
+        if (event.currentTarget?.setPointerCapture && event.pointerId != null) {
+            try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) {}
+        }
+    }
+    function handleDetailPointerUp(event) {
+        if (!detailDragStart || (event.pointerId != null && event.pointerId !== detailDragStart.id)) return;
+        const delta = event.clientY - detailDragStart.y;
+        detailDragStart = null;
+        if (Math.abs(delta) < 28) return;
+        detailDragMoved = true;
+        if (delta < 0) {
+            renderMapSpotDetail(currentDetailSpot, true);
+        } else if (mapSpotDetail?.classList.contains("is-expanded")) {
+            renderMapSpotDetail(currentDetailSpot, false);
+        } else {
+            hideSpotDetail();
+        }
+        window.setTimeout(function () { detailDragMoved = false; }, 220);
+    }
+    [mapSpotDetailHandle].forEach(function (el) {
+        if (!el) return;
+        el.addEventListener("pointerdown", handleDetailPointerDown, { passive: true });
+        el.addEventListener("pointerup", handleDetailPointerUp, { passive: true });
+        el.addEventListener("pointercancel", function () { detailDragStart = null; }, { passive: true });
+        el.addEventListener("click", function () {
+            if (detailDragMoved || !currentDetailSpot) return;
+            renderMapSpotDetail(currentDetailSpot, !mapSpotDetail.classList.contains("is-expanded"));
+        });
+    });
+    mapSpotDetailContent?.addEventListener("pointerdown", function (event) {
+        if (!event.target.closest(".map-spot-detail-summary")) return;
+        handleDetailPointerDown(event);
+    }, { passive: true });
+    mapSpotDetailContent?.addEventListener("pointerup", function (event) {
+        if (!event.target.closest(".map-spot-detail-summary")) return;
+        handleDetailPointerUp(event);
+    }, { passive: true });
 
     function selectSpot(
         spot
@@ -4027,45 +4160,9 @@ document.addEventListener("DOMContentLoaded", function () {
                         }
                     );
 
-                marker.on(
-                    "click",
-                    function () {
-                        focusSpotOnMap(spot);
-                    }
-                );
-
-                marker.bindPopup(
-                    createPopupHTML(
-                        spot
-                    ),
-                    {
-                        className:
-                            "planner-liquid-popup",
-
-                        maxWidth:
-                            350,
-
-                        minWidth:
-                            250,
-
-                        closeButton:
-                            true,
-
-                        autoPan:
-                            true
-                    }
-                );
-
-                marker.on(
-                    "popupopen",
-                    function () {
-
-                        bindPopupButton(
-                            marker,
-                            spot
-                        );
-                    }
-                );
+                marker.on("click", function () {
+                    showSpotOnMap(spot);
+                });
 
                 marker.addTo(map);
 
@@ -4126,28 +4223,6 @@ document.addEventListener("DOMContentLoaded", function () {
             )
         );
 
-        if (
-            marker.isPopupOpen()
-        ) {
-
-            marker.setPopupContent(
-                createPopupHTML(
-                    spot
-                )
-            );
-
-            setTimeout(
-                function () {
-
-                    bindPopupButton(
-                        marker,
-                        spot
-                    );
-
-                },
-                0
-            );
-        }
     }
 
     // ============================================================
@@ -4235,12 +4310,32 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (searchInput) {
-
-        searchInput.addEventListener(
-            "input",
-            filterSpots
-        );
+        searchInput.addEventListener("input", function () {
+            filterSpots();
+            if (searchInput.value.trim()) {
+                setPlannerSheetState("expanded");
+            }
+        });
     }
+
+    if (openMapSearchButton && mapSearchPopover) {
+        openMapSearchButton.addEventListener("click", function () {
+            mapSearchPopover.hidden = false;
+            openMapSearchButton.setAttribute("aria-expanded", "true");
+            window.setTimeout(function () { searchInput?.focus(); }, 60);
+        });
+    }
+    function closeMapSearch() {
+        if (mapSearchPopover) mapSearchPopover.hidden = true;
+        openMapSearchButton?.setAttribute("aria-expanded", "false");
+    }
+    closeMapSearchButton?.addEventListener("click", closeMapSearch);
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeMapSearch();
+            hideSpotDetail();
+        }
+    });
 
     const foodSubcategories = document.getElementById("foodSubcategories");
     document.querySelectorAll(".food-subcategory").forEach(function (button) {

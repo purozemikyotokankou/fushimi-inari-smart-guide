@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#f5f5f7">
-    <title>Fushimi Inari Smart Guide - ルート作成</title>
+    <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=26-spacing-header-fixes">
+    <link rel="stylesheet" href="css/planner.css?v=27-bottom-sheet-details">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
 <body data-google-form-url="https://docs.google.com/forms/d/e/1FAIpQLSfZQYyVeUwdfxDnmGi2dWMtzfNxWuxCfhIR0BTycJzAO8pytQ/viewform?usp=dialog">
 
 <header class="planner-site-header">
-    <div class="logo" aria-label="Fushimi Inari Smart Guide"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">Fushimi Inari Smart Guide</span><span class="logo-compact">GUIDE</span></div>
+    <div class="logo" aria-label="伏見稲荷スマートガイド"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">伏見稲荷スマートガイド</span></div>
 
     <nav aria-label="Main navigation">
         <a href="home.html" data-i18n="home">ホーム</a>
@@ -42,9 +42,28 @@
 
                 <div id="map" aria-label="伏見稲荷の地図"></div>
 
-                <div class="planner-map-buttons" aria-label="Map actions">
-                    <button type="button" id="locationBtn" class="map-location-action" title="現在地を表示" aria-label="現在地を表示"><span class="map-location-icon" aria-hidden="true">⌖</span><span class="map-location-label">現在地</span></button>
-                    <button type="button" id="createRouteBtn" class="map-primary-action" aria-label="選択したスポットでルートを作成">🧭 <span>ルート作成</span></button>
+                <div class="planner-top-actions" aria-label="Map actions">
+                    <button type="button" id="openMapSearchBtn" class="map-action-tile map-search-action" aria-label="スポットを検索" aria-expanded="false" aria-controls="mapSearchPopover">
+                        <span class="map-action-icon map-action-no-icon" aria-hidden="true">no icon</span>
+                        <span class="map-action-label">検索</span>
+                    </button>
+                    <button type="button" id="createRouteBtn" class="map-action-tile map-route-action" aria-label="選択したスポットでルートを作成">
+                        <span class="map-action-icon map-action-no-icon" aria-hidden="true">no icon</span>
+                        <span class="map-action-label">ルート作成</span>
+                    </button>
+                </div>
+                <div class="map-search-popover" id="mapSearchPopover" hidden>
+                    <label for="searchInput">スポットを検索</label>
+                    <div class="map-search-input-row">
+                        <input id="searchInput" class="planner-search-input" type="search" autocomplete="off" placeholder="スポット名・キーワード">
+                        <button type="button" id="closeMapSearchBtn" class="map-search-close" aria-label="検索を閉じる">×</button>
+                    </div>
+                </div>
+                <div class="planner-location-dock" aria-label="Current location">
+                    <button type="button" id="locationBtn" class="map-action-tile map-location-action" title="現在地を表示" aria-label="現在地を表示">
+                        <span class="map-action-icon map-action-no-icon" aria-hidden="true">no icon</span>
+                        <span class="map-action-label">現在地</span>
+                    </button>
                 </div>
 
                 <div class="planner-map-hint" aria-hidden="true">地図を動かしてスポットを探せます</div>
@@ -131,12 +150,20 @@
                 </section>
             </div>
         </aside>
+
+        <section id="mapSpotDetail" class="map-spot-detail is-compact" aria-label="スポット詳細" hidden>
+            <button type="button" id="mapSpotDetailHandle" class="map-spot-detail-handle" aria-label="上にスワイプして詳細を表示">
+                <span class="map-spot-detail-grabber" aria-hidden="true"></span>
+            </button>
+            <button type="button" id="closeMapSpotDetail" class="map-spot-detail-close" aria-label="スポット詳細を閉じる">×</button>
+            <div id="mapSpotDetailContent" class="map-spot-detail-content"></div>
+        </section>
     </div>
 </main>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=26-spacing-header-fixes"></script>
+<script src="js/planner.js?v=27-bottom-sheet-details"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
