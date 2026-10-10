@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V17-BATCH-FIX";
-    console.log("[Fushimi Inari Smart Guide] planner.js V17-BATCH-FIX loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V18-METAMAP-STYLE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V18-METAMAP-STYLE loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -203,12 +203,12 @@ document.addEventListener("DOMContentLoaded", function () {
     map.getPane(
         "plannerGsiPane"
     ).style.filter =
-        "grayscale(100%)";
+        "grayscale(28%) saturate(.78) contrast(.98) brightness(1.03)";
 
     map.getPane(
         "plannerGsiPane"
     ).style.webkitFilter =
-        "grayscale(100%)";
+        "grayscale(28%) saturate(.78) contrast(.98) brightness(1.03)";
 
     const gsiLayer =
         L.tileLayer(
@@ -637,17 +637,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updatePlannerSheetSummary();
 
-    // スマホではスポット一覧が最初から見える状態にする。
-    // マップを主役にしつつ、一覧が潰れて操作できなくなるのを防ぐ。
+    // スマホでは地図を主役にし、検索とカテゴリは地図上に浮かせる。
+    // ボトムシートは必要に応じて上スワイプで展開する。
     function applyMobileSheetDefault() {
         if (!plannerBottomSheet) {
             return;
         }
 
         if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
-            // 初期表示は一覧を確認できるよう展開状態。
-            // 収納したい場合はハンドルを下へスワイプ、再展開は上へスワイプ。
-            setPlannerSheetState("expanded");
+            // 初期表示は地図を主役にするため収納。
+            // 上スワイプで一覧を展開、下スワイプで地図を広く見せる。
+            setPlannerSheetState("collapsed");
             requestAnimationFrame(function () {
                 if (typeof map?.invalidateSize === "function") {
                     map.invalidateSize({ pan: false });
@@ -2578,18 +2578,18 @@ document.addEventListener("DOMContentLoaded", function () {
             `,
 
             iconSize: [
-                58,
-                68
+                48,
+                48
             ],
 
             iconAnchor: [
-                29,
-                52
+                24,
+                24
             ],
 
             popupAnchor: [
                 0,
-                -50
+                -27
             ]
         });
     }
