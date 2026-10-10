@@ -7,7 +7,7 @@
     <title>Fushimi Inari Smart Guide - ルート作成</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=18-metamap-style">
+    <link rel="stylesheet" href="css/planner.css?v=20-gsi-metamap">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -76,6 +76,10 @@
                             <button type="button" class="category category-button" data-category="案内">案内</button>
                         </div>
                     </section>
+                    <div class="planner-discovery-footer" aria-live="polite" aria-atomic="true">
+                        <span id="spotResultCount">スポットを読み込み中</span>
+                        <span class="planner-discovery-footer-hint">MAP · SPOTS · ROUTES</span>
+                    </div>
                 </div>
 
                 <div class="planner-map-hint" aria-hidden="true">
@@ -157,7 +161,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=18-metamap-style"></script>
+<script src="js/planner.js?v=20-gsi-metamap"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
