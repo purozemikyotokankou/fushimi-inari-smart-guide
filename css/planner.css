@@ -2398,3 +2398,60 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .planner-map-discovery .category-button { transition: none !important; }
 }
+
+
+/* ============================================================
+   V22 — METAMAP-INSPIRED MAP-FIRST + LIQUID GLASS
+   Keep GSI tiles and existing geographic coordinates.
+============================================================ */
+.planner-site-header {
+  position: absolute !important; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  width: min(1100px, calc(100% - 28px)); box-sizing: border-box; height: auto !important; min-height: 58px;
+  padding: 9px 14px !important; gap: 14px !important; border-radius: 22px !important;
+  background: rgba(248,250,247,.48) !important; border: 1px solid rgba(255,255,255,.78) !important;
+  box-shadow: 0 12px 38px rgba(22,42,29,.14), inset 0 1px 0 rgba(255,255,255,.82) !important;
+  backdrop-filter: blur(30px) saturate(1.5) !important; -webkit-backdrop-filter: blur(30px) saturate(1.5) !important;
+}
+.planner-site-header .logo { font-size: clamp(11px,1.2vw,15px) !important; color:#20372a !important; }
+.planner-site-header nav { gap: 3px !important; }
+.planner-site-header nav a { color:#294433 !important; padding:8px 11px !important; }
+.planner-site-header nav a.nav-active { background:rgba(255,255,255,.64) !important; box-shadow:inset 0 1px 0 #fff; }
+.planner-site-header #languageSelect { background:rgba(255,255,255,.46) !important; border-color:rgba(255,255,255,.8) !important; backdrop-filter:blur(16px); }
+.planner-page { height:100dvh !important; }
+.planner-map-title { display:none !important; }
+.planner-map-buttons { top: 88px !important; }
+.planner-map-hint { display:none !important; }
+.planner-spot-panel { background:rgba(246,249,245,.70) !important; border:1px solid rgba(255,255,255,.82) !important; box-shadow:0 -14px 40px rgba(22,42,29,.12), inset 0 1px 0 rgba(255,255,255,.95) !important; backdrop-filter:blur(30px) saturate(1.35) !important; -webkit-backdrop-filter:blur(30px) saturate(1.35) !important; }
+.planner-sheet-handle { background:rgba(255,255,255,.18) !important; }
+.planner-category-tray { padding: 7px 13px 12px; margin:0; }
+.planner-category-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; overflow-x:auto; scrollbar-width:none; }
+.planner-category-grid::-webkit-scrollbar { display:none; }
+.planner-category-grid .category-button { min-width:0; min-height:82px !important; height:auto !important; padding:9px 4px 8px !important; display:flex !important; flex-direction:column !important; align-items:center; justify-content:center; gap:4px !important; white-space:normal !important; border-radius:17px !important; border:1px solid rgba(255,255,255,.88) !important; background:rgba(255,255,255,.45) !important; color:#304b39 !important; box-shadow:0 5px 16px rgba(25,49,32,.06), inset 0 1px 0 rgba(255,255,255,.86) !important; backdrop-filter:blur(20px) saturate(1.4); -webkit-backdrop-filter:blur(20px) saturate(1.4); }
+.planner-category-grid .category-button.active { background:rgba(48,86,61,.90) !important; color:#fff !important; border-color:rgba(255,255,255,.88) !important; box-shadow:0 7px 18px rgba(37,77,49,.20),inset 0 1px 0 rgba(255,255,255,.25) !important; }
+.planner-category-grid .category-glyph { display:grid; place-items:center; width:31px; height:31px; border-radius:11px; font-size:19px; line-height:1; background:rgba(255,255,255,.70); color:#b44d35; }
+.planner-category-grid .category-button.active .category-glyph { background:rgba(255,255,255,.20); color:#fff; }
+.planner-category-grid .category-label { font-size:11px; line-height:1.2; font-weight:800; }
+.planner-category-grid .category-description { font-size:8px; line-height:1.2; opacity:.72; text-align:center; white-space:normal; }
+.planner-category-grid .category-button.active .category-description { opacity:.86; }
+.planner-category-tray + .spot-list-window { padding-top:0; }
+.planner-category-grid .category-button::before { content:none !important; }
+.planner-custom-div-icon { width:150px !important; height:68px !important; background:transparent !important; border:0 !important; }
+.custom-map-marker { width:150px !important; height:68px !important; display:flex !important; flex-direction:column; align-items:center; overflow:visible !important; }
+.custom-map-marker .marker-pin { flex:0 0 43px; }
+.marker-name-glass { display:block; max-width:142px; margin-top:2px; padding:3px 8px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid rgba(255,255,255,.86); border-radius:999px; background:rgba(249,251,247,.72); color:#24392b; box-shadow:0 4px 12px rgba(24,43,29,.13),inset 0 1px 0 rgba(255,255,255,.92); backdrop-filter:blur(16px) saturate(1.4); -webkit-backdrop-filter:blur(16px) saturate(1.4); font-size:10px; font-weight:800; line-height:1.2; text-align:center; pointer-events:none; }
+.custom-map-marker.is-selected .marker-name-glass { background:rgba(48,86,61,.91); color:#fff; border-color:rgba(255,255,255,.9); }
+@media (max-width:760px) {
+ .planner-site-header { top:max(7px,env(safe-area-inset-top)) !important; width:calc(100% - 14px) !important; min-height:48px; padding:6px 8px !important; gap:5px !important; border-radius:18px !important; flex-wrap:wrap; justify-content:space-between; }
+ .planner-site-header .logo { font-size:10px !important; max-width:48%; white-space:normal !important; line-height:1.15; }
+ .planner-site-header nav { margin-left:auto !important; gap:1px !important; }
+ .planner-site-header nav a { padding:7px 6px !important; font-size:10px !important; }
+ .planner-site-header #languageSelect { max-width:78px !important; min-height:29px !important; padding:0 4px !important; font-size:10px !important; }
+ .planner-map-buttons { top:91px !important; right:9px !important; }
+ .planner-category-tray { padding:6px 9px 10px; }
+ .planner-category-grid { grid-template-columns:repeat(7,minmax(65px,1fr)); gap:6px; }
+ .planner-category-grid .category-button { min-height:75px !important; border-radius:14px !important; }
+ .planner-category-grid .category-glyph { width:27px; height:27px; font-size:17px; }
+ .planner-category-grid .category-label { font-size:10px; }
+ .planner-category-grid .category-description { font-size:7px; }
+ .marker-name-glass { max-width:110px; font-size:9px; }
+}
