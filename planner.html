@@ -7,18 +7,18 @@
     <title>Fushimi Inari Smart Guide - ルート作成</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=22-metamap">
+    <link rel="stylesheet" href="css/planner.css?v=23-category-pill">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
 <body data-google-form-url="https://docs.google.com/forms/d/e/1FAIpQLSfZQYyVeUwdfxDnmGi2dWMtzfNxWuxCfhIR0BTycJzAO8pytQ/viewform?usp=dialog">
 
 <header class="planner-site-header">
-    <div class="logo">⛩ Fushimi Inari Smart Guide</div>
+    <div class="logo" aria-label="Fushimi Inari Smart Guide"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">Fushimi Inari Smart Guide</span><span class="logo-compact">GUIDE</span></div>
 
     <nav aria-label="Main navigation">
         <a href="home.html" data-i18n="home">ホーム</a>
-        <a href="planner.html" data-i18n="planner">ルート作成</a>
+        <a href="planner.html" data-i18n="planner">ルート</a>
         <a href="spots.html" data-i18n="spots">スポット</a>
     </nav>
 
@@ -68,6 +68,18 @@
 
             <div id="plannerSheetContent" class="planner-sheet-content">
 
+                <section class="planner-category-tray" aria-label="Spot categories" id="plannerCategoryTray">
+                    <div class="planner-category-grid">
+                        <button type="button" class="category category-button active" data-category="all"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M3 6.2 9 3l6 3.2L21 3v14.8L15 21l-6-3.2L3 21Z"/><path d="M9 3v14.8M15 6.2V21"/></svg></span><span class="category-label" data-ja="すべて" data-en="All" data-zh="全部" data-ko="전체">すべて</span><span class="category-description" data-ja="すべてのスポット" data-en="All places" data-zh="所有地点" data-ko="모든 장소">すべてのスポット</span></button>
+                        <button type="button" class="category category-button" data-category="景観"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="m2.5 19 6.2-10 4.1 6 2.6-3.6L21.5 19Z"/><path d="m8.7 9 2-3 4.7 7"/></svg></span><span class="category-label" data-ja="景観" data-en="Scenery" data-zh="景观" data-ko="경관">景観</span><span class="category-description" data-ja="景色・展望" data-en="Views" data-zh="风景与观景" data-ko="풍경·전망">景色・展望</span></button>
+                        <button type="button" class="category category-button" data-category="神社"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M4 7h16M3 4h18M6 7v14M18 7v14M4 12h16M9 12v9M15 12v9"/><path d="m5 4 2-2h10l2 2"/></svg></span><span class="category-label" data-ja="神社" data-en="Shrines" data-zh="神社" data-ko="신사">神社</span><span class="category-description" data-ja="神社・鳥居" data-en="Shrines & torii" data-zh="神社与鸟居" data-ko="신사·도리이">神社・鳥居</span></button>
+                        <button type="button" class="category category-button" data-category="登山"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="m3 20 6-9 3 4 3-7 6 12Z"/><path d="m12 8 3-4 4 1"/></svg></span><span class="category-label" data-ja="登山" data-en="Hiking" data-zh="登山" data-ko="등산">登山</span><span class="category-description" data-ja="山道・休憩" data-en="Trails & rest" data-zh="山路与休息" data-ko="산길·휴식">山道・休憩</span></button>
+                        <button type="button" class="category category-button" data-category="グルメ"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M3 12h18c-.6 5-4.2 8-9 8s-8.4-3-9-8Z"/><path d="M5 9c1.2-1.1 2.4-1.1 3.6 0S11 10.1 12.2 9s2.4-1.1 3.6 0 2.4 1.1 3.6 0"/><path d="M8 3v3M12 2v3M16 3v3"/></svg></span><span class="category-label" data-ja="飲食店" data-en="Food" data-zh="餐饮" data-ko="음식점">飲食店</span><span class="category-description" data-ja="食事・カフェ" data-en="Food & cafés" data-zh="餐厅与咖啡馆" data-ko="식당·카페">食事・カフェ</span></button>
+                        <button type="button" class="category category-button" data-category="交通"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="16" rx="4"/><path d="M5 12h14M8 7h.1M16 7h.1M8 22l3-3.5M16 22l-3-3.5M8 15h.1M16 15h.1"/></svg></span><span class="category-label" data-ja="交通" data-en="Transit" data-zh="交通" data-ko="교통">交通</span><span class="category-description" data-ja="駅・移動" data-en="Stations" data-zh="车站与交通" data-ko="역·이동">駅・移動</span></button>
+                        <button type="button" class="category category-button" data-category="施設"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg></span><span class="category-label" data-ja="施設" data-en="Facilities" data-zh="设施" data-ko="시설">施設</span><span class="category-description" data-ja="トイレ・案内" data-en="Toilets & info" data-zh="厕所与咨询" data-ko="화장실·안내">トイレ・案内</span></button>
+                    </div>
+                </section>
+
                 <section class="selected-section">
                     <div class="sheet-section-heading">
                         <h2 data-i18n="selectedSpots">選択したスポット</h2>
@@ -80,17 +92,7 @@
                     </div>
                 </section>
 
-                <section class="planner-category-tray" aria-label="Spot categories" id="plannerCategoryTray">
-                    <div class="planner-category-grid">
-                        <button type="button" class="category category-button active" data-category="all"><span class="category-glyph">✦</span><span class="category-label" data-ja="すべて" data-en="All" data-zh="全部" data-ko="전체">すべて</span><span class="category-description" data-ja="すべてのスポット" data-en="All places" data-zh="所有地点" data-ko="모든 장소">すべてのスポット</span></button>
-                        <button type="button" class="category category-button" data-category="景観"><span class="category-glyph">◒</span><span class="category-label" data-ja="景観" data-en="Scenery" data-zh="景观" data-ko="경관">景観</span><span class="category-description" data-ja="景色・展望" data-en="Views" data-zh="风景与观景" data-ko="풍경·전망">景色・展望</span></button>
-                        <button type="button" class="category category-button" data-category="神社"><span class="category-glyph">⛩</span><span class="category-label" data-ja="神社" data-en="Shrines" data-zh="神社" data-ko="신사">神社</span><span class="category-description" data-ja="神社・鳥居" data-en="Shrines & torii" data-zh="神社与鸟居" data-ko="신사·도리이">神社・鳥居</span></button>
-                        <button type="button" class="category category-button" data-category="登山"><span class="category-glyph">↗</span><span class="category-label" data-ja="登山" data-en="Hiking" data-zh="登山" data-ko="등산">登山</span><span class="category-description" data-ja="山道・休憩" data-en="Trails & rest" data-zh="山路与休息" data-ko="산길·휴식">山道・休憩</span></button>
-                        <button type="button" class="category category-button" data-category="グルメ"><span class="category-glyph">🍜</span><span class="category-label" data-ja="飲食店" data-en="Food" data-zh="餐饮" data-ko="음식점">飲食店</span><span class="category-description" data-ja="食事・カフェ" data-en="Food & cafés" data-zh="餐厅与咖啡馆" data-ko="식당·카페">食事・カフェ</span></button>
-                        <button type="button" class="category category-button" data-category="交通"><span class="category-glyph">🚉</span><span class="category-label" data-ja="交通" data-en="Transit" data-zh="交通" data-ko="교통">交通</span><span class="category-description" data-ja="駅・移動" data-en="Stations" data-zh="车站与交通" data-ko="역·이동">駅・移動</span></button>
-                        <button type="button" class="category category-button" data-category="施設"><span class="category-glyph">＋</span><span class="category-label" data-ja="施設" data-en="Facilities" data-zh="设施" data-ko="시설">施設</span><span class="category-description" data-ja="トイレ・案内" data-en="Toilets & info" data-zh="厕所与咨询" data-ko="화장실·안내">トイレ・案内</span></button>
-                    </div>
-                </section>
+
 
                 <section class="spot-list-window">
                     <div class="sheet-section-heading">
@@ -137,7 +139,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=22-metamap"></script>
+<script src="js/planner.js?v=23-category-pill"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
