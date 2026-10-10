@@ -2351,10 +2351,6 @@ body {
     box-shadow: none !important;
 }
 
-/* Strong, readable route casing underneath the signature orange route line. */
-.planner-v11-route-arrow-icon { filter: drop-shadow(0 1px 2px rgba(255,255,255,.98)); }
-.planner-v11-route-arrow-icon span { text-shadow: 0 1px 3px rgba(255,255,255,1), 0 0 5px rgba(255,255,255,.9) !important; }
-
 /* Missing custom SVGs never leave empty/broken marker faces. */
 .marker-fallback {
     display: none;
@@ -3546,3 +3542,139 @@ html, body { height: 100%; overflow: hidden !important; }
     .planner-category-grid .category-button { flex-basis: 48px !important; width: 48px !important; min-width: 48px !important; max-width: 48px !important; }
 }
 @media (prefers-reduced-motion: reduce) { .map-spot-detail { transition: none !important; } }
+
+/* V28: polished one-line header and an unmistakable swipe affordance. */
+.planner-site-header {
+  display:flex !important; flex-wrap:nowrap !important; align-items:center !important;
+  gap:clamp(6px,1.2vw,16px) !important; min-height:54px !important;
+  padding:7px clamp(10px,2vw,22px) !important; box-sizing:border-box !important;
+  overflow:visible !important;
+}
+.planner-site-header .logo { flex:0 1 auto !important; min-width:0 !important; white-space:nowrap !important; }
+.planner-site-header .logo-full { display:block !important; font-size:clamp(10px,1.15vw,15px) !important; line-height:1.05 !important; letter-spacing:.055em !important; font-weight:750 !important; white-space:nowrap !important; }
+.planner-site-header .logo-break { display:none !important; }
+.planner-site-header nav { display:flex !important; flex:0 0 auto !important; flex-wrap:nowrap !important; align-items:center !important; gap:clamp(5px,1vw,14px) !important; white-space:nowrap !important; }
+.planner-site-header nav a { white-space:nowrap !important; writing-mode:horizontal-tb !important; font-size:clamp(10px,1vw,13px) !important; }
+.planner-site-header #languageSelect { display:block !important; visibility:visible !important; opacity:1 !important; flex:0 0 auto !important; width:auto !important; min-width:78px !important; max-width:118px !important; font-size:11px !important; }
+.planner-page { height:calc(100dvh - 54px) !important; min-height:0 !important; }
+.planner-category-tray { position:relative !important; }
+.planner-spot-panel.is-collapsed .planner-sheet-handle { height:26px !important; min-height:26px !important; max-height:26px !important; flex:0 0 26px !important; cursor:grab !important; touch-action:pan-y !important; }
+.planner-sheet-swipe-hint { display:block !important; text-align:center !important; font-size:9px !important; line-height:12px !important; letter-spacing:.09em !important; font-weight:700 !important; color:rgba(45,49,54,.66) !important; margin-top:4px !important; pointer-events:none !important; }
+.planner-spot-panel.is-collapsed .planner-category-tray { margin-top:0 !important; }
+.planner-spot-panel.is-collapsed .planner-sheet-content { padding-top:0 !important; }
+.planner-workspace.has-spot-detail .leaflet-marker-icon { z-index:600 !important; }
+@media (max-width:560px) {
+ .planner-site-header { gap:5px !important; padding:6px 7px !important; min-height:48px !important; }
+ .planner-site-header .logo-mark { display:none !important; }
+ .planner-site-header .logo-full { font-size:9px !important; letter-spacing:.015em !important; }
+ .planner-site-header nav { gap:5px !important; }
+ .planner-site-header nav a { font-size:9px !important; padding:4px 2px !important; }
+ .planner-site-header #languageSelect { min-width:66px !important; max-width:74px !important; padding:0 2px !important; font-size:9px !important; }
+ .planner-page { height:calc(100dvh - 48px) !important; }
+ .planner-sheet-swipe-hint { font-size:8px !important; }
+}
+
+
+/* V29 — remove the phantom second rounded slab below the category bar.
+   The panel starts collapsed in HTML, and its wrapper is transparent; only
+   the category tray itself receives the Liquid Glass surface. */
+.planner-spot-panel.is-collapsed,
+.planner-spot-panel.is-collapsed:hover,
+.planner-spot-panel.is-collapsed:focus-within {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(7px + env(safe-area-inset-bottom)) !important;
+    width: 100% !important;
+    height: 69px !important;
+    min-height: 69px !important;
+    max-height: 69px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    outline: 0 !important;
+}
+.planner-spot-panel.is-collapsed::before,
+.planner-spot-panel.is-collapsed::after,
+.planner-spot-panel.is-collapsed .planner-sheet-content::before,
+.planner-spot-panel.is-collapsed .planner-sheet-content::after {
+    content: none !important;
+    display: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+.planner-spot-panel.is-collapsed .planner-sheet-handle {
+    display: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+.planner-spot-panel.is-collapsed .planner-sheet-content {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    height: 69px !important;
+    min-height: 69px !important;
+    max-height: 69px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.planner-spot-panel.is-collapsed .planner-category-tray {
+    position: absolute !important;
+    left: 50% !important;
+    top: 0 !important;
+    transform: translateX(-50%) !important;
+    display: block !important;
+    width: max-content !important;
+    max-width: calc(100vw - 14px) !important;
+    height: 67px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 3px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,.95) !important;
+    border-radius: 999px !important;
+    background: rgba(226,228,230,.86) !important;
+    box-shadow: 0 8px 24px rgba(20,30,24,.15), inset 0 1px 0 rgba(255,255,255,.98) !important;
+    backdrop-filter: blur(26px) saturate(1.35) !important;
+    -webkit-backdrop-filter: blur(26px) saturate(1.35) !important;
+}
+@media (max-width: 820px) {
+    .planner-spot-panel.is-collapsed { height: 69px !important; min-height: 69px !important; max-height: 69px !important; }
+    .planner-spot-panel.is-collapsed .planner-sheet-content { height: 69px !important; min-height: 69px !important; max-height: 69px !important; }
+}
+
+
+/* V30: flowing light traveling from the route start toward the destination. */
+.leaflet-overlay-pane .planner-route-flow-line {
+    stroke: #fffdf5 !important;
+    stroke-width: 3.2px !important;
+    stroke-opacity: .98 !important;
+    stroke-dasharray: 1 22 !important;
+    stroke-dashoffset: 0;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    filter: drop-shadow(0 0 2px rgba(255,255,255,.98)) drop-shadow(0 0 4px rgba(255,190,113,.95));
+    animation: fushimi-route-flow 1.35s linear infinite;
+    pointer-events: none !important;
+}
+@keyframes fushimi-route-flow {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -46; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .leaflet-overlay-pane .planner-route-flow-line { animation-duration: 3.5s; }
+}

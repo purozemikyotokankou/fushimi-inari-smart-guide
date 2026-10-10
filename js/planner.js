@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V27-METAMAP-SPOT-DETAIL-SHEET";
-    console.log("[Fushimi Inari Smart Guide] planner.js V27-METAMAP-SPOT-DETAIL-SHEET loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V30-ROUTE-FLOW-LIGHT-NO-ARROWS";
+    console.log("[Fushimi Inari Smart Guide] planner.js V30-ROUTE-FLOW-LIGHT-NO-ARROWS loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -138,6 +138,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let routeLine = null;
     let routeOutlineLine = null;
+    let routeFlowLine = null;
     let routeSegments = [];
     let routeNumberMarkers = [];
 
@@ -149,7 +150,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let navigationLegs = [];
     let navigationLegIndex = 0;
 
-    let routeArrowLayer = null;
 
     // ============================================================
     // HTML要素
@@ -3713,37 +3713,22 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const currentZoom = Number(map.getZoom?.() || 16);
-        const nextZoom = Math.min(18, Math.max(17, currentZoom));
+        const nextZoom = Math.min(18, Math.max(16, currentZoom));
+        // Offset the target before flying, so the marker clears the bottom sheet
+        // without a second pan animation (the old second movement caused a jerk).
+        const detailIsVisible = mapSpotDetail && !mapSpotDetail.hidden;
+        const obstruction = detailIsVisible ? mapSpotDetail : plannerBottomSheet;
+        const rect = obstruction ? obstruction.getBoundingClientRect() : null;
+        const sheetHeight = rect ? Math.min(Math.max(0, rect.height), window.innerHeight * 0.62) : 0;
+        const targetPoint = map.project([lat, lng], nextZoom);
+        targetPoint.y += sheetHeight * 0.28;
+        const targetCenter = map.unproject(targetPoint, nextZoom);
 
-        map.flyTo(
-            [lat, lng],
-            nextZoom,
-            {
-                animate: true,
-                duration: 0.55
-            }
-        );
-
-        window.setTimeout(function () {
-            if (!plannerBottomSheet) {
-                return;
-            }
-
-            const detailIsVisible = mapSpotDetail && !mapSpotDetail.hidden;
-            const obstruction = detailIsVisible ? mapSpotDetail : plannerBottomSheet;
-            const rect = obstruction.getBoundingClientRect();
-            const visibleSheetHeight = Math.min(
-                Math.max(0, rect.height),
-                window.innerHeight * 0.72
-            );
-
-            if (visibleSheetHeight > 0) {
-                map.panBy(
-                    [0, -Math.round(visibleSheetHeight * 0.30)],
-                    { animate: true, duration: 0.35 }
-                );
-            }
-        }, 620);
+        map.flyTo(targetCenter, nextZoom, {
+            animate: true,
+            duration: 0.9,
+            easeLinearity: 0.22
+        });
     }
 
     function renderMapSpotDetail(spot, expanded) {
@@ -5695,20 +5680,12 @@ document.addEventListener("DOMContentLoaded", function () {
             map.removeLayer(routeOutlineLine);
             routeOutlineLine = null;
         }
+        if (routeFlowLine) {
+            map.removeLayer(routeFlowLine);
+            routeFlowLine = null;
+        }
 
         clearRouteNumberMarkers();
-
-        if (
-            routeArrowLayer
-        ) {
-
-            map.removeLayer(
-                routeArrowLayer
-            );
-
-            routeArrowLayer =
-                null;
-        }
 
         routeSegments = [];
 
@@ -5910,12 +5887,25 @@ document.addEventListener("DOMContentLoaded", function () {
             weight: 6,
             opacity: 0.98,
             lineCap: "round",
-            lineJoin: "round"
+            lineJoin: "round",
+            interactive: false
         }).addTo(map);
 
-        addRouteDirectionArrows(
-            allCoordinates
-        );
+        // Tiny glowing dashes travel along the route in coordinate order
+        // (current location -> first stop -> next stops) toward the destination.
+        routeFlowLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            className: "planner-route-flow-line",
+            color: "#fffdf5",
+            weight: 3.2,
+            opacity: 0.98,
+            dashArray: "1 22",
+            dashOffset: "0",
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false,
+            bubblingMouseEvents: false
+        }).addTo(map);
 
         map.fitBounds(
             routeLine.getBounds(),
@@ -6012,139 +6002,7 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    // ============================================================
-    // ルート方向矢印
-    // ============================================================
-
-    function addRouteDirectionArrows(
-        points
-    ) {
-
-        if (
-            routeArrowLayer
-        ) {
-
-            map.removeLayer(
-                routeArrowLayer
-            );
-        }
-
-        routeArrowLayer =
-            L.layerGroup();
-
-        if (
-            !Array.isArray(points) ||
-            points.length < 3
-        ) {
-
-            routeArrowLayer.addTo(
-                map
-            );
-
-            return;
-        }
-
-        const step =
-            Math.max(
-                12,
-                Math.floor(
-                    points.length /
-                    14
-                )
-            );
-
-        for (
-            let i = step;
-            i < points.length - 1;
-            i += step
-        ) {
-
-            const current =
-                points[i];
-
-            const next =
-                points[
-                    Math.min(
-                        i + 2,
-                        points.length - 1
-                    )
-                ];
-
-            const angle =
-                Math.atan2(
-                    next[1] -
-                        current[1],
-                    next[0] -
-                        current[0]
-                ) *
-                180 /
-                Math.PI;
-
-            const arrow =
-                L.marker(
-                    current,
-                    {
-
-                        pane:
-                            "plannerRoutePane",
-
-                        interactive:
-                            false,
-
-                        keyboard:
-                            false,
-
-                        icon:
-                            L.divIcon(
-
-                                {
-
-                                    className:
-                                        "planner-v11-route-arrow-icon",
-
-                                    html:
-                                        `
-                                            <span
-                                                style="
-                                                    display:block;
-                                                    color:${ROUTE_COLOR};
-                                                    font-size:17px;
-                                                    font-weight:900;
-                                                    text-shadow:
-                                                        0 1px 4px rgba(255,255,255,.98);
-                                                    transform:
-                                                        rotate(${angle}deg);
-                                                "
-                                            >
-                                                ▶
-                                            </span>
-                                        `,
-
-                                    iconSize:
-                                        [
-                                            20,
-                                            20
-                                        ],
-
-                                    iconAnchor:
-                                        [
-                                            10,
-                                            10
-                                        ]
-                                }
-                            )
-                    }
-                );
-
-            routeArrowLayer.addLayer(
-                arrow
-            );
-        }
-
-        routeArrowLayer.addTo(
-            map
-        );
-    }
+    // Route direction arrows removed; the animated light on the route shows direction.
 
     // ============================================================
     // ナビ開始
@@ -6294,13 +6152,13 @@ document.addEventListener("DOMContentLoaded", function () {
             routeOutlineLine = null;
         }
 
-        if (routeArrowLayer) {
+        if (routeFlowLine) {
             try {
-                map.removeLayer(routeArrowLayer);
+                map.removeLayer(routeFlowLine);
             } catch (error) {
-                console.warn("routeArrowLayer cleanup warning:", error);
+                console.warn("routeFlowLine cleanup warning:", error);
             }
-            routeArrowLayer = null;
+            routeFlowLine = null;
         }
 
         clearRouteNumberMarkers();

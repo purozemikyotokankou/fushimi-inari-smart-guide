@@ -7,14 +7,14 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=27-bottom-sheet-details">
+    <link rel="stylesheet" href="css/planner.css?v=30-route-flow-light">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
 <body data-google-form-url="https://docs.google.com/forms/d/e/1FAIpQLSfZQYyVeUwdfxDnmGi2dWMtzfNxWuxCfhIR0BTycJzAO8pytQ/viewform?usp=dialog">
 
 <header class="planner-site-header">
-    <div class="logo" aria-label="伏見稲荷スマートガイド"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">伏見稲荷スマートガイド</span></div>
+    <div class="logo" aria-label="FUSHIMI INARI SMART GUIDE"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">FUSHIMI INARI<br class="logo-break"> SMART GUIDE</span></div>
 
     <nav aria-label="Main navigation">
         <a href="home.html" data-i18n="home">ホーム</a>
@@ -70,7 +70,7 @@
             </div>
         </section>
 
-        <aside class="planner-spot-panel" id="plannerBottomSheet" aria-label="Spot information">
+        <aside class="planner-spot-panel is-collapsed" id="plannerBottomSheet" aria-label="Spot information">
             <button
                 type="button"
                 id="plannerSheetHandle"
@@ -79,7 +79,7 @@
                 aria-controls="plannerSheetContent"
                 aria-label="上にスワイプで展開、下にスワイプで収納"
             >
-                <span class="planner-sheet-grabber" aria-hidden="true"></span>
+                <span class="planner-sheet-grabber" aria-hidden="true"></span><span class="planner-sheet-swipe-hint">SWIPE UP · スポットを見る</span>
                 
             </button>
 
@@ -163,7 +163,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=27-bottom-sheet-details"></script>
+<script src="js/planner.js?v=30-route-flow-light"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
