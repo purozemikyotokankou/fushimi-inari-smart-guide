@@ -7,7 +7,7 @@
     <title>Fushimi Inari Smart Guide - ルート作成</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=21-parkmap">
+    <link rel="stylesheet" href="css/planner.css?v=22-metamap">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -48,43 +48,7 @@
                     <button type="button" id="clearBtn" class="map-fab map-fab-clear" title="ルートを消去" aria-label="ルートを消去">↺</button>
                 </div>
 
-                <div class="planner-map-discovery" aria-label="スポットを探す">
-                    <section class="planner-sheet-search-section">
-                        <label class="sr-only" for="searchInput">スポットを検索</label>
-                        <div class="planner-search">
-                            <span class="planner-search-icon" aria-hidden="true">⌕</span>
-                            <input
-                                type="search"
-                                id="searchInput"
-                                class="planner-search-input"
-                                placeholder="スポットを検索..."
-                                data-i18n-placeholder="searchPlaceholder"
-                                autocomplete="off"
-                                inputmode="search"
-                            >
-                        </div>
-                    </section>
-                    <section class="category-window" aria-label="Spot categories">
-                        <div class="category-section">
-                            <button type="button" class="category category-button active" data-category="all" data-i18n="all">すべて</button>
-                            <button type="button" class="category category-button" data-category="景観" data-i18n="scenery">景観</button>
-                            <button type="button" class="category category-button" data-category="神社" data-i18n="shrine">神社</button>
-                            <button type="button" class="category category-button" data-category="登山" data-i18n="hiking">登山</button>
-                            <button type="button" class="category category-button" data-category="グルメ" data-i18n="restaurant">グルメ</button>
-                            <button type="button" class="category category-button" data-category="交通" data-i18n="transport">交通</button>
-                            <button type="button" class="category category-button" data-category="トイレ">トイレ</button>
-                            <button type="button" class="category category-button" data-category="案内">案内</button>
-                        </div>
-                    </section>
-                    <div class="planner-discovery-footer" aria-live="polite" aria-atomic="true">
-                        <span class="planner-discovery-live-dot" aria-hidden="true"></span><span id="spotResultCount" role="status">スポットを読み込み中</span>
-                        <span class="planner-discovery-footer-hint">MAP · SPOTS · ROUTES</span>
-                    </div>
-                </div>
-
-                <div class="planner-map-hint" aria-hidden="true">
-                    地図を動かしてスポットを探せます
-                </div>
+                <div class="planner-map-hint" aria-hidden="true">地図を動かしてスポットを探せます</div>
             </div>
         </section>
 
@@ -113,6 +77,18 @@
                         <div id="selectedList">
                             <p>スポットを選択してください。</p>
                         </div>
+                    </div>
+                </section>
+
+                <section class="planner-category-tray" aria-label="Spot categories" id="plannerCategoryTray">
+                    <div class="planner-category-grid">
+                        <button type="button" class="category category-button active" data-category="all"><span class="category-glyph">✦</span><span class="category-label" data-ja="すべて" data-en="All" data-zh="全部" data-ko="전체">すべて</span><span class="category-description" data-ja="すべてのスポット" data-en="All places" data-zh="所有地点" data-ko="모든 장소">すべてのスポット</span></button>
+                        <button type="button" class="category category-button" data-category="景観"><span class="category-glyph">◒</span><span class="category-label" data-ja="景観" data-en="Scenery" data-zh="景观" data-ko="경관">景観</span><span class="category-description" data-ja="景色・展望" data-en="Views" data-zh="风景与观景" data-ko="풍경·전망">景色・展望</span></button>
+                        <button type="button" class="category category-button" data-category="神社"><span class="category-glyph">⛩</span><span class="category-label" data-ja="神社" data-en="Shrines" data-zh="神社" data-ko="신사">神社</span><span class="category-description" data-ja="神社・鳥居" data-en="Shrines & torii" data-zh="神社与鸟居" data-ko="신사·도리이">神社・鳥居</span></button>
+                        <button type="button" class="category category-button" data-category="登山"><span class="category-glyph">↗</span><span class="category-label" data-ja="登山" data-en="Hiking" data-zh="登山" data-ko="등산">登山</span><span class="category-description" data-ja="山道・休憩" data-en="Trails & rest" data-zh="山路与休息" data-ko="산길·휴식">山道・休憩</span></button>
+                        <button type="button" class="category category-button" data-category="グルメ"><span class="category-glyph">🍜</span><span class="category-label" data-ja="飲食店" data-en="Food" data-zh="餐饮" data-ko="음식점">飲食店</span><span class="category-description" data-ja="食事・カフェ" data-en="Food & cafés" data-zh="餐厅与咖啡馆" data-ko="식당·카페">食事・カフェ</span></button>
+                        <button type="button" class="category category-button" data-category="交通"><span class="category-glyph">🚉</span><span class="category-label" data-ja="交通" data-en="Transit" data-zh="交通" data-ko="교통">交通</span><span class="category-description" data-ja="駅・移動" data-en="Stations" data-zh="车站与交通" data-ko="역·이동">駅・移動</span></button>
+                        <button type="button" class="category category-button" data-category="施設"><span class="category-glyph">＋</span><span class="category-label" data-ja="施設" data-en="Facilities" data-zh="设施" data-ko="시설">施設</span><span class="category-description" data-ja="トイレ・案内" data-en="Toilets & info" data-zh="厕所与咨询" data-ko="화장실·안내">トイレ・案内</span></button>
                     </div>
                 </section>
 
@@ -161,7 +137,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=21-parkmap"></script>
+<script src="js/planner.js?v=22-metamap"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
