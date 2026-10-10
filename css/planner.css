@@ -315,8 +315,11 @@ body {
     min-height: 66px;
     padding: 13px 16px 11px;
     color: inherit;
-    cursor: pointer;
+    cursor: grab;
     position: relative;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
     flex: 0 0 auto;
     text-align: left;
 }
@@ -1043,5 +1046,32 @@ body {
             height: 68vh;
             max-height: 76vh;
         }
+    }
+}
+
+
+/* ============================================================
+   V14 — BOTTOM SHEET SWIPE CONTROL
+   タップではなく、上/下スワイプで展開・収納する。
+============================================================ */
+.planner-sheet-handle {
+    touch-action: none !important;
+    cursor: grab !important;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.planner-sheet-handle:active {
+    cursor: grabbing !important;
+}
+.planner-sheet-grabber {
+    transition: width .18s ease, opacity .18s ease;
+}
+.planner-sheet-handle:active .planner-sheet-grabber {
+    width: 52px;
+    opacity: .72;
+}
+@media (max-width: 820px) {
+    .planner-sheet-handle {
+        min-height: 64px;
     }
 }
