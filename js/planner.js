@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V22-METAMAP-GLASS-CATEGORIES";
-    console.log("[Fushimi Inari Smart Guide] planner.js V22-METAMAP-GLASS-CATEGORIES loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V25-SWIPE-CATEGORIES-RAIL-ICON";
+    console.log("[Fushimi Inari Smart Guide] planner.js V25-SWIPE-CATEGORIES-RAIL-ICON loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -94,8 +94,31 @@ document.addEventListener("DOMContentLoaded", function () {
         hiking: "#2C7F5E",
         restaurant: "#B97800",
         guide: "#327B9B",
+        "station-jr": "#2878B8",
+        "station-keihan": "#72519A",
 
         torii: "#A83432"
+    };
+
+    window.handlePlannerMarkerIconError = function (img) {
+        if (!img) return;
+        img.style.display = "none";
+        const marker = img.closest(".custom-map-marker");
+        if (!marker) return;
+        if (marker.classList.contains("is-railway")) {
+            const variant = img.classList.contains("icon-color") ? ".railway-fallback.icon-color" : ".railway-fallback.icon-gray";
+            const fallback = marker.querySelector(variant);
+            if (fallback) fallback.style.display = "grid";
+            return;
+        }
+        const images = Array.from(marker.querySelectorAll("img.icon-image"));
+        const allFailed = images.length > 0 && images.every(function (image) {
+            return image.style.display === "none" || (image.complete && image.naturalWidth === 0);
+        });
+        if (allFailed) {
+            const fallback = marker.querySelector(".marker-fallback");
+            if (fallback) fallback.style.display = "grid";
+        }
     };
 
     // ============================================================
@@ -693,25 +716,61 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updatePlannerSheetSummary();
 
-    // スマホでは地図を主役にし、検索とカテゴリは地図上に浮かせる。
-    // ボトムシートは必要に応じて上スワイプで展開する。
-    function applyMobileSheetDefault() {
-        if (!plannerBottomSheet) {
-            return;
-        }
+    // Swiping vertically on the category bar reveals/hides the spot list.
+    // Horizontal swipes remain available for scrolling through categories.
+    const plannerCategoryTray = document.getElementById("plannerCategoryTray");
+    let categoryGesture = null;
+    let suppressCategoryClick = false;
+    if (plannerCategoryTray) {
+        plannerCategoryTray.addEventListener("pointerdown", function (event) {
+            if (event.button !== undefined && event.button !== 0) return;
+            categoryGesture = {
+                id: event.pointerId,
+                x: event.clientX,
+                y: event.clientY,
+                moved: false
+            };
+        }, { passive: true });
 
-        if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
-            // 初期表示は地図を主役にするため収納。
-            // 上スワイプで一覧を展開、下スワイプで地図を広く見せる。
-            setPlannerSheetState("collapsed");
-            requestAnimationFrame(function () {
-                if (typeof map?.invalidateSize === "function") {
-                    map.invalidateSize({ pan: false });
-                }
-            });
-        } else {
-            setPlannerSheetState("normal");
-        }
+        window.addEventListener("pointermove", function (event) {
+            if (!categoryGesture || event.pointerId !== categoryGesture.id) return;
+            const dx = event.clientX - categoryGesture.x;
+            const dy = event.clientY - categoryGesture.y;
+            if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * 1.12) {
+                categoryGesture.moved = true;
+                if (event.cancelable) event.preventDefault();
+            }
+        }, { passive: false });
+
+        window.addEventListener("pointerup", function (event) {
+            if (!categoryGesture || event.pointerId !== categoryGesture.id) return;
+            const dx = event.clientX - categoryGesture.x;
+            const dy = event.clientY - categoryGesture.y;
+            const wasVerticalSwipe = Math.abs(dy) >= 42 && Math.abs(dy) > Math.abs(dx) * 1.12;
+            categoryGesture = null;
+            if (!wasVerticalSwipe) return;
+            suppressCategoryClick = true;
+            setTimeout(function () { suppressCategoryClick = false; }, 320);
+            setPlannerSheetState(dy < 0 ? "expanded" : "collapsed");
+        }, { passive: true });
+
+        window.addEventListener("pointercancel", function () { categoryGesture = null; }, { passive: true });
+        plannerCategoryTray.addEventListener("click", function (event) {
+            if (!suppressCategoryClick) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }, true);
+    }
+
+    // Initial state: keep the category bar visible; spots appear after an upward swipe.
+    function applyMobileSheetDefault() {
+        if (!plannerBottomSheet) return;
+        setPlannerSheetState("collapsed");
+        requestAnimationFrame(function () {
+            if (typeof map?.invalidateSize === "function") {
+                map.invalidateSize({ pan: false });
+            }
+        });
     }
 
     applyMobileSheetDefault();
@@ -2607,6 +2666,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const classes = [
             "custom-map-marker"
         ];
+        const isRailway = ["station-jr", "station-keihan"].includes(iconType);
+        if (isRailway) classes.push("is-railway");
 
         if (selected) {
             classes.push(
@@ -2636,6 +2697,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         ></span>
 
                         <span class="marker-fallback" aria-hidden="true">no icon</span>
+                        ${isRailway ? `<span class="railway-fallback icon-gray" aria-hidden="true" style="display:none"><svg viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="16" rx="4"/><path d="M5 12h14M8 7h.2M16 7h.2M8 22l3-3.5M16 22l-3-3.5M8 15h.2M16 15h.2"/></svg></span><span class="railway-fallback icon-color" aria-hidden="true" style="display:none"><svg viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="16" rx="4"/><path d="M5 12h14M8 7h.2M16 7h.2M8 22l3-3.5M16 22l-3-3.5M8 15h.2M16 15h.2"/></svg></span>` : ""}
 
                         <img
                             class="icon-image icon-gray"
@@ -2643,7 +2705,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             alt=""
                             aria-hidden="true"
                             draggable="false"
-                            onerror="this.style.display='none';this.parentElement.querySelector('.marker-fallback').style.display='grid';"
+                            onerror="window.handlePlannerMarkerIconError(this)"
                         >
 
                         <img
@@ -2652,7 +2714,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             alt=""
                             aria-hidden="true"
                             draggable="false"
-                            onerror="this.style.display='none';this.parentElement.querySelector('.marker-fallback').style.display='grid';"
+                            onerror="window.handlePlannerMarkerIconError(this)"
                         >
 
                     </div>
@@ -4209,6 +4271,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
                     if (foodSubcategories) foodSubcategories.hidden = (button.dataset.category !== "グルメ");
+                    // Buying/eating choices should be visible as soon as the food category is tapped.
+                    if (button.dataset.category === "グルメ" && plannerBottomSheet?.classList.contains("is-collapsed")) {
+                        setPlannerSheetState("expanded");
+                    }
                     filterSpots();
                 }
             );

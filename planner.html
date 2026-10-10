@@ -7,7 +7,7 @@
     <title>Fushimi Inari Smart Guide - ルート作成</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=23-category-pill">
+    <link rel="stylesheet" href="css/planner.css?v=25-swipe-categories">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -84,6 +84,12 @@
                     </div>
                 </section>
 
+                <section class="spot-list-window">
+                    <div id="spotList">
+                        <!-- planner.js -->
+                    </div>
+                </section>
+
                 <section class="selected-section">
                     <div class="sheet-section-heading">
                         <h2 data-i18n="selectedSpots">選択したスポット</h2>
@@ -93,14 +99,6 @@
                         <div id="selectedList">
                             <p>スポットを選択してください。</p>
                         </div>
-                    </div>
-                </section>
-
-
-
-                <section class="spot-list-window">
-                    <div id="spotList">
-                        <!-- planner.js -->
                     </div>
                 </section>
 
@@ -139,7 +137,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=23-category-pill"></script>
+<script src="js/planner.js?v=25-swipe-categories"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
