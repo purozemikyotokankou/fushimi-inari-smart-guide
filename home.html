@@ -651,22 +651,35 @@
             body.home-page header {
                 top: 10px !important;
                 width: calc(100% - 20px) !important;
-                min-height: 54px !important;
-                padding: 0 12px !important;
-                gap: 8px;
+                height: auto !important;
+                min-height: 72px !important;
+                padding: 9px 12px !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                column-gap: 8px;
+                row-gap: 4px;
                 border-radius: 16px !important;
             }
 
             body.home-page header .logo {
-                max-width: 42vw;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                order: 1;
+                flex: 0 0 auto;
+                max-width: none;
+                overflow: visible;
+                text-overflow: clip;
+                white-space: nowrap;
                 font-size: 12px;
             }
 
             body.home-page header nav {
+                order: 3;
+                flex: 1 0 100%;
+                width: 100%;
                 gap: 1px;
                 margin-left: 0;
+                justify-content: space-between;
             }
 
             body.home-page header nav a {
@@ -676,6 +689,8 @@
             }
 
             body.home-page header #languageSelect {
+                order: 2;
+                margin-left: auto;
                 min-height: 32px;
                 max-width: 92px;
                 padding: 0 7px;
@@ -738,8 +753,12 @@
 
         @media (max-width: 430px) {
             body.home-page header .logo {
-                max-width: 29vw;
+                max-width: none;
+                overflow: visible;
+                text-overflow: clip;
+                white-space: nowrap;
                 font-size: 10px;
+                letter-spacing: -.025em;
             }
 
             body.home-page header nav a {
@@ -831,12 +850,12 @@
                 <a
                     href="planner.html"
                     class="home-plan-button"
-                    aria-label="ルートを作る"
+                    aria-label="観光プランを作る"
                 >
                     <span class="home-plan-icon" aria-hidden="true">🧭</span>
 
                     <span class="home-plan-text">
-                        <span class="home-plan-title" data-i18n="makePlan">ルートを作る</span>
+                        <span class="home-plan-title" data-i18n="makePlan">観光プランを作る</span>
                         <span
                             class="home-plan-description"
                             data-i18n="plannerDescription"
