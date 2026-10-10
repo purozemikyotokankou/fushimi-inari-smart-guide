@@ -561,8 +561,78 @@ document.addEventListener("DOMContentLoaded", function () {
         setPlannerSheetState("expanded");
     }
 
+    // ------------------------------------------------------------
+    // ボトムシート：タップではなく上下スワイプで展開・収納
+    // Android / Galaxy / iPhone 対応
+    // ------------------------------------------------------------
+    let sheetDragActive = false;
+    let sheetDragStartY = 0;
+    let sheetDragStartState = "normal";
+    let sheetDragMoved = false;
+
+    function getSheetDragY(event) {
+        if (event && event.touches && event.touches.length) {
+            return event.touches[0].clientY;
+        }
+        if (event && event.changedTouches && event.changedTouches.length) {
+            return event.changedTouches[0].clientY;
+        }
+        return Number(event?.clientY || 0);
+    }
+
+    function startSheetDrag(event) {
+        if (!plannerBottomSheet) return;
+        sheetDragActive = true;
+        sheetDragMoved = false;
+        sheetDragStartY = getSheetDragY(event);
+        sheetDragStartState = plannerBottomSheet.classList.contains("is-expanded")
+            ? "expanded"
+            : plannerBottomSheet.classList.contains("is-collapsed")
+                ? "collapsed"
+                : "normal";
+        if (plannerSheetHandle?.setPointerCapture && event.pointerId != null) {
+            try { plannerSheetHandle.setPointerCapture(event.pointerId); } catch (_) {}
+        }
+        event.preventDefault?.();
+    }
+
+    function moveSheetDrag(event) {
+        if (!sheetDragActive) return;
+        const y = getSheetDragY(event);
+        const delta = y - sheetDragStartY;
+        if (Math.abs(delta) > 8) sheetDragMoved = true;
+        if (sheetDragMoved) event.preventDefault?.();
+    }
+
+    function endSheetDrag(event) {
+        if (!sheetDragActive) return;
+        const y = getSheetDragY(event);
+        const delta = y - sheetDragStartY;
+        sheetDragActive = false;
+
+        // 小さな移動は何もしない。タップだけでは展開・収納しない。
+        if (Math.abs(delta) < 40) return;
+
+        // 上方向スワイプ → 展開
+        if (delta < 0) {
+            setPlannerSheetState("expanded");
+        }
+        // 下方向スワイプ → 収納
+        else {
+            setPlannerSheetState("collapsed");
+        }
+    }
+
     if (plannerSheetHandle) {
-        plannerSheetHandle.addEventListener("click", togglePlannerSheet);
+        plannerSheetHandle.addEventListener("pointerdown", startSheetDrag, { passive: false });
+        plannerSheetHandle.addEventListener("pointermove", moveSheetDrag, { passive: false });
+        plannerSheetHandle.addEventListener("pointerup", endSheetDrag, { passive: false });
+        plannerSheetHandle.addEventListener("pointercancel", endSheetDrag, { passive: false });
+        // タップによる開閉は廃止。誤操作を防ぐためclickは無視する。
+        plannerSheetHandle.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
     }
 
     updatePlannerSheetSummary();
@@ -575,6 +645,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
+            // 初期表示は一覧を確認できるよう展開状態。
+            // 収納したい場合はハンドルを下へスワイプ、再展開は上へスワイプ。
             setPlannerSheetState("expanded");
             requestAnimationFrame(function () {
                 if (typeof map?.invalidateSize === "function") {
