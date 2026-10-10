@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V18-METAMAP-STYLE";
-    console.log("[Fushimi Inari Smart Guide] planner.js V18-METAMAP-STYLE loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V20-GSI-METAMAP";
+    console.log("[Fushimi Inari Smart Guide] planner.js V20-GSI-METAMAP loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -121,6 +121,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const searchInput =
         document.getElementById("searchInput");
+
+    const spotResultCount =
+        document.getElementById("spotResultCount");
 
     const locationBtn =
         document.getElementById("locationBtn");
@@ -486,6 +489,44 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         return "このスポットを選択";
+    }
+
+    function getAddRouteText() {
+        const language = getCurrentLanguage();
+        if (language === "en") return "+ Add to route";
+        if (language === "zh") return "＋ 加入路线";
+        if (language === "ko") return "＋ 경로에 추가";
+        return "＋ ルートに追加";
+    }
+
+    function getRemoveRouteText() {
+        const language = getCurrentLanguage();
+        if (language === "en") return "Remove";
+        if (language === "zh") return "移除";
+        if (language === "ko") return "선택 해제";
+        return "選択解除";
+    }
+
+    function getViewOnMapText() {
+        const language = getCurrentLanguage();
+        if (language === "en") return "View on map";
+        if (language === "zh") return "在地图上查看";
+        if (language === "ko") return "지도에서 보기";
+        return "地図で見る";
+    }
+
+    function updateSpotResultCount(count) {
+        if (!spotResultCount) return;
+        const language = getCurrentLanguage();
+        if (language === "en") {
+            spotResultCount.textContent = `${count} ${count === 1 ? "spot" : "spots"} found`;
+        } else if (language === "zh") {
+            spotResultCount.textContent = `找到 ${count} 个景点`;
+        } else if (language === "ko") {
+            spotResultCount.textContent = `${count}곳 검색됨`;
+        } else {
+            spotResultCount.textContent = `${count}件のスポット`;
+        }
     }
 
     function updatePlannerSheetSummary() {
@@ -3443,164 +3484,93 @@ document.addEventListener("DOMContentLoaded", function () {
     function displaySpots(
         list
     ) {
-
-        if (!spotList) {
-            return;
-        }
-
+        if (!spotList) return;
         spotList.innerHTML = "";
 
-        if (
-            !Array.isArray(list) ||
-            list.length === 0
-        ) {
-
-            spotList.innerHTML =
-                "<p>スポットが見つかりませんでした。</p>";
-
+        if (!Array.isArray(list) || list.length === 0) {
+            spotList.innerHTML = `<p class="spot-empty-state">${escapeHTML(getNoSpotsFoundText())}</p>`;
             return;
         }
 
-        list.forEach(
-            function (spot) {
+        list.forEach(function (spot) {
+            const name = getLocalizedValue(spot.name);
+            const description = getLocalizedValue(spot.description);
+            const category = getCategoryLabel(spot.category);
+            const time = spot.time || "-";
+            const image = spot.image || "";
+            const url = getSafeURL(spot.url);
+            const selected = isSpotSelected(spot);
+            const accentColor = getMarkerAccentColor(spot);
+            const card = document.createElement("article");
+            card.className = "planner-spot";
+            card.dataset.id = String(spot.id);
+            card.style.setProperty("--spot-accent-color", accentColor);
+            if (selected) card.classList.add("selected");
 
-                const name =
-                    getLocalizedValue(
-                        spot.name
-                    );
+            const imageHTML = ENABLE_PHOTOS && image
+                ? `<img src="./images/${encodeURIComponent(image)}" alt="${escapeHTML(name)}" class="spot-image" loading="lazy" onerror="this.style.display='none';">`
+                : "";
+            const urlHTML = url
+                ? `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" class="spot-url">${escapeHTML(getOfficialSiteText())}</a>`
+                : "";
+            const selectedHTML = selected
+                ? `<span class="selected-label">${escapeHTML(getSelectedText())}</span>`
+                : "";
 
-                const description =
-                    getLocalizedValue(
-                        spot.description
-                    );
-
-                const category =
-                    getCategoryLabel(
-                        spot.category
-                    );
-
-                const time =
-                    spot.time || "-";
-
-                const image =
-                    spot.image || "";
-
-                const url =
-                    getSafeURL(
-                        spot.url
-                    );
-
-                const selected =
-                    isSpotSelected(
-                        spot
-                    );
-
-                const card =
-                    document.createElement(
-                        "div"
-                    );
-
-                card.className =
-                    "planner-spot";
-
-                card.dataset.id =
-                    String(spot.id);
-
-                if (selected) {
-
-                    card.classList.add(
-                        "selected"
-                    );
-                }
-
-                const imageHTML =
-                    ENABLE_PHOTOS && image
-                        ? `
-                            <img
-                                src="./images/${encodeURIComponent(image)}"
-                                alt="${escapeHTML(name)}"
-                                class="spot-image"
-                                onerror="this.style.display='none';"
-                            >
-                        `
-                        : "";
-
-                const urlHTML =
-                    url
-                        ? `
-                            <a
-                                href="${escapeHTML(url)}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="spot-url"
-                            >
-                                ${getOfficialSiteText()}
-                            </a>
-                        `
-                        : "";
-
-                const selectedHTML =
-                    selected
-                        ? `
-                            <span class="selected-label">
-                                ${getSelectedText()}
-                            </span>
-                        `
-                        : "";
-
-                card.innerHTML = `
-
-                    ${imageHTML}
-
-                    <div class="spot-content">
-
-                        <h3>
-                            ${escapeHTML(name)}
-                        </h3>
-
-                        <p class="spot-category">
-                            ${escapeHTML(category)}
-                        </p>
-
-                        <p>
-                            ${escapeHTML(description)}
-                        </p>
-
-                        <p class="spot-time">
-                            ⏱
-                            ${escapeHTML(time)}
-                        </p>
-
-                        ${selectedHTML}
-
-                        ${urlHTML}
-
+            card.innerHTML = `
+                ${imageHTML}
+                <div class="spot-card-heading">
+                    <span class="spot-card-category-dot" aria-hidden="true"></span>
+                    <div class="spot-card-heading-main">
+                        <div class="spot-content">
+                            <h3>${escapeHTML(name)}</h3>
+                            <p class="spot-category">${escapeHTML(category)}</p>
+                            <p>${escapeHTML(description)}</p>
+                            <p class="spot-time">⏱ ${escapeHTML(time)}</p>
+                            ${selectedHTML}
+                            ${urlHTML}
+                        </div>
                     </div>
-                `;
+                </div>
+                <div class="spot-card-actions">
+                    <button type="button" class="spot-card-detail-button">${escapeHTML(getViewOnMapText())}</button>
+                    <button type="button" class="spot-card-select-button ${selected ? "is-selected" : ""}" aria-pressed="${selected ? "true" : "false"}">${escapeHTML(selected ? getRemoveRouteText() : getAddRouteText())}</button>
+                </div>
+            `;
 
-                card.addEventListener(
-                    "click",
-                    function (event) {
+            card.addEventListener("click", function (event) {
+                if (event.target.closest("a, button")) return;
+                selectSpot(spot);
+            });
 
-                        if (
-                            event.target.closest(
-                                "a"
-                            )
-                        ) {
-                            return;
-                        }
-
-                        selectSpot(
-                            spot
-                        );
-                    }
-                );
-
-                spotList.appendChild(
-                    card
-                );
+            const detailButton = card.querySelector(".spot-card-detail-button");
+            if (detailButton) {
+                detailButton.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    showSpotOnMap(spot);
+                });
             }
-        );
+
+            const selectButton = card.querySelector(".spot-card-select-button");
+            if (selectButton) {
+                selectButton.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    selectSpot(spot);
+                });
+            }
+
+            spotList.appendChild(card);
+        });
+    }
+
+    function getNoSpotsFoundText() {
+        const language = getCurrentLanguage();
+        if (language === "en") return "No matching spots found.";
+        if (language === "zh") return "没有找到符合条件的景点。";
+        if (language === "ko") return "검색된 장소가 없습니다.";
+        return "条件に合うスポットが見つかりませんでした。";
     }
 
     function focusSpotOnMap(spot) {
@@ -3645,6 +3615,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
             }
         }, 620);
+    }
+
+    function showSpotOnMap(spot) {
+        focusSpotOnMap(spot);
+        window.setTimeout(function () {
+            const marker = markerMap.get(String(spot?.id));
+            if (marker && map.hasLayer(marker)) {
+                marker.openPopup();
+            }
+        }, 650);
     }
 
     function selectSpot(
@@ -3722,6 +3702,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     "selected",
                     selected
                 );
+
+                const selectButton = card.querySelector(".spot-card-select-button");
+                if (selectButton) {
+                    selectButton.textContent = selected ? getRemoveRouteText() : getAddRouteText();
+                    selectButton.classList.toggle("is-selected", selected);
+                    selectButton.setAttribute("aria-pressed", selected ? "true" : "false");
+                }
 
                 const oldLabel =
                     card.querySelector(
@@ -4130,6 +4117,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
                 }
             );
+
+        updateSpotResultCount(filtered.length);
 
         displaySpots(
             filtered
@@ -6946,6 +6935,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // spots.jsonを先に画面へ反映。routes.jsonの不備でスポット表示を止めない。
+        updateSpotResultCount(spots.length);
         displaySpots(spots);
         createMarkers(spots);
         updateSelected();
@@ -6974,6 +6964,8 @@ document.addEventListener("DOMContentLoaded", function () {
             error
         );
 
+        updateSpotResultCount(0);
+
         if (spotList) {
             spotList.innerHTML = `
                 <div class="planner-data-error">
@@ -6998,6 +6990,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const visibleSpots =
                 getCurrentlyVisibleSpots();
+
+            updateSpotResultCount(visibleSpots.length);
 
             displaySpots(
                 visibleSpots
