@@ -7,7 +7,7 @@
     <title>Fushimi Inari Smart Guide - ルート作成</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=17-batch-fix">
+    <link rel="stylesheet" href="css/planner.css?v=18-metamap-style">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -48,6 +48,36 @@
                     <button type="button" id="clearBtn" class="map-fab map-fab-clear" title="ルートを消去" aria-label="ルートを消去">✕</button>
                 </div>
 
+                <div class="planner-map-discovery" aria-label="スポットを探す">
+                    <section class="planner-sheet-search-section">
+                        <label class="sr-only" for="searchInput">スポットを検索</label>
+                        <div class="planner-search">
+                            <span class="planner-search-icon" aria-hidden="true">⌕</span>
+                            <input
+                                type="search"
+                                id="searchInput"
+                                class="planner-search-input"
+                                placeholder="スポットを検索..."
+                                data-i18n-placeholder="searchPlaceholder"
+                                autocomplete="off"
+                                inputmode="search"
+                            >
+                        </div>
+                    </section>
+                    <section class="category-window" aria-label="Spot categories">
+                        <div class="category-section">
+                            <button type="button" class="category category-button active" data-category="all" data-i18n="all">すべて</button>
+                            <button type="button" class="category category-button" data-category="景観" data-i18n="scenery">景観</button>
+                            <button type="button" class="category category-button" data-category="神社" data-i18n="shrine">神社</button>
+                            <button type="button" class="category category-button" data-category="登山" data-i18n="hiking">登山</button>
+                            <button type="button" class="category category-button" data-category="グルメ" data-i18n="restaurant">グルメ</button>
+                            <button type="button" class="category category-button" data-category="交通" data-i18n="transport">交通</button>
+                            <button type="button" class="category category-button" data-category="トイレ">トイレ</button>
+                            <button type="button" class="category category-button" data-category="案内">案内</button>
+                        </div>
+                    </section>
+                </div>
+
                 <div class="planner-map-hint" aria-hidden="true">
                     地図を動かしてスポットを探せます
                 </div>
@@ -59,7 +89,7 @@
                 type="button"
                 id="plannerSheetHandle"
                 class="planner-sheet-handle"
-                aria-expanded="true"
+                aria-expanded="false"
                 aria-controls="plannerSheetContent"
                 aria-label="上にスワイプで展開、下にスワイプで収納"
             >
@@ -69,34 +99,6 @@
             </button>
 
             <div id="plannerSheetContent" class="planner-sheet-content">
-                <section class="planner-sheet-search-section">
-                    <label class="sr-only" for="searchInput">スポットを検索</label>
-                    <div class="planner-search">
-                        <span class="planner-search-icon" aria-hidden="true">⌕</span>
-                        <input
-                            type="text"
-                            id="searchInput"
-                            class="planner-search-input"
-                            placeholder="スポットを検索..."
-                            data-i18n-placeholder="searchPlaceholder"
-                            autocomplete="off"
-                            inputmode="search"
-                        >
-                    </div>
-                </section>
-
-                <section class="category-window" aria-label="Spot categories">
-                    <div class="category-section">
-                        <button type="button" class="category category-button active" data-category="all" data-i18n="all">すべて</button>
-                        <button type="button" class="category category-button" data-category="景観" data-i18n="scenery">景観</button>
-                        <button type="button" class="category category-button" data-category="神社" data-i18n="shrine">神社</button>
-                        <button type="button" class="category category-button" data-category="登山" data-i18n="hiking">登山</button>
-                        <button type="button" class="category category-button" data-category="グルメ" data-i18n="restaurant">グルメ</button>
-                        <button type="button" class="category category-button" data-category="交通" data-i18n="transport">交通</button>
-                        <button type="button" class="category category-button" data-category="トイレ">トイレ</button>
-                        <button type="button" class="category category-button" data-category="案内">案内</button>
-                    </div>
-                </section>
 
                 <section class="selected-section">
                     <div class="sheet-section-heading">
@@ -155,7 +157,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=17-batch-fix"></script>
+<script src="js/planner.js?v=18-metamap-style"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
