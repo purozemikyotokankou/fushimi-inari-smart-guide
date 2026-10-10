@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V20-GSI-METAMAP";
-    console.log("[Fushimi Inari Smart Guide] planner.js V20-GSI-METAMAP loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V21-PLATINUM-INSPIRED-GSI";
+    console.log("[Fushimi Inari Smart Guide] planner.js V21-PLATINUM-INSPIRED-GSI loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -96,6 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let markerMap = new Map();
 
     let routeLine = null;
+    let routeOutlineLine = null;
     let routeSegments = [];
     let routeNumberMarkers = [];
 
@@ -206,12 +207,12 @@ document.addEventListener("DOMContentLoaded", function () {
     map.getPane(
         "plannerGsiPane"
     ).style.filter =
-        "grayscale(28%) saturate(.78) contrast(.98) brightness(1.03)";
+        "grayscale(14%) saturate(.94) contrast(1.025) brightness(1.025)";
 
     map.getPane(
         "plannerGsiPane"
     ).style.webkitFilter =
-        "grayscale(28%) saturate(.78) contrast(.98) brightness(1.03)";
+        "grayscale(14%) saturate(.94) contrast(1.025) brightness(1.025)";
 
     const gsiLayer =
         L.tileLayer(
@@ -2495,6 +2496,29 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    // Platinumaps/park-map inspired category pictograms.
+    // These are decorative fallbacks only; spot coordinates remain unchanged.
+    function getSpotSymbol(spot) {
+        const iconType = getIconType(spot);
+        const name = getLocalizedValue(spot?.name).toLowerCase();
+        const category = normalizeCategory(spot?.category);
+
+        if (iconType.includes("toilet") || category === "toilet") return "🚻";
+        if (["station-jr", "station-keihan"].includes(iconType) || category === "transport") return "🚉";
+        if (["wheelchair", "ostomate"].includes(iconType)) return "♿";
+        if (["diaper-changing", "baby-chair", "changing-table"].includes(iconType)) return "🍼";
+        if (iconType === "restaurant" || category === "restaurant") return "🍜";
+        if (iconType === "hiking" || category === "hiking") return "🥾";
+        if (["torii", "shrine"].includes(iconType) || category === "shrine" || name.includes("鳥居") || name.includes("神社")) return "⛩️";
+        if (iconType === "viewpoint" || category === "scenery") return "🌄";
+        if (["rest-area", "smoking"].includes(iconType)) return "☕";
+        if (iconType === "coin-locker" || iconType === "baggage-storage") return "🧳";
+        if (iconType === "guide" || category === "guide") return "ℹ️";
+        if (name.includes("駅")) return "🚉";
+        if (name.includes("山") || name.includes("展望")) return "🌄";
+        return "📍";
+    }
+
     function getMarkerZIndexOffset(
         spot
     ) {
@@ -2597,12 +2621,15 @@ document.addEventListener("DOMContentLoaded", function () {
                             aria-hidden="true"
                         ></span>
 
+                        <span class="marker-fallback" aria-hidden="true">${getSpotSymbol(spot)}</span>
+
                         <img
                             class="icon-image icon-gray"
                             src="${ICON_DIR}${grayFile}"
                             alt=""
                             aria-hidden="true"
                             draggable="false"
+                            onerror="this.style.display='none';this.parentElement.querySelector('.marker-fallback').style.display='grid';"
                         >
 
                         <img
@@ -2611,6 +2638,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             alt=""
                             aria-hidden="true"
                             draggable="false"
+                            onerror="this.style.display='none';this.parentElement.querySelector('.marker-fallback').style.display='grid';"
                         >
 
                     </div>
@@ -3358,6 +3386,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const name = getLocalizedValue(spot.name);
         const description = getLocalizedValue(spot.description);
         const category = getCategoryLabel(spot.category);
+        const symbol = getSpotSymbol(spot);
         const time = spot.time || "-";
         const url = getSafeURL(spot.url);
         const selected = isSpotSelected(spot);
@@ -3378,10 +3407,12 @@ document.addEventListener("DOMContentLoaded", function () {
             <div class="planner-popup">
                 ${photoHTML}
 
-                <h3>${escapeHTML(name)}</h3>
-
-                <div class="popup-category">
-                    ${escapeHTML(category)}
+                <div class="planner-popup-heading">
+                    <span class="planner-popup-symbol" aria-hidden="true">${symbol}</span>
+                    <div class="planner-popup-title-group">
+                        <h3>${escapeHTML(name)}</h3>
+                        <div class="popup-category">${escapeHTML(category)}</div>
+                    </div>
                 </div>
 
                 <p class="popup-description">
@@ -3398,8 +3429,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 >
                     ${escapeHTML(
                         selected
-                            ? getSelectedText()
-                            : getSelectButtonText()
+                            ? getRemoveRouteText()
+                            : getAddRouteText()
                     )}
                 </button>
 
@@ -3516,11 +3547,12 @@ document.addEventListener("DOMContentLoaded", function () {
             const selectedHTML = selected
                 ? `<span class="selected-label">${escapeHTML(getSelectedText())}</span>`
                 : "";
+            const symbol = getSpotSymbol(spot);
 
             card.innerHTML = `
                 ${imageHTML}
                 <div class="spot-card-heading">
-                    <span class="spot-card-category-dot" aria-hidden="true"></span>
+                    <span class="spot-card-category-dot" aria-hidden="true">${symbol}</span>
                     <div class="spot-card-heading-main">
                         <div class="spot-content">
                             <h3>${escapeHTML(name)}</h3>
@@ -3540,7 +3572,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             card.addEventListener("click", function (event) {
                 if (event.target.closest("a, button")) return;
-                selectSpot(spot);
+                // A card tap means inspect/show this place; route selection is explicit.
+                showSpotOnMap(spot);
             });
 
             const detailButton = card.querySelector(".spot-card-detail-button");
@@ -4072,36 +4105,30 @@ document.addEventListener("DOMContentLoaded", function () {
             spots.filter(
                 function (spot) {
 
-                    const name =
-                        getLocalizedValue(
-                            spot.name
-                        )
-                        .toLowerCase();
+                    const searchFields = [
+                        spot.id,
+                        spot.name,
+                        spot.description,
+                        spot.category,
+                        spot.keyword,
+                        spot.keywords,
+                        spot.searchKeyword,
+                        spot.searchKeywords,
+                        spot.tags,
+                        spot.address,
+                        spot.access,
+                        spot.englishName
+                    ];
 
-                    const description =
-                        getLocalizedValue(
-                            spot.description
-                        )
-                        .toLowerCase();
-
-                    const categoryText =
-                        String(
-                            spot.category ??
-                            ""
-                        )
-                        .toLowerCase();
+                    const searchableText = searchFields.map(function (value) {
+                        if (Array.isArray(value)) {
+                            return value.map(getLocalizedValue).join(" ");
+                        }
+                        return getLocalizedValue(value);
+                    }).join(" ").toLocaleLowerCase();
 
                     const matchesSearch =
-                        !keyword ||
-                        name.includes(
-                            keyword
-                        ) ||
-                        description.includes(
-                            keyword
-                        ) ||
-                        categoryText.includes(
-                            keyword
-                        );
+                        !keyword || searchableText.includes(keyword);
 
                     const matchesCategory =
                         targetCategory ===
@@ -5476,15 +5503,13 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        if (
-            routeLine
-        ) {
-
-            map.removeLayer(
-                routeLine
-            );
-
+        if (routeLine) {
+            map.removeLayer(routeLine);
             routeLine = null;
+        }
+        if (routeOutlineLine) {
+            map.removeLayer(routeOutlineLine);
+            routeOutlineLine = null;
         }
 
         clearRouteNumberMarkers();
@@ -5685,33 +5710,24 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        routeLine =
-            L.polyline(
-                allCoordinates,
-                {
+        routeOutlineLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            color: "#ffffff",
+            weight: 12,
+            opacity: 0.96,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false
+        }).addTo(map);
 
-                    pane:
-                        "plannerRoutePane",
-
-                    color:
-                        ROUTE_COLOR,
-
-                    weight:
-                        6,
-
-                    opacity:
-                        0.88,
-
-                    lineCap:
-                        "round",
-
-                    lineJoin:
-                        "round"
-                }
-            )
-            .addTo(
-                map
-            );
+        routeLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            color: ROUTE_COLOR,
+            weight: 6,
+            opacity: 0.98,
+            lineCap: "round",
+            lineJoin: "round"
+        }).addTo(map);
 
         addRouteDirectionArrows(
             allCoordinates
@@ -6083,6 +6099,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.warn("routeLine cleanup warning:", error);
             }
             routeLine = null;
+        }
+
+        if (routeOutlineLine) {
+            try {
+                map.removeLayer(routeOutlineLine);
+            } catch (error) {
+                console.warn("routeOutlineLine cleanup warning:", error);
+            }
+            routeOutlineLine = null;
         }
 
         if (routeArrowLayer) {
