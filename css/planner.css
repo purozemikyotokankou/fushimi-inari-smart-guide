@@ -54,6 +54,11 @@ body {
 
 .planner-site-header .logo {
     flex: 0 0 auto;
+    min-width: max-content;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
     font-weight: 750;
     letter-spacing: -.025em;
     color: #242426;
@@ -788,9 +793,9 @@ body {
     }
 
     .planner-site-header .logo {
-        max-width: 44vw;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
         white-space: nowrap;
         font-size: 12px;
     }
@@ -981,8 +986,18 @@ body {
         display: none;
     }
 
+    .planner-site-header nav a {
+        padding: 6px 6px;
+        font-size: 10px;
+    }
+
     .planner-site-header .logo {
-        max-width: 38vw;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+        font-size: 10px;
+        letter-spacing: -.04em;
     }
 
     .planner-map-buttons {
