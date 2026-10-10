@@ -1090,3 +1090,253 @@ body {
         min-height: 64px;
     }
 }
+
+
+/* ============================================================
+   V17 — UNIFIED HEADER + MORE TRANSPARENT LIQUID GLASS
+   - Keep all three navigation links visible on every screen size.
+   - Move language selection into the header.
+   - Use a grouped navigation capsule, matching the home page.
+   - Increase transparency of the map overlays / bottom sheet.
+============================================================ */
+:root {
+    --planner-card: rgba(255, 255, 255, .46);
+    --planner-card-strong: rgba(255, 255, 255, .60);
+    --planner-line: rgba(255, 255, 255, .58);
+}
+
+.planner-site-header {
+    position: relative;
+    z-index: 3000;
+    box-sizing: border-box;
+    width: 100%;
+    height: 64px;
+    min-height: 64px;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+    align-items: center;
+    column-gap: 16px;
+    background: rgba(255, 255, 255, .58) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, .045) !important;
+    backdrop-filter: blur(26px) saturate(1.4);
+    -webkit-backdrop-filter: blur(26px) saturate(1.4);
+}
+
+.planner-site-header .logo {
+    grid-column: 1;
+    min-width: max-content;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 780;
+    letter-spacing: -.025em;
+}
+
+.planner-site-header nav {
+    grid-column: 2;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 3px;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 4px;
+    border: 1px solid rgba(0, 0, 0, .045);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .28);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62);
+}
+
+.planner-site-header nav a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 11px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: #55555b;
+    text-decoration: none;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 680;
+}
+
+.planner-site-header nav a:hover,
+.planner-site-header nav a.nav-active {
+    color: #1d1d1f;
+    background: rgba(255, 255, 255, .58) !important;
+    border-color: rgba(255, 255, 255, .48);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 3px 10px rgba(0, 0, 0, .035);
+}
+
+/* The third link must never disappear on narrow devices. */
+.planner-site-header nav a:nth-child(3) {
+    display: inline-flex !important;
+}
+
+.planner-site-header #languageSelect {
+    grid-column: 3;
+    flex: 0 0 auto;
+    justify-self: end;
+    width: auto;
+    min-width: 112px;
+    max-width: 150px;
+    min-height: 36px;
+    margin: 0 !important;
+    padding: 0 11px;
+    border: 1px solid rgba(0, 0, 0, .08) !important;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .48) !important;
+    color: #252529 !important;
+    font: inherit;
+    font-size: 12px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+    backdrop-filter: blur(15px) saturate(1.2);
+    -webkit-backdrop-filter: blur(15px) saturate(1.2);
+}
+
+/* More see-through glass, so the map remains visible behind the sheet. */
+.planner-spot-panel {
+    background: rgba(255, 255, 255, .48) !important;
+    border-color: rgba(255, 255, 255, .62) !important;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, .10), inset 0 1px 0 rgba(255, 255, 255, .66) !important;
+    backdrop-filter: blur(30px) saturate(1.35) brightness(1.025) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(1.35) brightness(1.025) !important;
+}
+
+.planner-map-title {
+    background: rgba(255, 255, 255, .56) !important;
+    border-color: rgba(255, 255, 255, .64) !important;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .055), inset 0 1px 0 rgba(255, 255, 255, .72) !important;
+}
+
+.planner-map-buttons button {
+    background: rgba(255, 255, 255, .56) !important;
+    border-color: rgba(255, 255, 255, .68) !important;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, .065), inset 0 1px 0 rgba(255, 255, 255, .76) !important;
+}
+
+.map-primary-action {
+    background: rgba(255, 255, 255, .62) !important;
+}
+
+.planner-search-input {
+    background: rgba(255, 255, 255, .47) !important;
+    border-color: rgba(255, 255, 255, .68) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .68), 0 7px 18px rgba(0, 0, 0, .035) !important;
+}
+
+.category-button {
+    background: rgba(255, 255, 255, .42) !important;
+    border-color: rgba(255, 255, 255, .72) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .68), 0 5px 13px rgba(0, 0, 0, .025) !important;
+}
+
+#selectedList > .selected-spot {
+    background: rgba(255, 255, 255, .43) !important;
+    border-color: rgba(255, 255, 255, .72) !important;
+}
+
+.planner-spot {
+    background: rgba(255, 255, 255, .43) !important;
+    border-color: rgba(255, 255, 255, .70) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 8px 18px rgba(0, 0, 0, .035) !important;
+}
+
+.planner-spot.selected {
+    background: rgba(255, 255, 255, .57) !important;
+}
+
+@media (max-width: 820px) {
+    .planner-site-header {
+        height: 92px;
+        min-height: 92px;
+        padding: 8px 12px 7px;
+        grid-template-columns: minmax(0, 1fr) max-content;
+        grid-template-rows: 34px 36px;
+        align-content: center;
+        column-gap: 8px;
+        row-gap: 6px;
+    }
+
+    .planner-site-header .logo {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+        font-size: 12px;
+        letter-spacing: -.035em;
+    }
+
+    .planner-site-header nav {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-self: center;
+        align-self: center;
+        width: max-content;
+        max-width: 100%;
+        overflow: visible;
+        gap: 3px;
+        padding: 3px;
+    }
+
+    .planner-site-header nav a {
+        min-height: 30px;
+        padding: 0 10px;
+        font-size: 11px;
+    }
+
+    .planner-site-header #languageSelect {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        min-width: 0;
+        max-width: 108px;
+        width: auto;
+        min-height: 31px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .planner-page {
+        height: calc(100vh - 92px);
+        height: calc(100dvh - 92px);
+    }
+}
+
+@media (max-width: 430px) {
+    .planner-site-header {
+        padding-left: 9px;
+        padding-right: 9px;
+        column-gap: 5px;
+    }
+
+    .planner-site-header .logo {
+        font-size: 10.5px;
+        letter-spacing: -.045em;
+    }
+
+    .planner-site-header #languageSelect {
+        max-width: 88px;
+        padding: 0 6px;
+        font-size: 10px;
+    }
+
+    .planner-site-header nav {
+        gap: 2px;
+        padding: 3px;
+    }
+
+    .planner-site-header nav a {
+        padding: 0 8px;
+        font-size: 10.5px;
+    }
+}
