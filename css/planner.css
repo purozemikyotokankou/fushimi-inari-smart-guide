@@ -2805,7 +2805,7 @@ body { overflow:hidden !important; background:#e9ece8; }
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
-  transform: rotateY(0deg) !important;
+  transform: rotateX(0deg) !important;
   transform-origin: 50% 50% !important;
   transform-style: preserve-3d !important;
   -webkit-transform-style: preserve-3d !important;
@@ -2813,7 +2813,7 @@ body { overflow:hidden !important; background:#e9ece8; }
   will-change: transform;
 }
 #plannerCategoryTray #foodCategorySwitcher.is-open .food-category-flip-inner {
-  transform: rotateY(180deg) !important;
+  transform: rotateX(180deg) !important;
 }
 #plannerCategoryTray .food-category-face {
   position: absolute !important;
@@ -2841,14 +2841,14 @@ body { overflow:hidden !important; background:#e9ece8; }
 }
 #plannerCategoryTray #plannerCategoryFront {
   z-index: 2 !important;
-  transform: rotateY(0deg) !important;
+  transform: rotateX(0deg) !important;
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
 }
 #plannerCategoryTray #foodCategoryOptions {
   z-index: 3 !important;
-  transform: rotateY(180deg) !important;
+  transform: rotateX(180deg) !important;
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: none !important;
