@@ -2998,3 +2998,177 @@ body { overflow:hidden !important; background:#e9ece8; }
   max-height: 54px !important;
   border-radius: 13px !important;
 }
+
+/* ============================================================
+   V40 — THE WHOLE LIQUID-GLASS RECTANGLE FLIPS AS ONE CARD
+   Face A: all categories on a single glass face.
+   Face B: Back / Eat / Shop on the reverse face.
+   The outer shell never changes size or leaves its position.
+============================================================ */
+/* Keep the tray as a layout anchor only; the glass surface belongs to
+   each side of the rotating card, not to a stationary layer behind it. */
+.planner-spot-panel.is-collapsed #plannerCategoryTray {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  overflow: visible !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategorySwitcher {
+  position: relative !important;
+  display: block !important;
+  flex: 0 0 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 28px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  perspective: 1200px !important;
+  -webkit-perspective: 1200px !important;
+  transform: none !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategorySwitcher .food-category-flip-inner {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  transform: rotateX(0deg) !important;
+  transform-origin: 50% 50% !important;
+  transform-style: preserve-3d !important;
+  -webkit-transform-style: preserve-3d !important;
+  transition: transform 620ms cubic-bezier(.2,.76,.18,1) !important;
+  will-change: transform;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategorySwitcher.is-open .food-category-flip-inner {
+  transform: rotateX(180deg) !important;
+}
+/* Each side is a complete frosted-glass face, so the rectangle itself
+   appears to turn over rather than its labels or an inner sub-menu. */
+.planner-spot-panel.is-collapsed #plannerCategoryTray .food-category-face {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.82) !important;
+  border-radius: 28px !important;
+  background: rgba(231,233,234,.76) !important;
+  box-shadow: 0 9px 27px rgba(20,30,24,.13), inset 0 1px 0 rgba(255,255,255,.96) !important;
+  backdrop-filter: blur(27px) saturate(1.38) !important;
+  -webkit-backdrop-filter: blur(27px) saturate(1.38) !important;
+  transform-origin: 50% 50% !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  overflow: hidden !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #plannerCategoryFront {
+  z-index: 2 !important;
+  transform: rotateX(0deg) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions {
+  z-index: 3 !important;
+  transform: rotateX(180deg) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: none !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions[aria-hidden="false"] {
+  pointer-events: auto !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #plannerCategoryFront[aria-hidden="true"] {
+  pointer-events: none !important;
+}
+/* The back face uses the same full-width rectangle and centers its three
+   choices within that face. It must not shrink or expand the bar. */
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions .food-submenu-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(10px, 2.3vw, 22px) !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions .food-close-button,
+.planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions .food-option {
+  flex: 0 0 68px !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  border-radius: 16px !important;
+  transform: none !important;
+  animation: none !important;
+}
+@media (max-width: 820px) {
+  .planner-spot-panel.is-collapsed #plannerCategoryTray .food-category-face {
+    border-radius: 27px !important;
+  }
+  .planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions .food-close-button,
+  .planner-spot-panel.is-collapsed #plannerCategoryTray #foodCategoryOptions .food-option {
+    flex-basis: 62px !important;
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+  }
+}
+/* In the expanded spot sheet the top row can remain subtler, but still
+   flips as one face-to-face card without an extra stationary glass pane. */
+.planner-spot-panel.is-expanded #plannerCategoryTray {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.planner-spot-panel.is-expanded #plannerCategoryTray .food-category-face {
+  background: rgba(241,244,244,.36) !important;
+  border: 1px solid rgba(255,255,255,.56) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 3px 10px rgba(24,35,28,.055), inset 0 1px 0 rgba(255,255,255,.58) !important;
+  backdrop-filter: blur(18px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.2) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-spot-panel #plannerCategoryTray #foodCategorySwitcher .food-category-flip-inner {
+    transition-duration: .01ms !important;
+  }
+}
