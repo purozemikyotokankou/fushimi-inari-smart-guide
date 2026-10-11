@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V36-FRONT-BACK-FLIP-CATEGORIES";
-    console.log("[Fushimi Inari Smart Guide] planner.js V36-FRONT-BACK-FLIP-CATEGORIES loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V37-FULL-CAPSULE-FLIP";
+    console.log("[Fushimi Inari Smart Guide] planner.js V37-FULL-CAPSULE-FLIP loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -197,22 +197,32 @@ document.addEventListener("DOMContentLoaded", function () {
     const foodCategorySwitcher = document.getElementById("foodCategorySwitcher");
     const foodCategoryTrigger = document.getElementById("foodCategoryTrigger");
     const foodCategoryOptions = document.getElementById("foodCategoryOptions");
+    const plannerCategoryFront = document.getElementById("plannerCategoryFront");
     const foodCategoryClose = document.getElementById("foodCategoryClose");
 
+    // Flip the entire category capsule, not only the Eat & Shop tile.
+    // This keeps the back-side controls in the same visible glass bar.
     function setFoodCategorySwitcherOpen(open) {
         if (!foodCategorySwitcher || !foodCategoryTrigger || !foodCategoryOptions) return;
-        foodCategorySwitcher.classList.toggle("is-open", Boolean(open));
-        foodCategoryTrigger.setAttribute("aria-expanded", String(Boolean(open)));
-        foodCategoryOptions.setAttribute("aria-hidden", String(!open));
+        const isOpen = Boolean(open);
+        foodCategorySwitcher.classList.toggle("is-open", isOpen);
+        foodCategorySwitcher.dataset.face = isOpen ? "food" : "categories";
+        foodCategoryTrigger.setAttribute("aria-expanded", String(isOpen));
+        foodCategoryOptions.setAttribute("aria-hidden", String(!isOpen));
+        plannerCategoryFront?.setAttribute("aria-hidden", String(isOpen));
     }
 
-    foodCategoryTrigger?.addEventListener("click", function () {
+    foodCategoryTrigger?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
         setFoodCategorySwitcherOpen(!foodCategorySwitcher?.classList.contains("is-open"));
     });
 
-    foodCategoryClose?.addEventListener("click", function () {
+    foodCategoryClose?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
         setFoodCategorySwitcherOpen(false);
-        window.setTimeout(function () { foodCategoryTrigger?.focus({ preventScroll: true }); }, 260);
+        window.setTimeout(function () { foodCategoryTrigger?.focus({ preventScroll: true }); }, 620);
     });
 
     const plannerBottomSheet =
@@ -4346,40 +4356,33 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    categoryButtons.forEach(
-        function (button) {
+    categoryButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            const isFoodOption = button.matches(".food-option");
 
-            button.addEventListener(
-                "click",
-                function () {
-
-                    // All category tiles flip front-to-back-to-front as tactile selection feedback.
+            // The submenu action is already part of the capsule's flip.
+            // Do not run a second tile animation that can make the item vanish.
+            if (!isFoodOption) {
+                button.classList.remove("is-flipping");
+                void button.offsetWidth;
+                button.classList.add("is-flipping");
+                window.setTimeout(function () {
                     button.classList.remove("is-flipping");
-                    void button.offsetWidth;
-                    button.classList.add("is-flipping");
-                    window.setTimeout(function () { button.classList.remove("is-flipping"); }, 720);
+                }, 720);
+            }
 
-                    categoryButtons.forEach(
-                        function (item) {
+            categoryButtons.forEach(function (item) {
+                item.classList.remove("active");
+            });
+            button.classList.add("active");
 
-                            item.classList.remove(
-                                "active"
-                            );
-                        }
-                    );
-
-                    button.classList.add(
-                        "active"
-                    );
-
-                    // Selecting a category collapses the Eat / Shop flip-switch.
-                    // Scenery, shrine, and hiking are grouped under the single "Explore" category.
-                    setFoodCategorySwitcherOpen(false);
-                    filterSpots();
-                }
-            );
-        }
-    );
+            // Show the Eat & Shop tile as selected on the front after choosing
+            // either option; all other categories clear that selection.
+            foodCategoryTrigger?.classList.toggle("active", isFoodOption);
+            setFoodCategorySwitcherOpen(false);
+            filterSpots();
+        });
+    });
 
     // ============================================================
     // routes.json 正規化

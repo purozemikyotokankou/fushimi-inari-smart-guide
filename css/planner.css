@@ -2477,3 +2477,289 @@ body { overflow:hidden !important; background:#e9ece8; }
   .planner-category-grid .category-button.is-flipping { animation: none !important; }
   .planner-category-grid .food-category-flip-inner { transition-duration: .01ms !important; }
 }
+
+
+/* ============================================================
+   V37 — Flip the WHOLE category capsule for Eat / Shop.
+   The glass surface is the existing #plannerCategoryTray; the
+   front/back faces stay transparent so no additional glass card
+   is created. The reverse face remains visible inside that same bar.
+============================================================ */
+#plannerCategoryTray {
+  perspective: 1200px !important;
+  -webkit-perspective: 1200px !important;
+}
+
+#plannerCategoryTray #foodCategorySwitcher {
+  position: relative !important;
+  display: block !important;
+  flex: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+  transform-style: preserve-3d !important;
+  -webkit-transform-style: preserve-3d !important;
+}
+
+#plannerCategoryTray #foodCategorySwitcher .food-category-flip-inner {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  transform: rotateY(0deg) !important;
+  transform-style: preserve-3d !important;
+  -webkit-transform-style: preserve-3d !important;
+  transition: transform 620ms cubic-bezier(.2,.75,.18,1) !important;
+}
+
+#plannerCategoryTray #foodCategorySwitcher.is-open .food-category-flip-inner {
+  transform: rotateY(180deg) !important;
+}
+
+#plannerCategoryTray .food-category-face {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 21px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  overflow: hidden !important;
+}
+
+#plannerCategoryTray #plannerCategoryFront {
+  z-index: 2 !important;
+  transform: rotateY(0deg) !important;
+  pointer-events: auto !important;
+}
+
+#plannerCategoryTray #plannerCategoryFront[aria-hidden="true"] {
+  pointer-events: none !important;
+}
+
+#plannerCategoryTray #foodCategoryOptions {
+  z-index: 1 !important;
+  transform: rotateY(180deg) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: none !important;
+}
+
+#plannerCategoryTray #foodCategoryOptions[aria-hidden="false"] {
+  pointer-events: auto !important;
+}
+
+#plannerCategoryTray #foodCategorySwitcher.is-open #plannerCategoryFront {
+  pointer-events: none !important;
+}
+
+#plannerCategoryTray .planner-category-grid {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 2px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  touch-action: pan-x !important;
+}
+#plannerCategoryTray .planner-category-grid::-webkit-scrollbar {
+  display: none !important;
+}
+
+#plannerCategoryTray .planner-category-main-grid .food-category-trigger {
+  flex: 0 0 68px !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 5px 2px 3px !important;
+  border: 1px solid transparent !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  color: #707679 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+#plannerCategoryTray .planner-category-main-grid .food-category-trigger.active {
+  color: #d84a43 !important;
+  border-color: rgba(255,255,255,.65) !important;
+  background: rgba(255,255,255,.84) !important;
+  box-shadow: 0 2px 8px rgba(26,33,30,.08), inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+#plannerCategoryTray .food-category-trigger .category-glyph {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  flex: 0 0 26px !important;
+  color: inherit !important;
+}
+#plannerCategoryTray .food-category-trigger .category-svg {
+  width: 24px !important;
+  height: 24px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.6 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+#plannerCategoryTray .food-category-trigger .category-label {
+  display: block !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+#plannerCategoryTray #foodCategoryOptions .food-submenu-grid {
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 0 5px !important;
+  overflow: hidden !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-close-button,
+#plannerCategoryTray #foodCategoryOptions .food-option {
+  position: relative !important;
+  display: flex !important;
+  flex: 0 0 68px !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 5px 2px 3px !important;
+  border: 1px solid transparent !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  color: #74797b !important;
+  box-shadow: none !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-option.active {
+  color: #d84a43 !important;
+  background: rgba(255,255,255,.84) !important;
+  border-color: rgba(255,255,255,.65) !important;
+  box-shadow: 0 2px 8px rgba(26,33,30,.08), inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+#plannerCategoryTray #foodCategoryOptions .category-glyph {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 26px !important;
+  width: 26px !important;
+  height: 26px !important;
+  color: inherit !important;
+}
+#plannerCategoryTray #foodCategoryOptions .category-svg {
+  width: 24px !important;
+  height: 24px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.65 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+#plannerCategoryTray #foodCategoryOptions .category-label {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 820px) {
+  #plannerCategoryTray #plannerCategoryFront .category-button,
+  #plannerCategoryTray .planner-category-main-grid .food-category-trigger {
+    flex-basis: 62px !important;
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+  }
+  #plannerCategoryTray #foodCategoryOptions .food-close-button,
+  #plannerCategoryTray #foodCategoryOptions .food-option {
+    flex-basis: 62px !important;
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+  }
+  #plannerCategoryTray #foodCategoryOptions .food-submenu-grid {
+    gap: 5px !important;
+    padding: 0 3px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #plannerCategoryTray #foodCategorySwitcher .food-category-flip-inner {
+    transition-duration: .01ms !important;
+  }
+}
