@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V35-SIGHTSEEING-GROUP-FOOD-FLIP-SWITCH";
-    console.log("[Fushimi Inari Smart Guide] planner.js V35-SIGHTSEEING-GROUP-FOOD-FLIP-SWITCH loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V36-FRONT-BACK-FLIP-CATEGORIES";
+    console.log("[Fushimi Inari Smart Guide] planner.js V36-FRONT-BACK-FLIP-CATEGORIES loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     foodCategoryClose?.addEventListener("click", function () {
         setFoodCategorySwitcherOpen(false);
-        foodCategoryTrigger?.focus({ preventScroll: true });
+        window.setTimeout(function () { foodCategoryTrigger?.focus({ preventScroll: true }); }, 260);
     });
 
     const plannerBottomSheet =
@@ -4352,6 +4352,12 @@ document.addEventListener("DOMContentLoaded", function () {
             button.addEventListener(
                 "click",
                 function () {
+
+                    // All category tiles flip front-to-back-to-front as tactile selection feedback.
+                    button.classList.remove("is-flipping");
+                    void button.offsetWidth;
+                    button.classList.add("is-flipping");
+                    window.setTimeout(function () { button.classList.remove("is-flipping"); }, 720);
 
                     categoryButtons.forEach(
                         function (item) {

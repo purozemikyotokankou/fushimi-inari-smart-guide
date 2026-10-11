@@ -2290,3 +2290,190 @@ body { overflow:hidden !important; background:#e9ece8; }
   }
   .planner-spot-panel.is-collapsed .planner-category-grid .food-category-trigger .category-label { font-size:7.7px !important; }
 }
+
+
+/* V36: physical flip motion for the category tiles, plus a true front/back Eat & Shop card.
+   The choice list is stacked vertically on the reverse face instead of extending sideways. */
+.planner-category-grid .category-button {
+  transform-style: preserve-3d !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+}
+@keyframes categoryFrontBackFlip {
+  0%   { transform: perspective(520px) rotateY(0deg) scale(1); }
+  22%  { transform: perspective(520px) rotateY(90deg) scale(.96); }
+  50%  { transform: perspective(520px) rotateY(180deg) scale(.94); }
+  78%  { transform: perspective(520px) rotateY(270deg) scale(.96); }
+  100% { transform: perspective(520px) rotateY(360deg) scale(1); }
+}
+.planner-category-grid .category-button.is-flipping {
+  animation: categoryFrontBackFlip .68s cubic-bezier(.2,.72,.18,1) both !important;
+  z-index: 5 !important;
+}
+
+/* The switch occupies one category slot at all times. Its reverse face uses rows, not a side-by-side menu. */
+.planner-category-grid .food-category-switcher,
+.planner-spot-panel.is-collapsed .planner-category-grid .food-category-switcher,
+.planner-spot-panel.is-collapsed .planner-category-grid .food-category-switcher.is-open,
+.planner-spot-panel.is-expanded .planner-category-grid .food-category-switcher,
+.planner-spot-panel.is-expanded .planner-category-grid .food-category-switcher.is-open {
+  position: relative !important;
+  display: block !important;
+  flex: 0 0 68px !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  perspective: 850px !important;
+  -webkit-perspective: 850px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.planner-category-grid .food-category-flip-inner {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: rotateY(0deg) !important;
+  transform-style: preserve-3d !important;
+  -webkit-transform-style: preserve-3d !important;
+  transition: transform .58s cubic-bezier(.2,.75,.18,1) !important;
+}
+.planner-category-grid .food-category-switcher.is-open .food-category-flip-inner {
+  transform: rotateY(180deg) !important;
+}
+.planner-category-grid .food-category-face {
+  position: absolute !important;
+  inset: 0 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  transform-style: preserve-3d !important;
+}
+.planner-category-grid .food-category-front {
+  z-index: 2 !important;
+  transform: rotateY(0deg) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 5px 2px 3px !important;
+  border: 1px solid transparent !important;
+  border-radius: 17px !important;
+  background: transparent !important;
+  color: #74797b !important;
+  box-shadow: none !important;
+}
+.planner-category-grid .food-category-switcher.is-open .food-category-front {
+  pointer-events: none !important;
+}
+.planner-category-grid .food-category-back {
+  z-index: 3 !important;
+  transform: rotateY(180deg) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  gap: 1px !important;
+  padding: 3px !important;
+  border: 1px solid rgba(255,255,255,.48) !important;
+  border-radius: 15px !important;
+  background: rgba(255,255,255,.1) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+.planner-category-grid .food-category-options[aria-hidden="true"] {
+  pointer-events: none !important;
+}
+.planner-category-grid .food-category-options[aria-hidden="false"] {
+  pointer-events: auto !important;
+}
+.planner-category-grid .food-choice-button {
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1px 2px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #575f59 !important;
+  font-size: 8px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  transform: none !important;
+  animation: none !important;
+}
+.planner-category-grid .food-choice-button + .food-choice-button {
+  border-top: 1px solid rgba(90,100,94,.16) !important;
+}
+.planner-category-grid .food-choice-button:hover,
+.planner-category-grid .food-choice-button:focus-visible {
+  background: rgba(255,255,255,.42) !important;
+  color: #d94b43 !important;
+  outline: none !important;
+}
+.planner-category-grid .food-choice-button.active {
+  background: rgba(255,255,255,.72) !important;
+  color: #d94b43 !important;
+}
+.planner-category-grid .food-choice-label {
+  display: block !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 8px !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+.planner-category-grid .food-category-trigger .category-label {
+  font-size: 8.2px !important;
+  letter-spacing: -.05em !important;
+}
+
+@media (max-width: 820px) {
+  .planner-category-grid .food-category-switcher,
+  .planner-spot-panel.is-collapsed .planner-category-grid .food-category-switcher,
+  .planner-spot-panel.is-collapsed .planner-category-grid .food-category-switcher.is-open,
+  .planner-spot-panel.is-expanded .planner-category-grid .food-category-switcher,
+  .planner-spot-panel.is-expanded .planner-category-grid .food-category-switcher.is-open {
+    flex-basis: 62px !important;
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+  }
+  .planner-category-grid .food-category-trigger .category-label { font-size: 7.5px !important; }
+  .planner-category-grid .food-choice-label { font-size: 8px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-category-grid .category-button.is-flipping { animation: none !important; }
+  .planner-category-grid .food-category-flip-inner { transition-duration: .01ms !important; }
+}
