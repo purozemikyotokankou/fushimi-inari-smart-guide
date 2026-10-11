@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V48-UNIVERSAL-DESIGN-COLORS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V48-UNIVERSAL-DESIGN-COLORS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V49-SPOT-FOCUS-ROUTE-ORIGIN";
+    console.log("[Fushimi Inari Smart Guide] planner.js V49-SPOT-FOCUS-ROUTE-ORIGIN loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -142,6 +142,10 @@ document.addEventListener("DOMContentLoaded", function () {
     let routes = [];
     let selectedSpots = [];
     let currentDetailSpot = null;
+    // Spot currently being inspected in the detail sheet. This is separate from
+    // route-selected spots so tapping a pin clearly highlights it without silently
+    // adding it to the route.
+    let activeViewedSpotId = null;
 
     let markers = [];
     let markerMap = new Map();
@@ -2662,7 +2666,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function createMarkerIcon(
         spot,
-        selected
+        selected,
+        viewed = false
     ) {
 
         const iconType =
@@ -2692,9 +2697,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (isRailway) classes.push("is-railway");
 
         if (selected) {
-            classes.push(
-                "is-selected"
-            );
+            classes.push("is-selected");
+        }
+        if (viewed) {
+            classes.push("is-viewing");
         }
 
         return L.divIcon({
@@ -3647,21 +3653,25 @@ document.addEventListener("DOMContentLoaded", function () {
             const selectedHTML = selected
                 ? `<span class="selected-label">${escapeHTML(getSelectedText())}</span>`
                 : "";
+            const viewing = String(activeViewedSpotId ?? "") === String(spot.id);
+            const viewingHTML = viewing
+                ? `<span class="viewing-label">${escapeHTML(getSpotViewingLabel())}</span>`
+                : "";
             const iconType = getIconType(spot);
             const customIconFile = iconType ? `${ICON_DIR}${iconType}.svg` : "";
             const symbol = customIconFile
-                ? `<img class="spot-custom-icon" src="${customIconFile}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'no-icon',textContent:'no icon'}));">`
-                : `<span class="no-icon">no icon</span>`;
+                ? `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true" onerror="this.classList.add('is-load-error'); this.nextElementSibling.hidden=false;"> <span class="spot-card-icon-fallback" hidden>no icon</span>`
+                : `<span class="spot-card-icon-fallback">no icon</span>`;
 
             card.innerHTML = `
                 ${imageHTML}
                 <div class="spot-card-heading">
-                    <span class="spot-card-category-dot" aria-hidden="true">${symbol}</span>
+                    <div class="spot-card-iconbox" aria-label="${escapeHTML(getSpotIconLabel())}">${symbol}</div>
                     <div class="spot-card-heading-main">
                         <div class="spot-content">
-                            <h3>${escapeHTML(name)}</h3>
+                            <div class="spot-card-name-line"><h3>${escapeHTML(name)}</h3>${viewingHTML}</div>
                             <p class="spot-category">${escapeHTML(category)}</p>
-                            <p>${escapeHTML(description)}</p>
+                            <p class="spot-description-line">${escapeHTML(description)}</p>
                             <p class="spot-time">⏱ ${escapeHTML(time)}</p>
                             ${selectedHTML}
                             ${urlHTML}
@@ -3669,10 +3679,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 </div>
                 <div class="spot-card-actions">
-                    <button type="button" class="spot-card-detail-button">${escapeHTML(getViewOnMapText())}</button>
+                    <button type="button" class="spot-card-detail-button" aria-label="${escapeHTML(getViewOnMapText())}">${escapeHTML(getViewOnMapText())}</button>
                     <button type="button" class="spot-card-select-button ${selected ? "is-selected" : ""}" aria-pressed="${selected ? "true" : "false"}">${escapeHTML(selected ? getRemoveRouteText() : getAddRouteText())}</button>
                 </div>
             `;
+            if (viewing) card.classList.add("is-viewing");
 
             card.addEventListener("click", function (event) {
                 if (event.target.closest("a, button")) return;
@@ -3738,6 +3749,47 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function routeSetupText(key) {
+        const translations = {
+            viewing: { ja: "表示中", en: "Viewing", zh: "正在查看", ko: "보고 있음" },
+            icon: { ja: "スポットアイコン", en: "Spot icon", zh: "地点图标", ko: "장소 아이콘" },
+            route: { ja: "ルート作成", en: "Create route", zh: "创建路线", ko: "경로 만들기" },
+            chooseOrigin: { ja: "出発地を選択", en: "Choose a starting point", zh: "选择出发点", ko: "출발 지점 선택" },
+            currentLocation: { ja: "現在地から", en: "From my location", zh: "从当前位置出发", ko: "현재 위치에서" },
+            anotherSpot: { ja: "別のスポットから", en: "From another spot", zh: "从其他地点出发", ko: "다른 장소에서" },
+            pickSpot: { ja: "出発するスポットを選択", en: "Choose a starting spot", zh: "选择出发地点", ko: "출발 장소 선택" },
+            destination: { ja: "到着地", en: "Destination", zh: "目的地", ko: "도착지" },
+            start: { ja: "出発地", en: "Start", zh: "出发地", ko: "출발지" },
+            confirmRoute: { ja: "この条件でルート作成", en: "Build this route", zh: "按此条件创建路线", ko: "이 조건으로 경로 만들기" },
+            cancel: { ja: "キャンセル", en: "Cancel", zh: "取消", ko: "취소" },
+            selectStartError: { ja: "出発するスポットを選択してください。", en: "Choose a starting spot.", zh: "请选择出发地点。", ko: "출발 장소를 선택해 주세요." },
+            sameSpotError: { ja: "出発地と到着地は別のスポットを選択してください。", en: "Choose different start and destination spots.", zh: "出发地点和目的地不能相同。", ko: "출발지와 도착지는 서로 다른 장소여야 합니다." },
+            noOrigin: { ja: "現在地を取得できませんでした。位置情報の許可を確認して、もう一度お試しください。", en: "Could not get your location. Check location permission and try again.", zh: "无法获取当前位置。请检查位置权限后重试。", ko: "현재 위치를 가져오지 못했습니다. 위치 권한을 확인하고 다시 시도해 주세요." },
+            iconMissing: { ja: "no icon", en: "no icon", zh: "无图标", ko: "아이콘 없음" }
+        };
+        const language = getCurrentLanguage();
+        return translations[key]?.[language] || translations[key]?.ja || key;
+    }
+
+    function getSpotViewingLabel() {
+        return routeSetupText("viewing");
+    }
+
+    function getSpotIconLabel() {
+        return routeSetupText("icon");
+    }
+
+    function setSpotAsSingleDestination(spot) {
+        if (!spot) return;
+        selectedSpots = [spot];
+        saveSelectedIDs();
+        updateSelected();
+        updateInfo();
+        updateCardSelection();
+        updateRoutePreviewState();
+        filterSpots();
+    }
+
     function renderMapSpotDetail(spot, expanded) {
         if (!spot || !mapSpotDetail || !mapSpotDetailContent) return;
         currentDetailSpot = spot;
@@ -3758,7 +3810,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const addressHtml = addressValue ? `<p class="map-spot-detail-meta">${escapeHTML(addressValue)}</p>` : "";
         const accessValue = getLocalizedValue(spot.access || "");
         const accessHtml = accessValue ? `<h3>アクセス</h3><p class="map-spot-detail-full-description">${escapeHTML(accessValue)}</p>` : "";
-        const selected = isSpotSelected(spot);
+        const routeOriginOptions = spots
+            .filter(item => String(item.id) !== String(spot.id))
+            .map(item => `<option value="${escapeHTML(String(item.id))}">${escapeHTML(getLocalizedValue(item.name))}</option>`)
+            .join("");
 
         mapSpotDetailContent.innerHTML = `
             <div class="map-spot-detail-summary">
@@ -3768,7 +3823,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
                 <div class="map-spot-detail-title-row">
                     <div class="map-spot-detail-title-copy">
-                        <p class="map-spot-detail-category">${escapeHTML(category)}</p>
+                        <p class="map-spot-detail-category">${escapeHTML(category)} <span class="map-spot-detail-viewing-badge">${escapeHTML(routeSetupText("viewing"))}</span></p>
                         <h2>${escapeHTML(name)}</h2>
                     </div>
                 </div>
@@ -3782,7 +3837,29 @@ document.addEventListener("DOMContentLoaded", function () {
                 ${addressHtml}
                 ${accessHtml}
                 ${urlHtml}
-                <button type="button" class="map-spot-detail-route-button ${selected ? "is-selected" : ""}">${escapeHTML(selected ? getRemoveRouteText() : getAddRouteText())}</button>
+                <button type="button" class="map-spot-detail-route-button">${escapeHTML(routeSetupText("route"))}</button>
+                <section class="map-spot-route-setup" hidden aria-label="${escapeHTML(routeSetupText("chooseOrigin"))}">
+                    <h3>${escapeHTML(routeSetupText("chooseOrigin"))}</h3>
+                    <div class="map-spot-route-origin-options" role="group" aria-label="${escapeHTML(routeSetupText("chooseOrigin"))}">
+                        <button type="button" class="map-spot-route-origin-option is-active" data-origin-mode="current" aria-pressed="true">⌖ ${escapeHTML(routeSetupText("currentLocation"))}</button>
+                        <button type="button" class="map-spot-route-origin-option" data-origin-mode="spot" aria-pressed="false">◎ ${escapeHTML(routeSetupText("anotherSpot"))}</button>
+                    </div>
+                    <label class="map-spot-route-origin-select-wrap" hidden>
+                        <span>${escapeHTML(routeSetupText("pickSpot"))}</span>
+                        <select class="map-spot-route-origin-select">
+                            <option value="">${escapeHTML(routeSetupText("pickSpot"))}</option>
+                            ${routeOriginOptions}
+                        </select>
+                    </label>
+                    <div class="map-spot-route-endpoint-preview">
+                        <div><span>${escapeHTML(routeSetupText("start"))}</span><strong class="map-spot-route-origin-summary">${escapeHTML(routeSetupText("currentLocation"))}</strong></div>
+                        <span class="map-spot-route-endpoint-arrow" aria-hidden="true">→</span>
+                        <div><span>${escapeHTML(routeSetupText("destination"))}</span><strong>${escapeHTML(name)}</strong></div>
+                    </div>
+                    <p class="map-spot-route-setup-error" role="status" hidden></p>
+                    <button type="button" class="map-spot-route-confirm">${escapeHTML(routeSetupText("confirmRoute"))}</button>
+                    <button type="button" class="map-spot-route-cancel">${escapeHTML(routeSetupText("cancel"))}</button>
+                </section>
             </div>
         `;
 
@@ -3792,12 +3869,101 @@ document.addEventListener("DOMContentLoaded", function () {
         plannerWorkspace?.classList.add("has-spot-detail");
 
         const routeButton = mapSpotDetailContent.querySelector(".map-spot-detail-route-button");
+        const routeSetup = mapSpotDetailContent.querySelector(".map-spot-route-setup");
+        const originSelectWrap = mapSpotDetailContent.querySelector(".map-spot-route-origin-select-wrap");
+        const originSelect = mapSpotDetailContent.querySelector(".map-spot-route-origin-select");
+        const originSummary = mapSpotDetailContent.querySelector(".map-spot-route-origin-summary");
+        const originButtons = Array.from(mapSpotDetailContent.querySelectorAll("[data-origin-mode]"));
+        const confirmButton = mapSpotDetailContent.querySelector(".map-spot-route-confirm");
+        const cancelButton = mapSpotDetailContent.querySelector(".map-spot-route-cancel");
+        const setupError = mapSpotDetailContent.querySelector(".map-spot-route-setup-error");
+        let originMode = "current";
+
+        function refreshRouteOriginPreview() {
+            if (!originSummary) return;
+            if (originMode === "current") {
+                originSummary.textContent = routeSetupText("currentLocation");
+                return;
+            }
+            const selectedOrigin = spots.find(item => String(item.id) === String(originSelect?.value || ""));
+            originSummary.textContent = selectedOrigin ? getLocalizedValue(selectedOrigin.name) : routeSetupText("pickSpot");
+        }
+
+        function setRouteOriginMode(mode) {
+            originMode = mode === "spot" ? "spot" : "current";
+            originButtons.forEach(button => {
+                const active = button.dataset.originMode === originMode;
+                button.classList.toggle("is-active", active);
+                button.setAttribute("aria-pressed", String(active));
+            });
+            if (originSelectWrap) originSelectWrap.hidden = originMode !== "spot";
+            if (setupError) setupError.hidden = true;
+            refreshRouteOriginPreview();
+        }
+
         routeButton?.addEventListener("click", function (event) {
             event.preventDefault();
             event.stopPropagation();
-            selectSpot(spot);
-            renderMapSpotDetail(spot, true);
+            // The spot whose details are open immediately becomes the route destination.
+            setSpotAsSingleDestination(spot);
+            routeButton.hidden = true;
+            if (routeSetup) routeSetup.hidden = false;
+            mapSpotDetail.classList.add("is-expanded");
+            mapSpotDetail.classList.remove("is-compact");
+            window.requestAnimationFrame(function () {
+                routeSetup?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            });
         });
+
+        originButtons.forEach(button => {
+            button.addEventListener("click", function () {
+                setRouteOriginMode(button.dataset.originMode);
+            });
+        });
+        originSelect?.addEventListener("change", function () {
+            if (setupError) setupError.hidden = true;
+            refreshRouteOriginPreview();
+        });
+        cancelButton?.addEventListener("click", function () {
+            if (routeSetup) routeSetup.hidden = true;
+            if (routeButton) routeButton.hidden = false;
+            if (setupError) setupError.hidden = true;
+        });
+        confirmButton?.addEventListener("click", async function () {
+            if (setupError) setupError.hidden = true;
+            let options;
+            if (originMode === "spot") {
+                const startSpot = spots.find(item => String(item.id) === String(originSelect?.value || ""));
+                if (!startSpot) {
+                    if (setupError) {
+                        setupError.textContent = routeSetupText("selectStartError");
+                        setupError.hidden = false;
+                    }
+                    return;
+                }
+                if (String(startSpot.id) === String(spot.id)) {
+                    if (setupError) {
+                        setupError.textContent = routeSetupText("sameSpotError");
+                        setupError.hidden = false;
+                    }
+                    return;
+                }
+                options = { destinationSpot: spot, originMode: "spot", startSpot };
+            } else {
+                options = { destinationSpot: spot, originMode: "current" };
+            }
+            confirmButton.disabled = true;
+            confirmButton.textContent = getCurrentLanguage() === "en" ? "Creating route…" : getCurrentLanguage() === "zh" ? "正在创建路线…" : getCurrentLanguage() === "ko" ? "경로 생성 중…" : "ルートを作成中…";
+            try {
+                await createRoute(options);
+            } finally {
+                if (confirmButton.isConnected) {
+                    confirmButton.disabled = false;
+                    confirmButton.textContent = routeSetupText("confirmRoute");
+                }
+            }
+        });
+        setRouteOriginMode("current");
     }
 
     function hideSpotDetail() {
@@ -3806,11 +3972,15 @@ document.addEventListener("DOMContentLoaded", function () {
         mapSpotDetail.classList.remove("is-expanded", "is-compact");
         plannerWorkspace?.classList.remove("has-spot-detail");
         currentDetailSpot = null;
+        activeViewedSpotId = null;
+        filterSpots();
     }
 
     function showSpotOnMap(spot) {
         if (!spot) return;
         closeMapSearch();
+        activeViewedSpotId = String(spot.id);
+        filterSpots();
         renderMapSpotDetail(spot, false);
         focusSpotOnMap(spot);
     }
@@ -4118,37 +4288,18 @@ document.addEventListener("DOMContentLoaded", function () {
         list.forEach(
             function (spot) {
 
+                const isViewing = String(activeViewedSpotId ?? "") === String(spot.id);
                 const marker =
                     L.marker(
                         [
-                            Number(
-                                spot.lat
-                            ),
-                            Number(
-                                spot.lng
-                            )
+                            Number(spot.lat),
+                            Number(spot.lng)
                         ],
                         {
-                            icon:
-                                createMarkerIcon(
-                                    spot,
-                                    isSpotSelected(
-                                        spot
-                                    )
-                                ),
-
-                            keyboard:
-                                true,
-
-                            title:
-                                getLocalizedValue(
-                                    spot.name
-                                ),
-
-                            zIndexOffset:
-                                getMarkerZIndexOffset(
-                                    spot
-                                )
+                            icon: createMarkerIcon(spot, isSpotSelected(spot), isViewing),
+                            keyboard: true,
+                            title: getLocalizedValue(spot.name),
+                            zIndexOffset: isViewing ? 12000 : getMarkerZIndexOffset(spot)
                         }
                     );
 
@@ -4157,6 +4308,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
 
                 marker.addTo(map);
+                const markerElement = marker.getElement?.();
+                if (markerElement) markerElement.classList.toggle("planner-marker-viewing", isViewing);
 
                 markers.push(
                     marker
@@ -4206,14 +4359,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        marker.setIcon(
-            createMarkerIcon(
-                spot,
-                isSpotSelected(
-                    spot
-                )
-            )
-        );
+        const isViewing = String(activeViewedSpotId ?? "") === String(spot.id);
+        marker.setIcon(createMarkerIcon(spot, isSpotSelected(spot), isViewing));
+        const markerElement = marker.getElement?.();
+        if (markerElement) markerElement.classList.toggle("planner-marker-viewing", isViewing);
+        marker.setZIndexOffset(isViewing ? 12000 : getMarkerZIndexOffset(spot));
 
     }
 
@@ -4275,6 +4425,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function filterSpots() {
         const filtered = getFilteredSpotsForCurrentState();
+        if (activeViewedSpotId !== null) {
+            filtered.sort(function (a, b) {
+                const aViewed = String(a.id) === String(activeViewedSpotId) ? 1 : 0;
+                const bViewed = String(b.id) === String(activeViewedSpotId) ? 1 : 0;
+                return bViewed - aViewed;
+            });
+        }
         updateSpotResultCount(filtered.length);
         displaySpots(filtered);
         createMarkers(filtered);
@@ -5636,17 +5793,23 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    async function createRoute() {
+    async function createRoute(routeOptions = null) {
 
-        if (
-            selectedSpots.length ===
-            0
-        ) {
+        // When launched from a spot detail, that spot is the sole destination.
+        // A chosen origin is kept separate from the destination list.
+        if (routeOptions?.destinationSpot) {
+            setSpotAsSingleDestination(routeOptions.destinationSpot);
+        }
 
-            alert(
-                "まずスポットを1か所以上選択してください。"
-            );
+        if (selectedSpots.length === 0) {
+            alert("まずスポットを1か所以上選択してください。");
+            return;
+        }
 
+        const explicitOriginMode = routeOptions?.originMode || null;
+        const explicitStartSpot = explicitOriginMode === "spot" ? routeOptions?.startSpot || null : null;
+        if (explicitOriginMode === "spot" && !explicitStartSpot) {
+            alert(routeSetupText("selectStartError"));
             return;
         }
 
@@ -5669,30 +5832,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let startLocation = null;
 
-        try {
-
-            startLocation =
-                await ensureCurrentLocation();
-
-        } catch (error) {
-
-            console.warn(
-                "現在地を取得できませんでした。選択スポット同士のルートを作成します。",
-                error
-            );
+        if (explicitOriginMode === "current") {
+            try {
+                startLocation = await ensureCurrentLocation();
+            } catch (error) {
+                console.warn("現在地を取得できませんでした。", error);
+                alert(routeSetupText("noOrigin"));
+                return;
+            }
+        } else if (!explicitOriginMode) {
+            try {
+                startLocation = await ensureCurrentLocation();
+            } catch (error) {
+                console.warn("現在地を取得できませんでした。選択スポット同士のルートを作成します。", error);
+            }
         }
 
-        const allCoordinates =
-            [];
-
-        const legs =
-            [];
+        const allCoordinates = [];
+        const legs = [];
 
         try {
-
-            if (
-                startLocation
-            ) {
+            if (explicitStartSpot) {
+                const firstTarget = selectedSpots[0];
+                const firstRoute = await getWalkingRoute(explicitStartSpot, firstTarget);
+                if (!firstRoute || !Array.isArray(firstRoute.coordinates) || firstRoute.coordinates.length < 2) {
+                    throw new Error("出発スポットから到着地への徒歩ルートが空です。");
+                }
+                routeSegments.push(firstRoute);
+                legs.push({
+                    from: explicitStartSpot,
+                    to: firstTarget,
+                    coordinates: firstRoute.coordinates,
+                    source: firstRoute.source
+                });
+                allCoordinates.push(...firstRoute.coordinates);
+            } else if (startLocation) {
 
                 const firstTarget =
                     selectedSpots[0];
@@ -5935,8 +6109,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (navStatus) {
 
-            navStatus.textContent =
-                startLocation
+            navStatus.textContent = explicitStartSpot
+                ? `${getLocalizedValue(explicitStartSpot.name)}から作成`
+                : startLocation
                     ? "現在地から作成"
                     : "ルート作成完了";
         }
@@ -5971,6 +6146,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         updateNavigationPanel();
+
+        if (routeOptions?.destinationSpot) {
+            hideSpotDetail();
+            setPlannerSheetState("expanded");
+        }
     }
 
     if (createRouteBtn) {

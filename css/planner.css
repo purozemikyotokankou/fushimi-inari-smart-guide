@@ -4631,3 +4631,302 @@ body { overflow:hidden !important; background:#e9ece8; }
     animation-duration: .01ms !important;
   }
 }
+
+
+/* ============================================================
+   V49 — DETAIL FOCUS + ROUTE ORIGIN PICKER + CLEAN CATEGORY STATE
+   ============================================================ */
+
+/* Selected category is inset, not an outside glow, so its red state can never
+   be clipped by the rounded capsule at the top/bottom/left/right. Fill the
+   whole available width with even columns so no awkward blank space remains. */
+#plannerBottomSheet #plannerCategoryTray,
+#plannerBottomSheet.is-collapsed #plannerCategoryTray {
+  box-sizing: border-box !important;
+}
+#plannerBottomSheet.is-collapsed .planner-category-tray {
+  width: calc(100vw - 24px) !important;
+  max-width: 520px !important;
+  left: 50% !important;
+  padding: 4px !important;
+  overflow: hidden !important;
+}
+#plannerBottomSheet.is-collapsed #foodCategorySwitcher,
+#plannerBottomSheet.is-collapsed #foodCategorySwitcher .food-category-flip-inner,
+#plannerBottomSheet.is-collapsed #plannerCategoryFront,
+#plannerBottomSheet.is-collapsed #foodCategoryOptions {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 2px !important;
+  overflow: visible !important;
+}
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid > .category-button,
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid > .food-category-trigger {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  flex: 0 1 auto !important;
+  flex-basis: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  padding: 3px 1px !important;
+  margin: 0 !important;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid > .category-button.active,
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid > .food-category-trigger.active {
+  border-color: transparent !important;
+  background: rgba(255, 209, 209, .38) !important;
+  box-shadow: inset 0 0 0 1.5px rgba(196, 0, 24, .90), inset 0 1px 0 rgba(255,255,255,.82) !important;
+  color: #000 !important;
+  outline: none !important;
+  transform: none !important;
+}
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid > .category-button.active .category-label,
+#plannerBottomSheet #plannerCategoryFront .planner-category-main-grid > .food-category-trigger.active .category-label {
+  color: #000 !important;
+  font-weight: 850 !important;
+}
+#plannerBottomSheet #plannerCategoryFront .category-glyph {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  max-width: 100% !important;
+  height: 24px !important;
+}
+#plannerBottomSheet #plannerCategoryFront .category-svg {
+  width: 21px !important;
+  height: 21px !important;
+  max-width: 100% !important;
+}
+#plannerBottomSheet #plannerCategoryFront .category-label {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  font-size: clamp(8px, 2.3vw, 11px) !important;
+  line-height: 1.1 !important;
+  letter-spacing: -.025em !important;
+  text-align: center !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+#plannerBottomSheet #foodCategoryOptions .food-submenu-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 3px !important;
+  box-sizing: border-box !important;
+}
+#plannerBottomSheet #foodCategoryOptions .food-close-button,
+#plannerBottomSheet #foodCategoryOptions .food-option {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+#plannerBottomSheet #foodCategoryOptions .food-choice-button.active {
+  border-color: transparent !important;
+  box-shadow: inset 0 0 0 1.5px rgba(196, 0, 24, .85) !important;
+}
+
+/* A selected/inspected pin is visually in the foreground and remains above
+   nearby pins while its details are open. */
+.planner-workspace.has-spot-detail .leaflet-marker-icon.planner-marker-viewing {
+  z-index: 9999 !important;
+}
+.custom-map-marker.is-viewing .marker-pin {
+  transform: translateY(-3px) scale(1.18) !important;
+  box-shadow: 0 9px 22px rgba(0,0,0,.28), 0 0 0 3px #fff, 0 0 0 7px rgba(196,0,24,.52) !important;
+}
+.custom-map-marker.is-viewing .icon-gray { opacity: 0 !important; }
+.custom-map-marker.is-viewing .icon-color { opacity: 1 !important; transform: translate(-50%,-50%) scale(1.13) !important; }
+.custom-map-marker.is-viewing .marker-name-glass {
+  z-index: 9 !important;
+  padding: 5px 10px 6px !important;
+  border-color: rgba(196,0,24,.72) !important;
+  background: rgba(196,0,24,.96) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22), 0 0 0 2px rgba(255,255,255,.82) !important;
+  font-weight: 900 !important;
+}
+
+/* Spot list: put the icon/no-icon fallback INSIDE the spot card in a stable
+   thumbnail well. The viewed card is promoted and tagged independently from
+   route-selected cards. */
+#spotList .planner-spot {
+  grid-template-columns: minmax(0,1fr) !important;
+  overflow: visible !important;
+  border: 1px solid rgba(255,255,255,.80) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72), 0 6px 16px rgba(0,0,0,.045) !important;
+}
+#spotList .planner-spot.is-viewing {
+  order: -1 !important;
+  border: 1px solid rgba(196,0,24,.82) !important;
+  background: rgba(255,209,209,.28) !important;
+  box-shadow: inset 0 0 0 1px rgba(196,0,24,.26), 0 0 0 2px rgba(255,40,0,.12), 0 11px 22px rgba(0,0,0,.08) !important;
+}
+.spot-card-heading {
+  display: grid !important;
+  grid-template-columns: 58px minmax(0,1fr) !important;
+  align-items: start !important;
+  gap: 11px !important;
+  min-width: 0 !important;
+}
+.spot-card-iconbox {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(127,135,143,.24) !important;
+  border-radius: 15px !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(200,200,203,.24)) !important;
+  color: #000 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72) !important;
+}
+.spot-card-iconbox .spot-custom-icon {
+  display: block !important;
+  width: 32px !important;
+  height: 32px !important;
+  max-width: 76% !important;
+  max-height: 76% !important;
+  object-fit: contain !important;
+  filter: none !important;
+}
+.spot-card-iconbox .spot-card-icon-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+  color: #3c4145;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.spot-card-iconbox .spot-card-icon-fallback[hidden] { display: none !important; }
+.spot-card-iconbox .spot-custom-icon.is-load-error { display: none !important; }
+.spot-card-iconbox .spot-card-icon-fallback { white-space: nowrap !important; overflow-wrap: normal !important; }
+.spot-card-heading-main { min-width: 0 !important; }
+.spot-card-name-line { display:flex; align-items:center; flex-wrap:wrap; gap:6px; min-width:0; margin-bottom:3px; }
+.spot-card-name-line h3 { margin:0 !important; min-width:0; overflow-wrap:anywhere; }
+.viewing-label,
+.map-spot-detail-viewing-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid rgba(196,0,24,.34);
+  border-radius: 999px;
+  background: rgba(255,209,209,.72);
+  color: #7b0011;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+.spot-card-description-line { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+#spotList .planner-spot .spot-content > p.spot-description-line { margin: 0 0 6px !important; }
+#spotList .spot-card-actions { display:flex; align-items:center; gap:8px; margin-top:12px; }
+#spotList .spot-card-actions button { flex:1 1 0; min-width:0; min-height:38px; border-radius:12px; }
+#spotList .spot-card-detail-button { border:1px solid rgba(127,135,143,.28); background:rgba(255,255,255,.42); color:#1c2024; font-weight:750; }
+#spotList .spot-card-select-button { border:1px solid rgba(196,0,24,.25); background:rgba(255,209,209,.22); color:#7b0011; font-weight:800; }
+#spotList .spot-card-select-button.is-selected { border-color:rgba(196,0,24,.55); background:rgba(255,209,209,.50); }
+
+/* Details and route endpoint picker, inspired by the supplied venue-map video. */
+.map-spot-detail-viewing-badge { margin-left: 5px; vertical-align: middle; }
+.map-spot-route-setup[hidden] { display:none !important; }
+.map-spot-route-setup {
+  margin-top: 14px !important;
+  padding: 14px !important;
+  border: 1px solid rgba(255,255,255,.74) !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.54) !important;
+  backdrop-filter: blur(16px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(145%) !important;
+}
+.map-spot-route-setup > h3 { margin:0 0 10px !important; font-size:14px !important; color:#000 !important; }
+.map-spot-route-origin-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:0 0 12px; }
+.map-spot-route-origin-option {
+  display:flex; align-items:center; justify-content:center; gap:5px;
+  min-width:0; min-height:42px; padding:8px 9px;
+  border:1px solid rgba(127,135,143,.34); border-radius:12px;
+  background:rgba(255,255,255,.38); color:#111; font-size:12px; font-weight:800;
+}
+.map-spot-route-origin-option.is-active {
+  border-color:rgba(0,65,255,.72); background:rgba(180,235,250,.46);
+  box-shadow:inset 0 0 0 1px rgba(0,65,255,.25); color:#000;
+}
+.map-spot-route-origin-select-wrap[hidden] { display:none !important; }
+.map-spot-route-origin-select-wrap { display:block; margin:0 0 12px; }
+.map-spot-route-origin-select-wrap > span { display:block; margin-bottom:5px; color:#272b2f; font-size:11px; font-weight:800; }
+.map-spot-route-origin-select {
+  display:block; width:100%; min-height:42px; box-sizing:border-box; padding:8px 10px;
+  border:1px solid rgba(127,135,143,.38); border-radius:12px;
+  background:rgba(255,255,255,.72); color:#000; font:inherit; font-size:12px;
+}
+.map-spot-route-endpoint-preview {
+  display:grid; grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr); gap:6px; align-items:center;
+  padding:10px; margin:2px 0 12px; border-radius:13px; background:rgba(255,255,255,.34);
+}
+.map-spot-route-endpoint-preview > div { min-width:0; }
+.map-spot-route-endpoint-preview > div > span { display:block; margin-bottom:3px; color:#5f666d; font-size:9px; font-weight:750; }
+.map-spot-route-endpoint-preview strong { display:block; overflow-wrap:anywhere; color:#111; font-size:11px; font-weight:850; line-height:1.35; }
+.map-spot-route-endpoint-arrow { text-align:center; color:#c40018; font-size:18px; font-weight:900; }
+.map-spot-route-setup-error { margin:0 0 10px !important; padding:8px 9px; border-radius:10px; background:rgba(255,209,209,.52); color:#7b0011; font-size:11px; line-height:1.5; }
+.map-spot-route-setup-error[hidden] { display:none !important; }
+.map-spot-route-confirm {
+  display:flex; align-items:center; justify-content:center; width:100%; min-height:45px; padding:10px 13px;
+  border:1px solid rgba(255,255,255,.54); border-radius:13px;
+  background:linear-gradient(135deg,#d21a2b,#a90018); color:#fff; font-size:13px; font-weight:900;
+  box-shadow:0 7px 18px rgba(196,0,24,.20);
+}
+.map-spot-route-confirm:disabled { opacity:.58; cursor:wait; }
+.map-spot-route-cancel {
+  display:block; width:100%; min-height:36px; margin-top:6px; padding:7px;
+  border:1px solid rgba(127,135,143,.24); border-radius:11px;
+  background:rgba(255,255,255,.26); color:#202328; font-size:11px; font-weight:800;
+}
+
+@media (max-width: 430px) {
+  #plannerBottomSheet.is-collapsed .planner-category-tray { width: calc(100vw - 20px) !important; padding: 3px !important; }
+  #plannerBottomSheet #plannerCategoryFront .planner-category-main-grid { gap: 2px !important; padding: 2px !important; }
+  #plannerBottomSheet #plannerCategoryFront .category-glyph { flex-basis: 21px !important; width: 21px !important; height: 21px !important; }
+  #plannerBottomSheet #plannerCategoryFront .category-svg { width: 19px !important; height: 19px !important; }
+  #plannerBottomSheet #plannerCategoryFront .category-label { font-size: clamp(7.5px, 2.15vw, 9px) !important; }
+  .spot-card-heading { grid-template-columns: 51px minmax(0,1fr) !important; gap:9px !important; }
+  .spot-card-iconbox { width:51px !important; height:51px !important; min-width:51px !important; border-radius:13px !important; }
+  .spot-card-iconbox .spot-custom-icon { width:28px !important; height:28px !important; }
+}
