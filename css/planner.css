@@ -2763,3 +2763,238 @@ body { overflow:hidden !important; background:#e9ece8; }
     transition-duration: .01ms !important;
   }
 }
+
+/* ============================================================
+   V38 — META-MAP STYLE CATEGORY CONTENT SWITCH, STABLE GLASS SHELL
+   Keep the single capsule fixed in place. Do not rotate individual tiles.
+   Only the category row content flips inside the same glass capsule.
+============================================================ */
+#plannerCategoryTray {
+  /* State-specific rules decide absolute (collapsed) vs sticky (expanded). */
+  isolation: isolate !important;
+}
+#plannerCategoryTray #foodCategorySwitcher {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  perspective: 1100px !important;
+  -webkit-perspective: 1100px !important;
+}
+#plannerCategoryTray #foodCategorySwitcher .food-category-flip-inner {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  transform: rotateY(0deg) !important;
+  transform-origin: 50% 50% !important;
+  transform-style: preserve-3d !important;
+  -webkit-transform-style: preserve-3d !important;
+  transition: transform 480ms cubic-bezier(.2,.74,.18,1) !important;
+  will-change: transform;
+}
+#plannerCategoryTray #foodCategorySwitcher.is-open .food-category-flip-inner {
+  transform: rotateY(180deg) !important;
+}
+#plannerCategoryTray .food-category-face {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform-origin: 50% 50% !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  overflow: hidden !important;
+}
+#plannerCategoryTray #plannerCategoryFront {
+  z-index: 2 !important;
+  transform: rotateY(0deg) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+#plannerCategoryTray #foodCategoryOptions {
+  z-index: 3 !important;
+  transform: rotateY(180deg) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: none !important;
+}
+#plannerCategoryTray #plannerCategoryFront[aria-hidden="true"] {
+  pointer-events: none !important;
+}
+#plannerCategoryTray #foodCategoryOptions[aria-hidden="false"] {
+  pointer-events: auto !important;
+}
+#plannerCategoryTray #foodCategorySwitcher.is-open #plannerCategoryFront {
+  pointer-events: none !important;
+}
+/* Clicked category buttons stay still; only the whole content surface switches. */
+#plannerCategoryTray .category-button,
+#plannerCategoryTray .category-button.is-flipping {
+  animation: none !important;
+  transform: none !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+}
+#plannerCategoryTray .category-button {
+  transition: background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-submenu-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 4px !important;
+  overflow: hidden !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-close-button,
+#plannerCategoryTray #foodCategoryOptions .food-option {
+  position: relative !important;
+  flex: 0 0 68px !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  max-height: 68px !important;
+  box-sizing: border-box !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  color: #707679 !important;
+  box-shadow: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-option.active {
+  color: #d84a43 !important;
+  background: rgba(255,255,255,.86) !important;
+  border-color: rgba(255,255,255,.72) !important;
+  box-shadow: 0 2px 8px rgba(26,33,30,.08), inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-choice-button + .food-choice-button {
+  border-top: 0 !important;
+}
+#plannerCategoryTray .food-category-trigger.active {
+  color: #d84a43 !important;
+  background: rgba(255,255,255,.91) !important;
+  border-color: rgba(255,255,255,.78) !important;
+  box-shadow: 0 2px 8px rgba(26,33,30,.08), inset 0 1px 0 rgba(255,255,255,.94) !important;
+}
+@media (max-width: 820px) {
+  #plannerCategoryTray #foodCategoryOptions .food-close-button,
+  #plannerCategoryTray #foodCategoryOptions .food-option {
+    flex-basis: 62px !important;
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    max-height: 68px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #plannerCategoryTray #foodCategorySwitcher .food-category-flip-inner {
+    transition-duration: .01ms !important;
+  }
+}
+
+/* In the expanded sheet the sheet itself is the glass surface. Give the
+   switcher a definite row height so its absolute front/back faces stay mounted. */
+.planner-spot-panel.is-expanded #plannerCategoryTray {
+  position: sticky !important;
+  top: 0 !important;
+  left: auto !important;
+  z-index: 40 !important;
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+}
+.planner-spot-panel.is-expanded #plannerCategoryTray #foodCategorySwitcher,
+.planner-spot-panel.is-expanded #plannerCategoryTray .food-category-flip-inner,
+.planner-spot-panel.is-expanded #plannerCategoryTray .food-category-face {
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+}
+.planner-spot-panel.is-expanded #plannerCategoryTray .planner-category-grid {
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+.planner-spot-panel.is-expanded #plannerCategoryTray #plannerCategoryFront .category-button,
+.planner-spot-panel.is-expanded #plannerCategoryTray .food-category-trigger {
+  flex: 0 0 59px !important;
+  width: 59px !important;
+  min-width: 59px !important;
+  max-width: 59px !important;
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+  border-radius: 13px !important;
+}
+.planner-spot-panel.is-expanded #plannerCategoryTray #foodCategoryOptions .food-close-button,
+.planner-spot-panel.is-expanded #plannerCategoryTray #foodCategoryOptions .food-option {
+  flex-basis: 59px !important;
+  width: 59px !important;
+  min-width: 59px !important;
+  max-width: 59px !important;
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+  border-radius: 13px !important;
+}

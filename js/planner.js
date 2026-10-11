@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V37-FULL-CAPSULE-FLIP";
-    console.log("[Fushimi Inari Smart Guide] planner.js V37-FULL-CAPSULE-FLIP loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V38-STABLE-CATEGORY-CAPSULE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V38-STABLE-CATEGORY-CAPSULE loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -191,8 +191,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const stayTime =
         document.getElementById("stayTime");
 
+    // Only real category buttons are wired to the filter handler. The Eat & Shop
+    // trigger opens the back-face menu but is never treated as a filter button.
     const categoryButtons =
-        document.querySelectorAll(".category");
+        document.querySelectorAll("#plannerCategoryFront .category, #foodCategoryOptions .food-option");
 
     const foodCategorySwitcher = document.getElementById("foodCategorySwitcher");
     const foodCategoryTrigger = document.getElementById("foodCategoryTrigger");
@@ -200,8 +202,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const plannerCategoryFront = document.getElementById("plannerCategoryFront");
     const foodCategoryClose = document.getElementById("foodCategoryClose");
 
-    // Flip the entire category capsule, not only the Eat & Shop tile.
-    // This keeps the back-side controls in the same visible glass bar.
+    // The capsule is a fixed-size, single-glass surface. Only its contents switch
+    // front/back; no individual category tile rotates and the bar never unmounts.
+    let activeCategoryFilter = "all";
+    let activeFoodFilter = "all";
+
     function setFoodCategorySwitcherOpen(open) {
         if (!foodCategorySwitcher || !foodCategoryTrigger || !foodCategoryOptions) return;
         const isOpen = Boolean(open);
@@ -215,14 +220,16 @@ document.addEventListener("DOMContentLoaded", function () {
     foodCategoryTrigger?.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
-        setFoodCategorySwitcherOpen(!foodCategorySwitcher?.classList.contains("is-open"));
+        setFoodCategorySwitcherOpen(!foodCategorySwitcher.classList.contains("is-open"));
     });
 
     foodCategoryClose?.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
         setFoodCategorySwitcherOpen(false);
-        window.setTimeout(function () { foodCategoryTrigger?.focus({ preventScroll: true }); }, 620);
+        window.setTimeout(function () {
+            foodCategoryTrigger?.focus({ preventScroll: true });
+        }, 500);
     });
 
     const plannerBottomSheet =
@@ -4245,85 +4252,63 @@ document.addEventListener("DOMContentLoaded", function () {
     // 検索
     // ============================================================
 
+    function getFilteredSpotsForCurrentState() {
+        const keyword = searchInput ? searchInput.value.trim().toLocaleLowerCase() : "";
+        const selectedCategory = activeCategoryFilter || "all";
+        const isFoodMode = selectedCategory === "__food_shop__";
+        const targetCategory = selectedCategory === "施設"
+            ? "facility"
+            : (isFoodMode ? "__food_shop__" : normalizeCategory(selectedCategory));
+        const foodFilter = activeFoodFilter || "all";
+
+        const eatPattern = /食事|飲食|料理|食堂|カフェ|喫茶|レストラン|ラーメン|そば|うどん|寿司|甘味|スイーツ|food|eat|restaurant|cafe|dining|ramen|noodle|sushi|dessert|餐|吃|咖啡|饮食|식당|음식|카페|식사/i;
+        const buyPattern = /お土産|土産|土みやげ|売店|物販|商店|雑貨|本舗|専門店|ショップ|買い物|購入|販売|グッズ|みやげ|souvenir|shopping|gift shop|retail|store|shop|merchandise|购物|纪念品|礼品|商店|판매|기념품|쇼핑|매장/i;
+
+        return spots.filter(function (spot) {
+            const searchFields = [
+                spot.id, spot.name, spot.description, spot.category, spot.keyword,
+                spot.keywords, spot.searchKeyword, spot.searchKeywords, spot.tags,
+                spot.address, spot.access, spot.englishName, spot.type, spot.icon
+            ];
+            const searchableText = searchFields.map(function (value) {
+                if (Array.isArray(value)) return value.map(getLocalizedValue).join(" ");
+                return getLocalizedValue(value);
+            }).join(" ").toLocaleLowerCase();
+            const matchesSearch = !keyword || searchableText.includes(keyword);
+
+            const normalizedSpotCategory = normalizeCategory(spot.category);
+            const foodFields = [spot.name, spot.category, spot.description, spot.tags,
+                spot.keywords, spot.keyword, spot.type, spot.icon, spot.englishName];
+            const foodText = foodFields.map(function (value) {
+                if (Array.isArray(value)) return value.map(getLocalizedValue).join(" ");
+                return getLocalizedValue(value);
+            }).join(" ").toLocaleLowerCase();
+
+            let matchesCategory;
+            if (isFoodMode) {
+                const isBuySpot = buyPattern.test(foodText) ||
+                    ["shop", "shopping", "store", "souvenir", "gift", "retail", "物販", "土産"].includes(normalizedSpotCategory);
+                // When a spot has conflicting text (for example a store name and a
+                // copied café description), treat explicit shop signals as Buy first.
+                const isEatSpot = !isBuySpot &&
+                    (normalizedSpotCategory === "restaurant" || eatPattern.test(foodText));
+                matchesCategory = foodFilter === "eat" ? isEatSpot :
+                    foodFilter === "buy" ? isBuySpot : (isEatSpot || isBuySpot);
+            } else {
+                matchesCategory = targetCategory === "all" ||
+                    (targetCategory === "sightseeing" && ["scenery", "shrine", "hiking"].includes(normalizedSpotCategory)) ||
+                    (targetCategory === "facility" && ["toilet", "guide", "施設", "トイレ", "案内"].includes(normalizedSpotCategory)) ||
+                    normalizedSpotCategory === targetCategory;
+            }
+            return matchesSearch && matchesCategory;
+        });
+    }
+
     function filterSpots() {
-
-        const keyword =
-            searchInput
-                ? searchInput.value
-                    .trim()
-                    .toLowerCase()
-                : "";
-
-        const activeButton =
-            document.querySelector(
-                ".category.active"
-            );
-
-        const selectedCategory =
-            activeButton
-                ? (
-                    activeButton.dataset.category ||
-                    activeButton.textContent.trim()
-                )
-                : "all";
-
-        const targetCategory = selectedCategory === "施設" ? "facility" : normalizeCategory(selectedCategory);
-        // The Eat / Shop controls are category buttons inside the always-visible capsule.
-        // Read the filter from the active category itself; never open a second row/panel.
-        const foodFilter = activeButton?.dataset.foodFilter || "all";
-
-        const filtered =
-            spots.filter(
-                function (spot) {
-
-                    const searchFields = [
-                        spot.id,
-                        spot.name,
-                        spot.description,
-                        spot.category,
-                        spot.keyword,
-                        spot.keywords,
-                        spot.searchKeyword,
-                        spot.searchKeywords,
-                        spot.tags,
-                        spot.address,
-                        spot.access,
-                        spot.englishName
-                    ];
-
-                    const searchableText = searchFields.map(function (value) {
-                        if (Array.isArray(value)) {
-                            return value.map(getLocalizedValue).join(" ");
-                        }
-                        return getLocalizedValue(value);
-                    }).join(" ").toLocaleLowerCase();
-
-                    const matchesSearch =
-                        !keyword || searchableText.includes(keyword);
-
-                    const normalizedSpotCategory = normalizeCategory(spot.category);
-                    const matchesCategory = targetCategory === "all" ||
-                        (targetCategory === "sightseeing" && ["scenery", "shrine", "hiking"].includes(normalizedSpotCategory)) ||
-                        (targetCategory === "facility" && ["toilet", "guide", "施設", "トイレ", "案内"].includes(normalizedSpotCategory)) ||
-                        normalizedSpotCategory === targetCategory;
-                    const foodText = [spot.name, spot.category, spot.description, spot.tags, spot.keywords, spot.keyword].map(getLocalizedValue).join(" ").toLowerCase();
-                    const matchesFood = targetCategory !== normalizeCategory("グルメ") || foodFilter === "all" ||
-                        (foodFilter === "buy" && /買|土産|土みやげ|shop|souvenir|shopping|売店|物販|기념품|쇼핑|购物|纪念品/i.test(foodText)) ||
-                        (foodFilter === "eat" && /食|飲|料理|カフェ|レストラン|food|eat|restaurant|cafe|餐|吃|식당|음식/i.test(foodText));
-                    return matchesSearch && matchesCategory && matchesFood;
-                }
-            );
-
+        const filtered = getFilteredSpotsForCurrentState();
         updateSpotResultCount(filtered.length);
-
-        displaySpots(
-            filtered
-        );
-
-        createMarkers(
-            filtered
-        );
-
+        displaySpots(filtered);
+        createMarkers(filtered);
         renderRouteNumberMarkers();
     }
 
@@ -4357,28 +4342,29 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     categoryButtons.forEach(function (button) {
-        button.addEventListener("click", function () {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
             const isFoodOption = button.matches(".food-option");
 
-            // The submenu action is already part of the capsule's flip.
-            // Do not run a second tile animation that can make the item vanish.
-            if (!isFoodOption) {
-                button.classList.remove("is-flipping");
-                void button.offsetWidth;
-                button.classList.add("is-flipping");
-                window.setTimeout(function () {
-                    button.classList.remove("is-flipping");
-                }, 720);
+            // Never animate the selected tile itself. The only transition is the
+            // shared contents switching inside the persistent capsule.
+            categoryButtons.forEach(function (item) { item.classList.remove("active"); });
+
+            if (isFoodOption) {
+                activeCategoryFilter = "__food_shop__";
+                activeFoodFilter = button.dataset.foodFilter === "buy" ? "buy" : "eat";
+                button.classList.add("active"); // remembers the last choice on the back face
+                foodCategoryTrigger?.classList.add("active");
+                setFoodCategorySwitcherOpen(false);
+                filterSpots();
+                return;
             }
 
-            categoryButtons.forEach(function (item) {
-                item.classList.remove("active");
-            });
+            activeCategoryFilter = button.dataset.category || button.textContent.trim() || "all";
+            activeFoodFilter = "all";
             button.classList.add("active");
-
-            // Show the Eat & Shop tile as selected on the front after choosing
-            // either option; all other categories clear that selection.
-            foodCategoryTrigger?.classList.toggle("active", isFoodOption);
+            foodCategoryTrigger?.classList.remove("active");
             setFoodCategorySwitcherOpen(false);
             filterSpots();
         });
@@ -7019,6 +7005,10 @@ document.addEventListener("DOMContentLoaded", function () {
         categoryButtons.forEach(function (button) {
             button.classList.remove("active");
         });
+        activeCategoryFilter = "all";
+        activeFoodFilter = "all";
+        foodCategoryTrigger?.classList.remove("active");
+        setFoodCategorySwitcherOpen(false);
 
         if (allButton) {
             allButton.classList.add("active");
@@ -7111,80 +7101,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
 
     function getCurrentlyVisibleSpots() {
-
-        const keyword =
-            searchInput
-                ? searchInput.value
-                    .trim()
-                    .toLowerCase()
-                : "";
-
-        const activeButton =
-            document.querySelector(
-                ".category.active"
-            );
-
-        const categoryValue =
-            activeButton
-                ? (
-                    activeButton.dataset.category ||
-                    activeButton.textContent.trim()
-                )
-                : "all";
-
-        const targetCategory =
-            normalizeCategory(
-                categoryValue
-            );
-
-        return spots.filter(
-            function (spot) {
-
-                const name =
-                    getLocalizedValue(
-                        spot.name
-                    )
-                    .toLowerCase();
-
-                const description =
-                    getLocalizedValue(
-                        spot.description
-                    )
-                    .toLowerCase();
-
-                const categoryText =
-                    String(
-                        spot.category ?? ""
-                    )
-                    .toLowerCase();
-
-                const matchesSearch =
-                    !keyword ||
-                    name.includes(
-                        keyword
-                    ) ||
-                    description.includes(
-                        keyword
-                    ) ||
-                    categoryText.includes(
-                        keyword
-                    );
-
-                const matchesCategory =
-                    targetCategory ===
-                        "all" ||
-
-                    normalizeCategory(
-                        spot.category
-                    ) ===
-                        targetCategory;
-
-                return (
-                    matchesSearch &&
-                    matchesCategory
-                );
-            }
-        );
+        return getFilteredSpotsForCurrentState();
     }
 
     // ============================================================
