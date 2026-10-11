@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V32-COHERENT-LIQUID-GLASS-NO-DOUBLE-PANEL";
-    console.log("[Fushimi Inari Smart Guide] planner.js V32-COHERENT-LIQUID-GLASS-NO-DOUBLE-PANEL loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V35-SIGHTSEEING-GROUP-FOOD-FLIP-SWITCH";
+    console.log("[Fushimi Inari Smart Guide] planner.js V35-SIGHTSEEING-GROUP-FOOD-FLIP-SWITCH loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -193,6 +193,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const categoryButtons =
         document.querySelectorAll(".category");
+
+    const foodCategorySwitcher = document.getElementById("foodCategorySwitcher");
+    const foodCategoryTrigger = document.getElementById("foodCategoryTrigger");
+    const foodCategoryOptions = document.getElementById("foodCategoryOptions");
+    const foodCategoryClose = document.getElementById("foodCategoryClose");
+
+    function setFoodCategorySwitcherOpen(open) {
+        if (!foodCategorySwitcher || !foodCategoryTrigger || !foodCategoryOptions) return;
+        foodCategorySwitcher.classList.toggle("is-open", Boolean(open));
+        foodCategoryTrigger.setAttribute("aria-expanded", String(Boolean(open)));
+        foodCategoryOptions.setAttribute("aria-hidden", String(!open));
+    }
+
+    foodCategoryTrigger?.addEventListener("click", function () {
+        setFoodCategorySwitcherOpen(!foodCategorySwitcher?.classList.contains("is-open"));
+    });
+
+    foodCategoryClose?.addEventListener("click", function () {
+        setFoodCategorySwitcherOpen(false);
+        foodCategoryTrigger?.focus({ preventScroll: true });
+    });
 
     const plannerBottomSheet =
         document.getElementById("plannerBottomSheet");
@@ -4237,8 +4258,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 : "all";
 
         const targetCategory = selectedCategory === "施設" ? "facility" : normalizeCategory(selectedCategory);
-        const foodFilterButton = document.querySelector(".food-subcategory.active");
-        const foodFilter = foodFilterButton ? foodFilterButton.dataset.foodFilter : "all";
+        // The Eat / Shop controls are category buttons inside the always-visible capsule.
+        // Read the filter from the active category itself; never open a second row/panel.
+        const foodFilter = activeButton?.dataset.foodFilter || "all";
 
         const filtered =
             spots.filter(
@@ -4271,6 +4293,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     const normalizedSpotCategory = normalizeCategory(spot.category);
                     const matchesCategory = targetCategory === "all" ||
+                        (targetCategory === "sightseeing" && ["scenery", "shrine", "hiking"].includes(normalizedSpotCategory)) ||
                         (targetCategory === "facility" && ["toilet", "guide", "施設", "トイレ", "案内"].includes(normalizedSpotCategory)) ||
                         normalizedSpotCategory === targetCategory;
                     const foodText = [spot.name, spot.category, spot.description, spot.tags, spot.keywords, spot.keyword].map(getLocalizedValue).join(" ").toLowerCase();
@@ -4319,15 +4342,8 @@ document.addEventListener("DOMContentLoaded", function () {
         if (event.key === "Escape") {
             closeMapSearch();
             hideSpotDetail();
+            setFoodCategorySwitcherOpen(false);
         }
-    });
-
-    const foodSubcategories = document.getElementById("foodSubcategories");
-    document.querySelectorAll(".food-subcategory").forEach(function (button) {
-        button.addEventListener("click", function () {
-            document.querySelectorAll(".food-subcategory").forEach(b => b.classList.toggle("active", b === button));
-            filterSpots();
-        });
     });
 
     categoryButtons.forEach(
@@ -4350,11 +4366,9 @@ document.addEventListener("DOMContentLoaded", function () {
                         "active"
                     );
 
-                    if (foodSubcategories) foodSubcategories.hidden = (button.dataset.category !== "グルメ");
-                    // Buying/eating choices should be visible as soon as the food category is tapped.
-                    if (button.dataset.category === "グルメ" && plannerBottomSheet?.classList.contains("is-collapsed")) {
-                        setPlannerSheetState("expanded");
-                    }
+                    // Selecting a category collapses the Eat / Shop flip-switch.
+                    // Scenery, shrine, and hiking are grouped under the single "Explore" category.
+                    setFoodCategorySwitcherOpen(false);
                     filterSpots();
                 }
             );
