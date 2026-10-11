@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V49-SPOT-FOCUS-ROUTE-ORIGIN";
-    console.log("[Fushimi Inari Smart Guide] planner.js V49-SPOT-FOCUS-ROUTE-ORIGIN loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V50-ROUTE-BUILDER-VIDEO-INSPIRED";
+    console.log("[Fushimi Inari Smart Guide] planner.js V50-ROUTE-BUILDER-VIDEO-INSPIRED loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -38,7 +38,10 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshPlannerCategoryLanguage();
     document.getElementById("languageSelect")?.addEventListener("change", function () {
         setTimeout(refreshPlannerCategoryLanguage, 0);
-        if (currentDetailSpot) setTimeout(function () {
+        if (activeRoutePlannerState) setTimeout(function () {
+            renderRoutePlanner(activeRoutePlannerState);
+        }, 0);
+        else if (currentDetailSpot) setTimeout(function () {
             renderMapSpotDetail(currentDetailSpot, mapSpotDetail?.classList.contains("is-expanded"));
         }, 0);
     });
@@ -142,6 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let routes = [];
     let selectedSpots = [];
     let currentDetailSpot = null;
+    let activeRoutePlannerState = null;
     // Spot currently being inspected in the detail sheet. This is separate from
     // route-selected spots so tapping a pin clearly highlights it without silently
     // adding it to the route.
@@ -3792,7 +3796,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function renderMapSpotDetail(spot, expanded) {
         if (!spot || !mapSpotDetail || !mapSpotDetailContent) return;
+        activeRoutePlannerState = null;
         currentDetailSpot = spot;
+        mapSpotDetail.classList.remove("is-route-mode");
+        plannerWorkspace?.classList.remove("has-route-planner");
+        window.requestAnimationFrame(function () {
+            if (typeof map?.invalidateSize === "function") map.invalidateSize({ pan: true });
+        });
         const name = getLocalizedValue(spot.name);
         const description = getLocalizedValue(spot.description) || "説明はまだ登録されていません。";
         const category = getCategoryLabel(spot.category);
@@ -3810,10 +3820,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const addressHtml = addressValue ? `<p class="map-spot-detail-meta">${escapeHTML(addressValue)}</p>` : "";
         const accessValue = getLocalizedValue(spot.access || "");
         const accessHtml = accessValue ? `<h3>アクセス</h3><p class="map-spot-detail-full-description">${escapeHTML(accessValue)}</p>` : "";
-        const routeOriginOptions = spots
-            .filter(item => String(item.id) !== String(spot.id))
-            .map(item => `<option value="${escapeHTML(String(item.id))}">${escapeHTML(getLocalizedValue(item.name))}</option>`)
-            .join("");
 
         mapSpotDetailContent.innerHTML = `
             <div class="map-spot-detail-summary">
@@ -3828,6 +3834,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 </div>
                 <p class="map-spot-detail-short-description">${escapeHTML(description)}</p>
+                <button type="button" class="map-spot-detail-route-button map-spot-detail-route-button-summary"><span class="route-button-symbol" aria-hidden="true">↗</span><span>${escapeHTML(routeSetupText("route"))}</span></button>
             </div>
             <div class="map-spot-detail-body">
                 <div class="map-spot-detail-divider"></div>
@@ -3837,29 +3844,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 ${addressHtml}
                 ${accessHtml}
                 ${urlHtml}
-                <button type="button" class="map-spot-detail-route-button">${escapeHTML(routeSetupText("route"))}</button>
-                <section class="map-spot-route-setup" hidden aria-label="${escapeHTML(routeSetupText("chooseOrigin"))}">
-                    <h3>${escapeHTML(routeSetupText("chooseOrigin"))}</h3>
-                    <div class="map-spot-route-origin-options" role="group" aria-label="${escapeHTML(routeSetupText("chooseOrigin"))}">
-                        <button type="button" class="map-spot-route-origin-option is-active" data-origin-mode="current" aria-pressed="true">⌖ ${escapeHTML(routeSetupText("currentLocation"))}</button>
-                        <button type="button" class="map-spot-route-origin-option" data-origin-mode="spot" aria-pressed="false">◎ ${escapeHTML(routeSetupText("anotherSpot"))}</button>
-                    </div>
-                    <label class="map-spot-route-origin-select-wrap" hidden>
-                        <span>${escapeHTML(routeSetupText("pickSpot"))}</span>
-                        <select class="map-spot-route-origin-select">
-                            <option value="">${escapeHTML(routeSetupText("pickSpot"))}</option>
-                            ${routeOriginOptions}
-                        </select>
-                    </label>
-                    <div class="map-spot-route-endpoint-preview">
-                        <div><span>${escapeHTML(routeSetupText("start"))}</span><strong class="map-spot-route-origin-summary">${escapeHTML(routeSetupText("currentLocation"))}</strong></div>
-                        <span class="map-spot-route-endpoint-arrow" aria-hidden="true">→</span>
-                        <div><span>${escapeHTML(routeSetupText("destination"))}</span><strong>${escapeHTML(name)}</strong></div>
-                    </div>
-                    <p class="map-spot-route-setup-error" role="status" hidden></p>
-                    <button type="button" class="map-spot-route-confirm">${escapeHTML(routeSetupText("confirmRoute"))}</button>
-                    <button type="button" class="map-spot-route-cancel">${escapeHTML(routeSetupText("cancel"))}</button>
-                </section>
             </div>
         `;
 
@@ -3868,109 +3852,229 @@ document.addEventListener("DOMContentLoaded", function () {
         mapSpotDetail.classList.toggle("is-compact", !expanded);
         plannerWorkspace?.classList.add("has-spot-detail");
 
-        const routeButton = mapSpotDetailContent.querySelector(".map-spot-detail-route-button");
-        const routeSetup = mapSpotDetailContent.querySelector(".map-spot-route-setup");
-        const originSelectWrap = mapSpotDetailContent.querySelector(".map-spot-route-origin-select-wrap");
-        const originSelect = mapSpotDetailContent.querySelector(".map-spot-route-origin-select");
-        const originSummary = mapSpotDetailContent.querySelector(".map-spot-route-origin-summary");
-        const originButtons = Array.from(mapSpotDetailContent.querySelectorAll("[data-origin-mode]"));
-        const confirmButton = mapSpotDetailContent.querySelector(".map-spot-route-confirm");
-        const cancelButton = mapSpotDetailContent.querySelector(".map-spot-route-cancel");
-        const setupError = mapSpotDetailContent.querySelector(".map-spot-route-setup-error");
-        let originMode = "current";
-
-        function refreshRouteOriginPreview() {
-            if (!originSummary) return;
-            if (originMode === "current") {
-                originSummary.textContent = routeSetupText("currentLocation");
-                return;
-            }
-            const selectedOrigin = spots.find(item => String(item.id) === String(originSelect?.value || ""));
-            originSummary.textContent = selectedOrigin ? getLocalizedValue(selectedOrigin.name) : routeSetupText("pickSpot");
-        }
-
-        function setRouteOriginMode(mode) {
-            originMode = mode === "spot" ? "spot" : "current";
-            originButtons.forEach(button => {
-                const active = button.dataset.originMode === originMode;
-                button.classList.toggle("is-active", active);
-                button.setAttribute("aria-pressed", String(active));
-            });
-            if (originSelectWrap) originSelectWrap.hidden = originMode !== "spot";
-            if (setupError) setupError.hidden = true;
-            refreshRouteOriginPreview();
-        }
-
+        const routeButton = mapSpotDetailContent.querySelector(".map-spot-detail-route-button-summary");
         routeButton?.addEventListener("click", function (event) {
             event.preventDefault();
             event.stopPropagation();
-            // The spot whose details are open immediately becomes the route destination.
             setSpotAsSingleDestination(spot);
-            routeButton.hidden = true;
-            if (routeSetup) routeSetup.hidden = false;
-            mapSpotDetail.classList.add("is-expanded");
-            mapSpotDetail.classList.remove("is-compact");
-            window.requestAnimationFrame(function () {
-                routeSetup?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-            });
+            activeRoutePlannerState = {
+                destinationSpot: spot,
+                originMode: "current",
+                startSpotId: "",
+                travelMode: "walk",
+                locationStatus: ""
+            };
+            renderRoutePlanner(activeRoutePlannerState);
         });
+    }
 
-        originButtons.forEach(button => {
-            button.addEventListener("click", function () {
-                setRouteOriginMode(button.dataset.originMode);
-            });
+    // Route-builder inspired by the supplied venue-map video. On desktop it becomes
+    // a left-side glass panel; on small screens it stays a bottom sheet over the map.
+    function renderRoutePlanner(state) {
+        if (!state || !mapSpotDetail || !mapSpotDetailContent) return;
+        activeRoutePlannerState = state;
+        currentDetailSpot = state.destinationSpot;
+        const destination = state.destinationSpot;
+        const destinationName = getLocalizedValue(destination?.name || "");
+        const language = getCurrentLanguage();
+        const t = {
+            back: {ja:"詳細に戻る", en:"Back to details", zh:"返回详情", ko:"상세로 돌아가기"},
+            title: {ja:"ルート検索", en:"Plan your route", zh:"路线规划", ko:"경로 검색"},
+            subtitle: {ja:"出発地と到着地を確認", en:"Confirm your start and destination", zh:"确认出发地和目的地", ko:"출발지와 도착지 확인"},
+            start: {ja:"出発地", en:"START", zh:"出发地", ko:"출발지"},
+            destination: {ja:"到着地", en:"DESTINATION", zh:"目的地", ko:"도착지"},
+            current: {ja:"現在地", en:"My location", zh:"当前位置", ko:"현재 위치"},
+            getLocation: {ja:"現在地を取得", en:"Use current location", zh:"获取当前位置", ko:"현재 위치 가져오기"},
+            currentHelp: {ja:"端末の位置情報を使います", en:"Uses your device location", zh:"使用设备的位置", ko:"기기의 위치 정보를 사용합니다"},
+            startMode: {ja:"出発地の指定方法", en:"Choose starting point", zh:"选择出发方式", ko:"출발지 선택 방법"},
+            fromCurrent: {ja:"現在地から", en:"My location", zh:"当前位置", ko:"현재 위치"},
+            fromSpot: {ja:"スポットから", en:"A spot", zh:"从地点出发", ko:"장소에서"},
+            chooseSpot: {ja:"出発するスポットを選択", en:"Choose a starting spot", zh:"选择出发地点", ko:"출발 장소 선택"},
+            swap: {ja:"出発地と到着地を入れ替え", en:"Swap start and destination", zh:"交换出发地和目的地", ko:"출발지와 도착지 바꾸기"},
+            method: {ja:"移動方法", en:"Travel mode", zh:"出行方式", ko:"이동 방법"},
+            walking: {ja:"徒歩", en:"Walking", zh:"步行", ko:"도보"},
+            accessible: {ja:"車いす対応", en:"Wheelchair", zh:"无障碍", ko:"휠체어"},
+            accessibleNote: {ja:"車いす対応ルートのデータは準備中です。現在は徒歩ルートを案内します。", en:"Accessible route data is still being prepared; walking routes are available now.", zh:"无障碍路线数据仍在准备中，目前提供步行路线。", ko:"휠체어 대응 경로 데이터는 준비 중이며 현재는 도보 경로를 안내합니다."},
+            search: {ja:"ルート検索", en:"Find route", zh:"搜索路线", ko:"경로 검색"},
+            loading: {ja:"ルートを作成中…", en:"Building route…", zh:"正在生成路线…", ko:"경로 생성 중…"},
+            cancel: {ja:"キャンセル", en:"Cancel", zh:"取消", ko:"취소"},
+            chooseStartError: {ja:"出発するスポットを選択してください。", en:"Choose a starting spot.", zh:"请选择出发地点。", ko:"출발 장소를 선택해 주세요."},
+            sameSpotError: {ja:"出発地と到着地は別のスポットを選択してください。", en:"Start and destination must be different spots.", zh:"出发地和目的地不能相同。", ko:"출발지와 도착지는 서로 다른 장소여야 합니다."},
+            locationPending: {ja:"ルート検索時に位置情報を確認します。", en:"Location will be requested when you search.", zh:"搜索路线时将请求位置权限。", ko:"경로 검색 시 위치 정보를 확인합니다."},
+            locationSuccess: {ja:"現在地を取得しました", en:"Location acquired", zh:"已获取当前位置", ko:"현재 위치를 가져왔습니다"},
+            locationError: {ja:"現在地を取得できません。ブラウザの位置情報許可を確認してください。", en:"Could not get location. Check your browser's location permission.", zh:"无法获取当前位置，请检查浏览器位置权限。", ko:"현재 위치를 가져올 수 없습니다. 브라우저 위치 권한을 확인해 주세요."},
+            swapHint: {ja:"入れ替えはスポットを出発地に選ぶと利用できます", en:"Choose a spot as the start to swap endpoints", zh:"选择地点作为出发地后即可交换", ko:"장소를 출발지로 선택하면 바꿀 수 있습니다"}
+        };
+        const text = key => t[key]?.[language] || t[key]?.ja || key;
+        const startSpot = state.originMode === "spot" ? spots.find(item => String(item.id) === String(state.startSpotId || "")) : null;
+        const startName = state.originMode === "current" ? text("current") : (startSpot ? getLocalizedValue(startSpot.name) : text("chooseSpot"));
+        const originOptions = spots.filter(item => String(item.id) !== String(destination?.id)).map(item => {
+            const id = String(item.id);
+            const selected = id === String(state.startSpotId || "") ? " selected" : "";
+            return `<option value="${escapeHTML(id)}"${selected}>${escapeHTML(getLocalizedValue(item.name))}</option>`;
+        }).join("");
+        const locationStatus = state.locationStatus || text("locationPending");
+        const swapDisabled = !(state.originMode === "spot" && startSpot);
+
+        mapSpotDetail.classList.add("is-route-mode", "is-expanded");
+        mapSpotDetail.classList.remove("is-compact");
+        plannerWorkspace?.classList.add("has-spot-detail", "has-route-planner");
+        window.requestAnimationFrame(function () {
+            if (typeof map?.invalidateSize === "function") map.invalidateSize({ pan: true });
         });
-        originSelect?.addEventListener("change", function () {
-            if (setupError) setupError.hidden = true;
-            refreshRouteOriginPreview();
+        mapSpotDetailContent.innerHTML = `
+          <div class="map-route-builder">
+            <header class="map-route-builder-header">
+              <button type="button" class="map-route-builder-back" aria-label="${escapeHTML(text("back"))}">‹</button>
+              <div class="map-route-builder-heading"><h2>${escapeHTML(text("title"))}</h2><p>${escapeHTML(text("subtitle"))}</p></div>
+              <span class="map-route-builder-badge" aria-hidden="true">${escapeHTML(text("walking"))}</span>
+            </header>
+            <section class="map-route-endpoints" aria-label="${escapeHTML(text("title"))}">
+              <div class="map-route-endpoint map-route-endpoint-start">
+                <span class="map-route-point-dot" aria-hidden="true"></span>
+                <div class="map-route-endpoint-copy"><span class="map-route-endpoint-label">${escapeHTML(text("start"))}</span><strong class="map-route-start-name">${escapeHTML(startName)}</strong><small>${escapeHTML(state.originMode === "current" ? text("currentHelp") : text("chooseSpot"))}</small></div>
+                <button type="button" class="map-route-location-button" ${state.originMode === "spot" ? "hidden" : ""}>${escapeHTML(text("getLocation"))}</button>
+              </div>
+              <div class="map-route-endpoint-connector">
+                <span aria-hidden="true"></span>
+                <button type="button" class="map-route-swap" aria-label="${escapeHTML(text("swap"))}" title="${escapeHTML(swapDisabled ? text("swapHint") : text("swap"))}" ${swapDisabled ? "disabled" : ""}>⇅</button>
+              </div>
+              <div class="map-route-endpoint map-route-endpoint-destination">
+                <span class="map-route-point-dot" aria-hidden="true"></span>
+                <div class="map-route-endpoint-copy"><span class="map-route-endpoint-label">${escapeHTML(text("destination"))}</span><strong>${escapeHTML(destinationName)}</strong><small>${escapeHTML(getCategoryLabel(destination?.category || ""))}</small></div>
+              </div>
+            </section>
+            <section class="map-route-origin-picker">
+              <h3>${escapeHTML(text("startMode"))}</h3>
+              <div class="map-route-origin-mode" role="group" aria-label="${escapeHTML(text("startMode"))}">
+                <button type="button" data-origin-mode="current" class="${state.originMode === "current" ? "is-active" : ""}" aria-pressed="${state.originMode === "current"}"><span aria-hidden="true">⌖</span>${escapeHTML(text("fromCurrent"))}</button>
+                <button type="button" data-origin-mode="spot" class="${state.originMode === "spot" ? "is-active" : ""}" aria-pressed="${state.originMode === "spot"}"><span aria-hidden="true">◎</span>${escapeHTML(text("fromSpot"))}</button>
+              </div>
+              <label class="map-route-start-select-wrap" ${state.originMode === "spot" ? "" : "hidden"}>
+                <span>${escapeHTML(text("chooseSpot"))}</span>
+                <select class="map-route-start-select"><option value="">${escapeHTML(text("chooseSpot"))}</option>${originOptions}</select>
+              </label>
+              <p class="map-route-location-status" role="status">${escapeHTML(locationStatus)}</p>
+            </section>
+            <section class="map-route-mode-section">
+              <h3>${escapeHTML(text("method"))}</h3>
+              <div class="map-route-mode-options">
+                <button type="button" class="map-route-mode-option is-active" aria-pressed="true" data-travel-mode="walk"><span aria-hidden="true">♙</span>${escapeHTML(text("walking"))}</button>
+                <button type="button" class="map-route-mode-option is-unavailable" aria-disabled="true" disabled title="${escapeHTML(text("accessibleNote"))}"><span aria-hidden="true">♿</span>${escapeHTML(text("accessible"))}<small>準備中</small></button>
+              </div>
+              <p class="map-route-mode-note">${escapeHTML(text("accessibleNote"))}</p>
+            </section>
+            <p class="map-route-builder-error" role="alert" hidden></p>
+            <div class="map-route-builder-actions">
+              <button type="button" class="map-route-builder-submit"><span aria-hidden="true">➜</span><span>${escapeHTML(text("search"))}</span></button>
+              <button type="button" class="map-route-builder-cancel">${escapeHTML(text("cancel"))}</button>
+            </div>
+          </div>`;
+
+        const backButton = mapSpotDetailContent.querySelector(".map-route-builder-back");
+        const currentButton = mapSpotDetailContent.querySelector(".map-route-location-button");
+        const status = mapSpotDetailContent.querySelector(".map-route-location-status");
+        const originModeButtons = Array.from(mapSpotDetailContent.querySelectorAll("[data-origin-mode]"));
+        const startSelect = mapSpotDetailContent.querySelector(".map-route-start-select");
+        const startSelectWrap = mapSpotDetailContent.querySelector(".map-route-start-select-wrap");
+        const swapButton = mapSpotDetailContent.querySelector(".map-route-swap");
+        const startNameNode = mapSpotDetailContent.querySelector(".map-route-start-name");
+        const errorNode = mapSpotDetailContent.querySelector(".map-route-builder-error");
+        const submitButton = mapSpotDetailContent.querySelector(".map-route-builder-submit");
+        const cancelButton = mapSpotDetailContent.querySelector(".map-route-builder-cancel");
+
+        backButton?.addEventListener("click", function () {
+            activeRoutePlannerState = null;
+            renderMapSpotDetail(state.destinationSpot, true);
+        });
+        originModeButtons.forEach(button => button.addEventListener("click", function () {
+            state.originMode = button.dataset.originMode === "spot" ? "spot" : "current";
+            state.locationStatus = state.originMode === "current" ? text("locationPending") : text("chooseSpot");
+            if (state.originMode === "current") state.startSpotId = "";
+            renderRoutePlanner(state);
+        }));
+        startSelect?.addEventListener("change", function () {
+            state.startSpotId = startSelect.value;
+            const newStart = spots.find(item => String(item.id) === String(state.startSpotId));
+            if (startNameNode) startNameNode.textContent = newStart ? getLocalizedValue(newStart.name) : text("chooseSpot");
+            if (errorNode) errorNode.hidden = true;
+            if (swapButton) {
+                const disabled = !newStart;
+                swapButton.disabled = disabled;
+                swapButton.title = disabled ? text("swapHint") : text("swap");
+            }
+            const small = mapSpotDetailContent.querySelector(".map-route-endpoint-start .map-route-endpoint-copy small");
+            if (small) small.textContent = newStart ? getCategoryLabel(newStart.category || "") : text("chooseSpot");
+        });
+        swapButton?.addEventListener("click", function () {
+            if (state.originMode !== "spot" || !state.startSpotId) return;
+            const oldDestination = state.destinationSpot;
+            const newDestination = spots.find(item => String(item.id) === String(state.startSpotId));
+            if (!oldDestination || !newDestination || String(newDestination.id) === String(oldDestination.id)) return;
+            state.destinationSpot = newDestination;
+            state.startSpotId = String(oldDestination.id);
+            currentDetailSpot = newDestination;
+            activeViewedSpotId = String(newDestination.id);
+            filterSpots();
+            renderRoutePlanner(state);
+        });
+        currentButton?.addEventListener("click", async function () {
+            if (status) status.textContent = language === "en" ? "Getting location…" : language === "zh" ? "正在获取位置…" : language === "ko" ? "위치 가져오는 중…" : "現在地を取得中…";
+            currentButton.disabled = true;
+            try {
+                await ensureCurrentLocation();
+                state.locationStatus = text("locationSuccess");
+                if (status) status.textContent = state.locationStatus;
+            } catch (error) {
+                console.warn("ルートパネルから現在地を取得できませんでした。", error);
+                state.locationStatus = text("locationError");
+                if (status) status.textContent = state.locationStatus;
+            } finally {
+                currentButton.disabled = false;
+            }
         });
         cancelButton?.addEventListener("click", function () {
-            if (routeSetup) routeSetup.hidden = true;
-            if (routeButton) routeButton.hidden = false;
-            if (setupError) setupError.hidden = true;
+            activeRoutePlannerState = null;
+            renderMapSpotDetail(state.destinationSpot, false);
         });
-        confirmButton?.addEventListener("click", async function () {
-            if (setupError) setupError.hidden = true;
-            let options;
-            if (originMode === "spot") {
-                const startSpot = spots.find(item => String(item.id) === String(originSelect?.value || ""));
-                if (!startSpot) {
-                    if (setupError) {
-                        setupError.textContent = routeSetupText("selectStartError");
-                        setupError.hidden = false;
-                    }
-                    return;
-                }
-                if (String(startSpot.id) === String(spot.id)) {
-                    if (setupError) {
-                        setupError.textContent = routeSetupText("sameSpotError");
-                        setupError.hidden = false;
-                    }
-                    return;
-                }
-                options = { destinationSpot: spot, originMode: "spot", startSpot };
-            } else {
-                options = { destinationSpot: spot, originMode: "current" };
+        submitButton?.addEventListener("click", async function () {
+            if (errorNode) { errorNode.hidden = true; errorNode.textContent = ""; }
+            const startSpot = state.originMode === "spot" ? spots.find(item => String(item.id) === String(state.startSpotId || "")) : null;
+            if (state.originMode === "spot" && !startSpot) {
+                if (errorNode) { errorNode.textContent = text("chooseStartError"); errorNode.hidden = false; }
+                return;
             }
-            confirmButton.disabled = true;
-            confirmButton.textContent = getCurrentLanguage() === "en" ? "Creating route…" : getCurrentLanguage() === "zh" ? "正在创建路线…" : getCurrentLanguage() === "ko" ? "경로 생성 중…" : "ルートを作成中…";
+            if (startSpot && String(startSpot.id) === String(state.destinationSpot.id)) {
+                if (errorNode) { errorNode.textContent = text("sameSpotError"); errorNode.hidden = false; }
+                return;
+            }
+            submitButton.disabled = true;
+            submitButton.innerHTML = `<span aria-hidden="true">◌</span><span>${escapeHTML(text("loading"))}</span>`;
             try {
-                await createRoute(options);
+                await createRoute({
+                    destinationSpot: state.destinationSpot,
+                    originMode: state.originMode,
+                    startSpot: startSpot || null,
+                    travelMode: state.travelMode
+                });
             } finally {
-                if (confirmButton.isConnected) {
-                    confirmButton.disabled = false;
-                    confirmButton.textContent = routeSetupText("confirmRoute");
+                if (submitButton.isConnected) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = `<span aria-hidden="true">➜</span><span>${escapeHTML(text("search"))}</span>`;
                 }
             }
         });
-        setRouteOriginMode("current");
     }
 
     function hideSpotDetail() {
         if (!mapSpotDetail) return;
         mapSpotDetail.hidden = true;
-        mapSpotDetail.classList.remove("is-expanded", "is-compact");
-        plannerWorkspace?.classList.remove("has-spot-detail");
+        mapSpotDetail.classList.remove("is-expanded", "is-compact", "is-route-mode");
+        plannerWorkspace?.classList.remove("has-spot-detail", "has-route-planner");
+        activeRoutePlannerState = null;
+        window.requestAnimationFrame(function () {
+            if (typeof map?.invalidateSize === "function") map.invalidateSize({ pan: true });
+        });
         currentDetailSpot = null;
         activeViewedSpotId = null;
         filterSpots();
@@ -4028,10 +4132,14 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     mapSpotDetailContent?.addEventListener("pointerdown", function (event) {
         if (!event.target.closest(".map-spot-detail-summary")) return;
+        // Buttons / links in the compact summary must remain tappable. Capturing
+        // their pointer here suppresses their click event on some mobile browsers.
+        if (event.target.closest("button, a, input, select, textarea, label")) return;
         handleDetailPointerDown(event);
     }, { passive: true });
     mapSpotDetailContent?.addEventListener("pointerup", function (event) {
         if (!event.target.closest(".map-spot-detail-summary")) return;
+        if (event.target.closest("button, a, input, select, textarea, label")) return;
         handleDetailPointerUp(event);
     }, { passive: true });
 
