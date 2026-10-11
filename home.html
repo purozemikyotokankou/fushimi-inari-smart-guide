@@ -805,6 +805,136 @@
             }
         }
 
+        /* =========================================================
+           V31 — ONE-LINE RESPONSIVE HOME HEADER
+           ブランド / ナビ / 言語選択を、スマホでも必ず一段に収める
+        ========================================================= */
+        body.home-page header .logo {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 5px;
+            min-width: 0;
+            white-space: nowrap !important;
+            flex-wrap: nowrap !important;
+        }
+
+        body.home-page header .home-brand-mark {
+            flex: 0 0 auto;
+            line-height: 1;
+        }
+
+        body.home-page header .home-brand-name {
+            display: inline-block;
+            white-space: nowrap !important;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: .035em;
+        }
+
+        @media (max-width: 768px) {
+            body.home-page header {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                width: calc(100% - 16px) !important;
+                height: 54px !important;
+                min-height: 54px !important;
+                max-height: 54px !important;
+                padding: 0 8px !important;
+                gap: clamp(3px, 1.2vw, 7px) !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }
+
+            body.home-page header .logo {
+                order: 1 !important;
+                flex: 0 0 auto !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                overflow: visible !important;
+                text-overflow: clip !important;
+                font-size: clamp(8px, 2.5vw, 11px) !important;
+                line-height: 1 !important;
+                letter-spacing: -.025em !important;
+            }
+
+            body.home-page header .home-brand-name {
+                letter-spacing: -.045em !important;
+            }
+
+            body.home-page header nav {
+                order: 2 !important;
+                display: flex !important;
+                flex: 1 1 auto !important;
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 2px !important;
+                gap: 0 !important;
+                flex-wrap: nowrap !important;
+                justify-content: center !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }
+
+            body.home-page header nav a {
+                display: inline-flex !important;
+                flex: 0 1 auto !important;
+                min-width: 0 !important;
+                min-height: 30px !important;
+                padding: 0 clamp(3px, .9vw, 7px) !important;
+                margin: 0 !important;
+                font-size: clamp(9px, 2.7vw, 12px) !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+                letter-spacing: -.02em;
+            }
+
+            body.home-page header #languageSelect {
+                order: 3 !important;
+                flex: 0 0 57px !important;
+                width: 57px !important;
+                min-width: 57px !important;
+                max-width: 57px !important;
+                min-height: 30px !important;
+                margin: 0 !important;
+                padding: 0 3px !important;
+                font-size: 9px !important;
+                line-height: 1 !important;
+                box-sizing: border-box !important;
+                white-space: nowrap !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            body.home-page header {
+                width: calc(100% - 12px) !important;
+                padding: 0 6px !important;
+                gap: 3px !important;
+            }
+
+            body.home-page header .logo {
+                font-size: 8px !important;
+                gap: 3px;
+            }
+
+            body.home-page header nav a {
+                padding: 0 3px !important;
+                font-size: 9px !important;
+            }
+
+            body.home-page header #languageSelect {
+                flex-basis: 52px !important;
+                width: 52px !important;
+                min-width: 52px !important;
+                max-width: 52px !important;
+                font-size: 8px !important;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *,
             *::before,
@@ -823,7 +953,7 @@
     <div class="liquid-cursor" aria-hidden="true"></div>
 
     <header>
-        <div class="logo">⛩ Fushimi Inari Smart Guide</div>
+        <div class="logo" aria-label="Fushimi Inari Smart Guide"><span class="home-brand-mark" aria-hidden="true">⛩</span><span class="home-brand-name">FUSHIMI INARI SMART GUIDE</span></div>
 
         <nav>
             <a class="liquid-nav-link" href="home.html" data-i18n="home">ホーム</a>
