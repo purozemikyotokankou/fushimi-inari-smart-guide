@@ -5454,7 +5454,7 @@ body.spot-share-open { overflow: hidden; }
    V57 — User-made category SVG icons + CUD accent palette
    Place these transparent SVG files in ./images/icons/:
    category-all.svg, category-sightseeing.svg, category-food-shop.svg,
-   category-transport.svg, category-facilities.svg, category-eat.svg,
+   category-transport.svg, category-facilities.svg, category-food.svg,
    category-buy.svg, category-back.svg.
    SVG shape is used as a CSS mask, so CSS controls the exact accessible color.
    This only affects the category bar; map pins and route lines are unchanged.
@@ -5683,9 +5683,9 @@ body.spot-share-open { overflow: hidden; }
   -webkit-mask-image: url("../images/icons/category-facilities.svg") !important;
   mask-image: url("../images/icons/category-facilities.svg") !important;
 }
-#plannerCategoryTray .category-glyph-image[style*="category-eat.svg"] {
-  -webkit-mask-image: url("../images/icons/category-eat.svg") !important;
-  mask-image: url("../images/icons/category-eat.svg") !important;
+#plannerCategoryTray .category-glyph-image[style*="category-food.svg"] {
+  -webkit-mask-image: url("../images/icons/category-food.svg") !important;
+  mask-image: url("../images/icons/category-food.svg") !important;
 }
 #plannerCategoryTray .category-glyph-image[style*="category-buy.svg"] {
   -webkit-mask-image: url("../images/icons/category-buy.svg") !important;
@@ -5757,17 +5757,53 @@ body.spot-share-open { overflow: hidden; }
 }
 
 /* ============================================================
-   V59 — Animated SVG Route Path + Glowing Traveling Light Particles
-   The base orange path stays visible. The other SVG paths use animated dash
-   offsets, so light streaks and particles travel forward along the same real
-   route geometry rather than blinking the whole line.
+   V60 — Category SVG corrections + static route line
    ============================================================ */
+
+/* Selected category labels stay white, including All and Facilities. */
+#plannerCategoryTray #plannerCategoryFront [data-category="all"],
+#plannerCategoryTray #plannerCategoryFront [data-category="施設"],
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
+  --category-active-text: #FFFFFF !important;
+}
+
+/* Eat and Buy now use white knockout icons while selected. */
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"].active .category-glyph-image,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"].active .category-glyph-image {
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+}
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"].active .category-label,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"].active .category-label {
+  color: #FFFFFF !important;
+}
+
+/* The Eat option uses images/icons/category-food.svg. */
+#plannerCategoryTray .category-glyph-image[style*="category-food.svg"] {
+  -webkit-mask-image: url("../images/icons/category-food.svg") !important;
+  mask-image: url("../images/icons/category-food.svg") !important;
+}
+
+/* Static route only: retain the actual route geometry, remove traveling lights. */
 .planner-route-outline-line {
   stroke: #FFFFFF !important;
   stroke-width: 12px !important;
   stroke-opacity: .96 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
+  filter: none !important;
+  animation: none !important;
   pointer-events: none !important;
 }
 .planner-route-base-line {
@@ -5776,67 +5812,16 @@ body.spot-share-open { overflow: hidden; }
   stroke-opacity: 1 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  filter: drop-shadow(0 0 2px rgba(102,51,0,.75)) drop-shadow(0 0 3px rgba(255,255,255,.95)) !important;
+  filter: none !important;
+  animation: none !important;
   pointer-events: none !important;
 }
-.planner-route-flow-line {
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-  pointer-events: none !important;
-  vector-effect: non-scaling-stroke !important;
-  will-change: stroke-dashoffset, filter;
-}
-.planner-route-light-trail {
-  stroke: #FFFDEB !important;
-  stroke-width: 4.4px !important;
-  stroke-opacity: 1 !important;
-  stroke-dasharray: 3 33 !important;
-  filter: drop-shadow(0 0 2px rgba(255,255,255,1))
-          drop-shadow(0 0 6px rgba(255,245,156,.98))
-          drop-shadow(0 0 12px rgba(255,153,0,.92)) !important;
-  animation: fushimi-route-flow 0.88s linear infinite,
-             fushimi-route-pulse 0.46s ease-in-out infinite alternate !important;
-}
-.planner-route-particle-a {
-  stroke: #FFFFFF !important;
-  stroke-width: 5.2px !important;
-  stroke-opacity: 1 !important;
-  stroke-dasharray: .1 70 4 185 !important;
-  filter: drop-shadow(0 0 3px #FFFFFF)
-          drop-shadow(0 0 8px rgba(118,221,255,.98))
-          drop-shadow(0 0 15px rgba(82,171,255,.88)) !important;
-  animation: fushimi-route-particle-a 1.7s linear infinite !important;
-}
+/* Legacy light layers are intentionally disabled for this version. */
+.planner-route-flow-line,
+.planner-route-light-trail,
+.planner-route-particle-a,
 .planner-route-particle-b {
-  stroke: #FFF0B8 !important;
-  stroke-width: 3.7px !important;
-  stroke-opacity: 1 !important;
-  stroke-dasharray: .1 112 2.5 205 !important;
-  filter: drop-shadow(0 0 3px rgba(255,255,255,1))
-          drop-shadow(0 0 8px rgba(255,173,75,1))
-          drop-shadow(0 0 14px rgba(255,128,45,.86)) !important;
-  animation: fushimi-route-particle-b 2.2s linear infinite !important;
-}
-@keyframes fushimi-route-flow {
-  from { stroke-dashoffset: 0; }
-  to   { stroke-dashoffset: -72; }
-}
-@keyframes fushimi-route-particle-a {
-  from { stroke-dashoffset: 0; }
-  to   { stroke-dashoffset: -259; }
-}
-@keyframes fushimi-route-particle-b {
-  from { stroke-dashoffset: 0; }
-  to   { stroke-dashoffset: -320; }
-}
-@keyframes fushimi-route-pulse {
-  from { stroke-opacity: .80; }
-  to   { stroke-opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .planner-route-light-trail,
-  .planner-route-particle-a,
-  .planner-route-particle-b {
-    animation: none !important;
-  }
+  display: none !important;
+  animation: none !important;
+  filter: none !important;
 }

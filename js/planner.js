@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V59-SVG-ROUTE-PATH-GLOWING-PARTICLES";
-    console.log("[Fushimi Inari Smart Guide] planner.js V59-SVG-ROUTE-PATH-GLOWING-PARTICLES loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V60-CATEGORY-FOOD-WHITE-SOLID-ROUTE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V60-CATEGORY-FOOD-WHITE-SOLID-ROUTE loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -157,8 +157,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let routeLine = null;
     let routeOutlineLine = null;
-    let routeFlowLine = null;
-    let routeParticleLines = [];
     let routeSegments = [];
     let routeNumberMarkers = [];
 
@@ -6279,13 +6277,6 @@ document.addEventListener("DOMContentLoaded", function () {
             map.removeLayer(routeOutlineLine);
             routeOutlineLine = null;
         }
-        if (routeFlowLine) {
-            map.removeLayer(routeFlowLine);
-            routeFlowLine = null;
-        }
-        routeParticleLines.forEach(function (line) { try { map.removeLayer(line); } catch (_) {} });
-        routeParticleLines = [];
-
         clearRouteNumberMarkers();
 
         routeSegments = [];
@@ -6507,35 +6498,7 @@ document.addEventListener("DOMContentLoaded", function () {
             interactive: false
         }).addTo(map);
 
-        // V55: SVG strokes follow the exact route geometry. The base route remains
-        // visible underneath while several animated dash layers create bright,
-        // forward-moving particles and a short glowing trail.
-        routeFlowLine = L.polyline(allCoordinates, {
-            pane: "plannerRoutePane",
-            renderer: routeSvgRenderer,
-            className: "planner-route-flow-line planner-route-light-trail",
-            color: "#fffdf5",
-            weight: 4.2,
-            opacity: 1,
-            dashArray: "2 34",
-            dashOffset: "0",
-            lineCap: "round",
-            lineJoin: "round",
-            interactive: false,
-            bubblingMouseEvents: false
-        }).addTo(map);
-        routeParticleLines = [
-            L.polyline(allCoordinates, {
-                pane: "plannerRoutePane", renderer: routeSvgRenderer, className: "planner-route-flow-line planner-route-particle-a",
-                color: "#ffffff", weight: 5, opacity: 1, dashArray: "0.1 76 3 180", dashOffset: "0",
-                lineCap: "round", lineJoin: "round", interactive: false, bubblingMouseEvents: false
-            }).addTo(map),
-            L.polyline(allCoordinates, {
-                pane: "plannerRoutePane", renderer: routeSvgRenderer, className: "planner-route-flow-line planner-route-particle-b",
-                color: "#fff0b8", weight: 3.4, opacity: .96, dashArray: "0.1 118 2 210", dashOffset: "0",
-                lineCap: "round", lineJoin: "round", interactive: false, bubblingMouseEvents: false
-            }).addTo(map)
-        ];
+        // V60: keep only the steady route path; no animated light/particle overlays.
 
         map.fitBounds(
             routeLine.getBounds(),
@@ -6790,19 +6753,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             routeOutlineLine = null;
         }
-
-        if (routeFlowLine) {
-            try {
-                map.removeLayer(routeFlowLine);
-            } catch (error) {
-                console.warn("routeFlowLine cleanup warning:", error);
-            }
-            routeFlowLine = null;
-        }
-        routeParticleLines.forEach(function (line) {
-            try { map.removeLayer(line); } catch (error) { console.warn("route particle cleanup warning:", error); }
-        });
-        routeParticleLines = [];
 
         clearRouteNumberMarkers();
         routeSegments = [];
