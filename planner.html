@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=52-spot-save-qr-share">
+    <link rel="stylesheet" href="css/planner.css?v=57-category-svg-icons">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -100,28 +100,28 @@
             <span class="food-category-edge food-category-edge-rear" aria-hidden="true"></span>
             <div class="food-category-face food-category-front-face" id="plannerCategoryFront">
                 <div class="planner-category-grid planner-category-main-grid">
-                    <button type="button" class="category category-button active" data-category="all"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M3 6.2 9 3l6 3.2L21 3v14.8L15 21l-6-3.2L3 21Z"/><path d="M9 3v14.8M15 6.2V21"/></svg></span><span class="category-label" data-ja="すべて" data-en="All" data-zh="全部" data-ko="전체">すべて</span></button>
-                    <button type="button" class="category category-button" data-category="sightseeing"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="m2.5 19 6.1-9.5 3.4 4.8 3-4.4 6.5 9.1Z"/><path d="M7 19v-2.3M17 19v-2.3"/><path d="M5 5h14M7 5V3h10v2M8 5v2M16 5v2"/></svg></span><span class="category-label" data-ja="見どころ" data-en="Explore" data-zh="景点" data-ko="명소">見どころ</span></button>
+                    <button type="button" class="category category-button active" data-category="all"><span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-all.svg')" aria-hidden="true"></span><span class="category-label" data-ja="すべて" data-en="All" data-zh="全部" data-ko="전체">すべて</span></button>
+                    <button type="button" class="category category-button" data-category="sightseeing"><span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-sightseeing.svg')" aria-hidden="true"></span><span class="category-label" data-ja="見どころ" data-en="Explore" data-zh="景点" data-ko="명소">見どころ</span></button>
                     <button type="button" class="category-button food-category-trigger" id="foodCategoryTrigger" aria-expanded="false" aria-controls="foodCategoryOptions" aria-label="食べる・買うを選ぶ">
-    <span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M4 8h16l-1.4 13H5.4L4 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M7 3v5M17 3v5"/></svg></span>
+    <span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-food-shop.svg')" aria-hidden="true"></span>
     <span class="category-label" data-ja="食べる・買う" data-en="Eat & Shop" data-zh="餐饮·购物" data-ko="먹기·쇼핑">食べる・買う</span>
 </button>
-                    <button type="button" class="category category-button" data-category="交通"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="16" rx="4"/><path d="M5 12h14M8 7h.1M16 7h.1M8 22l3-3.5M16 22l-3-3.5M8 15h.1M16 15h.1"/></svg></span><span class="category-label" data-ja="交通" data-en="Transit" data-zh="交通" data-ko="교통">交通</span></button>
-                    <button type="button" class="category category-button" data-category="施設"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg></span><span class="category-label" data-ja="施設" data-en="Facilities" data-zh="设施" data-ko="시설">施設</span></button>
+                    <button type="button" class="category category-button" data-category="交通"><span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-transport.svg')" aria-hidden="true"></span><span class="category-label" data-ja="交通" data-en="Transit" data-zh="交通" data-ko="교통">交通</span></button>
+                    <button type="button" class="category category-button" data-category="施設"><span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-facilities.svg')" aria-hidden="true"></span><span class="category-label" data-ja="施設" data-en="Facilities" data-zh="设施" data-ko="시설">施設</span></button>
                 </div>
             </div>
             <div class="food-category-options food-category-face food-category-back-face" id="foodCategoryOptions" aria-hidden="true">
                 <div class="planner-category-grid food-submenu-grid">
                     <button type="button" class="food-close-button food-choice-button" id="foodCategoryClose" aria-label="食べる・買うを閉じる">
-    <span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/><path d="M8 12h11"/></svg></span>
+    <span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-back.svg')" aria-hidden="true"></span>
     <span class="category-label food-choice-label" data-ja="閉じる" data-en="Back" data-zh="返回" data-ko="뒤로">閉じる</span>
 </button>
                     <button type="button" class="category category-button food-option food-choice-button" data-category="グルメ" data-food-filter="eat">
-    <span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M3 3l8 8M7 2l6 6M2 7l6 6M10 10l11 11"/><path d="M14 4c2-2 5-1 6 0s2 4 0 6l-3 3-6-6Z"/></svg></span>
+    <span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-eat.svg')" aria-hidden="true"></span>
     <span class="category-label food-choice-label" data-ja="食べる" data-en="Eat" data-zh="餐饮" data-ko="먹기">食べる</span>
 </button>
                     <button type="button" class="category category-button food-option food-choice-button" data-category="グルメ" data-food-filter="buy">
-    <span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M4 8h16l-1.4 13H5.4L4 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg></span>
+    <span class="category-glyph category-glyph-image" style="--category-mask: url('./images/icons/category-buy.svg')" aria-hidden="true"></span>
     <span class="category-label food-choice-label" data-ja="買う" data-en="Shop" data-zh="购物" data-ko="쇼핑">買う</span>
 </button>
                 </div>
@@ -238,7 +238,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=52-spot-save-qr-share"></script>
+<script src="js/planner.js?v=57-category-svg-icons"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");

@@ -5449,3 +5449,148 @@ body.spot-share-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .spot-engagement-button { transition: none !important; }
 }
+
+/* ============================================================
+   V57 — User-made category SVG icons + CUD accent palette
+   Place these transparent SVG files in ./images/icons/:
+   category-all.svg, category-sightseeing.svg, category-food-shop.svg,
+   category-transport.svg, category-facilities.svg, category-eat.svg,
+   category-buy.svg, category-back.svg.
+   SVG shape is used as a CSS mask, so CSS controls the exact accessible color.
+   This only affects the category bar; map pins and route lines are unchanged.
+   ============================================================ */
+
+/* CUD palette accent colors supplied for this project. */
+#plannerCategoryTray #plannerCategoryFront [data-category="all"] {
+  --category-accent: #FF2800;
+  --category-active-icon: #FFFFFF;
+  --category-active-text: #000000;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="sightseeing"] {
+  --category-accent: #9A0079;
+  --category-active-icon: #FFFFFF;
+  --category-active-text: #FFFFFF;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="交通"] {
+  --category-accent: #0041FF;
+  --category-active-icon: #FFFFFF;
+  --category-active-text: #FFFFFF;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="施設"] {
+  --category-accent: #35A16B;
+  --category-active-icon: #FFFFFF;
+  --category-active-text: #000000;
+}
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
+  --category-accent: #FF9900;
+  --category-active-icon: #000000;
+  --category-active-text: #000000;
+}
+#plannerCategoryTray #foodCategoryOptions .food-close-button {
+  --category-accent: #7F878F;
+  --category-active-icon: #000000;
+  --category-active-text: #000000;
+}
+
+/* The external SVG is used as a mask; this guarantees the category's exact color
+   regardless of which single-color fill/stroke the custom SVG was authored with. */
+#plannerCategoryTray .category-glyph-image {
+  display: block !important;
+  flex: 0 0 25px !important;
+  width: 25px !important;
+  min-width: 25px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  background-color: var(--category-accent, #FF2800) !important;
+  background-image: none !important;
+  -webkit-mask-image: var(--category-mask) !important;
+  mask-image: var(--category-mask) !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Inactive state: glass surface, category-colored icon and label. */
+#plannerCategoryTray #plannerCategoryFront .category-button,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button {
+  color: var(--category-accent, #FF2800) !important;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease !important;
+}
+#plannerCategoryTray #plannerCategoryFront .category-button:not(.active):hover,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger:not(.active):hover,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button:not(.active):hover,
+#plannerCategoryTray #plannerCategoryFront .category-button:not(.active):focus-visible,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger:not(.active):focus-visible,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button:not(.active):focus-visible {
+  background: rgba(255, 255, 255, .62) !important;
+  border-color: rgba(255, 255, 255, .9) !important;
+  color: var(--category-accent, #FF2800) !important;
+}
+
+/* Selected state: fill the tile with its own category accent. */
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .category-button.active,
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-choice-button.active,
+#plannerCategoryTray #plannerCategoryFront .category-button.active,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active {
+  background: var(--category-accent, #FF2800) !important;
+  background-color: var(--category-accent, #FF2800) !important;
+  border-color: var(--category-accent, #FF2800) !important;
+  color: var(--category-active-text, #FFFFFF) !important;
+  box-shadow: 0 3px 10px rgba(28, 39, 32, .14), inset 0 1px 0 rgba(255, 255, 255, .16) !important;
+}
+
+/* The icon can be white or black depending on the background's contrast.
+   Red/green/orange use black text for legibility; selected icons stay white
+   on red/green, while orange icons are black for much stronger contrast. */
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .category-button.active .category-glyph-image,
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-glyph-image,
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-glyph-image,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-glyph-image {
+  background-color: var(--category-active-icon, #FFFFFF) !important;
+}
+
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label,
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
+  color: var(--category-active-text, #FFFFFF) !important;
+}
+
+/* The back/close control is not a spot category; keep it neutral. */
+#plannerCategoryTray #foodCategoryOptions .food-close-button,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-close-button {
+  --category-accent: #7F878F;
+  --category-active-icon: #000000;
+  --category-active-text: #000000;
+  color: #7F878F !important;
+  background: rgba(255,255,255,.5) !important;
+  border-color: rgba(127,135,143,.35) !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-close-button .category-glyph-image,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-close-button .category-glyph-image {
+  background-color: #7F878F !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #plannerCategoryTray #plannerCategoryFront .category-button,
+  #plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+  #plannerCategoryTray #foodCategoryOptions .food-choice-button {
+    transition: none !important;
+  }
+}
