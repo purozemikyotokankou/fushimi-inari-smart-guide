@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V30-ROUTE-FLOW-LIGHT-NO-ARROWS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V30-ROUTE-FLOW-LIGHT-NO-ARROWS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V32-COHERENT-LIQUID-GLASS-NO-DOUBLE-PANEL";
+    console.log("[Fushimi Inari Smart Guide] planner.js V32-COHERENT-LIQUID-GLASS-NO-DOUBLE-PANEL loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE

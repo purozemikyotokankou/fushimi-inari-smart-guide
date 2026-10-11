@@ -7,14 +7,14 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=30-route-flow-light">
+    <link rel="stylesheet" href="css/planner.css?v=32-clean-glass">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
 <body data-google-form-url="https://docs.google.com/forms/d/e/1FAIpQLSfZQYyVeUwdfxDnmGi2dWMtzfNxWuxCfhIR0BTycJzAO8pytQ/viewform?usp=dialog">
 
 <header class="planner-site-header">
-    <div class="logo" aria-label="FUSHIMI INARI SMART GUIDE"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">FUSHIMI INARI<br class="logo-break"> SMART GUIDE</span></div>
+    <div class="logo" aria-label="FUSHIMI INARI SMART GUIDE"><span class="logo-mark" aria-hidden="true">⛩</span><span class="logo-full">FUSHIMI INARI SMART GUIDE</span></div>
 
     <nav aria-label="Main navigation">
         <a href="home.html" data-i18n="home">ホーム</a>
@@ -77,9 +77,9 @@
                 class="planner-sheet-handle"
                 aria-expanded="false"
                 aria-controls="plannerSheetContent"
-                aria-label="上にスワイプで展開、下にスワイプで収納"
+                aria-label="上下にスワイプしてスポット一覧を開閉"
             >
-                <span class="planner-sheet-grabber" aria-hidden="true"></span><span class="planner-sheet-swipe-hint">SWIPE UP · スポットを見る</span>
+                <span class="planner-sheet-grabber" aria-hidden="true"></span>
                 
             </button>
 
@@ -163,7 +163,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=30-route-flow-light"></script>
+<script src="js/planner.js?v=32-clean-glass"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
