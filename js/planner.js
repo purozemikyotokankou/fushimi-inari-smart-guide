@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V42-SOLID-3D-GLASS-PRISM";
-    console.log("[Fushimi Inari Smart Guide] planner.js V42-SOLID-3D-GLASS-PRISM loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V43-CUBOID-UNDERSIDE-MENU";
+    console.log("[Fushimi Inari Smart Guide] planner.js V43-CUBOID-UNDERSIDE-MENU loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -202,14 +202,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const plannerCategoryFront = document.getElementById("plannerCategoryFront");
     const foodCategoryClose = document.getElementById("foodCategoryClose");
 
-    // Keep the solid prism's left/right side planes attached to the real card width.
+    // Keep the solid cuboid's left/right side planes aligned to the full-width body.
     const foodCategoryFlipInner = foodCategorySwitcher?.querySelector(".food-category-flip-inner");
     const syncFoodCategorySolidWidth = () => {
         if (!foodCategorySwitcher || !foodCategoryFlipInner) return;
         const width = foodCategorySwitcher.getBoundingClientRect().width;
-        const styles = getComputedStyle(foodCategorySwitcher);
-        const halfDepth = parseFloat(styles.getPropertyValue("--solid-half-depth")) || 0;
-        if (width > 0) foodCategorySwitcher.style.setProperty("--solid-half-width", `${Math.max(0, width / 2 - halfDepth)}px`);
+        if (width > 0) foodCategorySwitcher.style.setProperty("--solid-half-width", `${Math.max(0, width / 2)}px`);
     };
     syncFoodCategorySolidWidth();
     if (foodCategorySwitcher && "ResizeObserver" in window) {
