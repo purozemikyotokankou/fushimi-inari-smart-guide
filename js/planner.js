@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V43-CUBOID-UNDERSIDE-MENU";
-    console.log("[Fushimi Inari Smart Guide] planner.js V43-CUBOID-UNDERSIDE-MENU loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V48-UNIVERSAL-DESIGN-COLORS";
+    console.log("[Fushimi Inari Smart Guide] planner.js V48-UNIVERSAL-DESIGN-COLORS loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ① 現在地を出発地点として利用
     // ② Liquid Glass UIをJSから追加
     // ③ GSI地図をモノクロ表示
-    // ④ ルート線を #e94709
+    // ④ ルート線をユニバーサルデザインパレットのオレンジ #FF9900
     // ⑤ routes.json をグラフとして扱う
     // ⑥ routes.json の複数区間を自動接続
     // ⑦ 直線フォールバックは使用しない
@@ -69,58 +69,68 @@ document.addEventListener("DOMContentLoaded", function () {
     const GOOGLE_FORM_URL =
         document.body.dataset.googleFormUrl || "";
 
-    const GRAY_COLOR = "#8A8A8E";
-    const PIN_COLOR = "#ff4b00";
-    const ROUTE_COLOR = "#e94709";
+    const GRAY_COLOR = "#7F878F"; // palette neutral gray
+    const PIN_COLOR = "#ff4b00"; // keep the existing Fushimi Inari vermilion pin color
+    const ROUTE_COLOR = "#FF9900"; // palette accent orange: route / motion line
 
     // ============================================================
     // アイコンカラー
     // ============================================================
 
+    // Universal-design palette roles. Gendered toilet variants deliberately share
+    // one color so meaning is carried by the icon / label, not pink-versus-blue.
+    // Fushimi Inari's existing vermilion shrine/torii colors are intentionally kept.
     const ICON_COLOR_MAP = {
-        toilet: "#B97800",
-        "toilet-male": "#2F86B2",
-        "toilet-female": "#C95F66",
-        "toilet-western": "#B97800",
-        "toilet-japanese": "#B97800",
-        washlet: "#B97800",
+        toilet: "#FF9900",
+        "toilet-male": "#FF9900",
+        "toilet-female": "#FF9900",
+        "toilet-western": "#FF9900",
+        "toilet-japanese": "#FF9900",
+        washlet: "#FF9900",
 
-        wheelchair: "#21805D",
-        "diaper-changing": "#21805D",
-        "baby-chair": "#21805D",
-        "changing-table": "#21805D",
-        ostomate: "#21805D",
+        wheelchair: "#35A16B",
+        "diaper-changing": "#35A16B",
+        "baby-chair": "#35A16B",
+        "changing-table": "#35A16B",
+        ostomate: "#35A16B",
 
-        scenery: "#5C548F",
-        viewpoint: "#5C548F",
-        shrine: "#A83432",
-        hiking: "#2C7F5E",
-        restaurant: "#B97800",
-        guide: "#327B9B",
-        "station-jr": "#2878B8",
-        "station-keihan": "#72519A",
+        scenery: "#0041FF",
+        viewpoint: "#0041FF",
+        shrine: "#A83432", // existing Fushimi Inari vermilion / shrine color
+        hiking: "#35A16B",
+        restaurant: "#FF9900",
+        guide: "#663300",
+        "station-jr": "#0041FF",
+        "station-keihan": "#9A0079",
+        smoking: "#7F878F",
+        exchange: "#35A16B",
+        "public-phone": "#0041FF",
+        "trash-box": "#663300",
+        "evacuation-shelter": "#35A16B",
+        "baggage-storage": "#9A0079",
+        "coin-locker": "#9A0079",
+        "rest-area": "#66CCFF",
 
-        torii: "#A83432"
+        torii: "#A83432" // existing Fushimi Inari vermilion / torii color
     };
 
+    // Use the icon assets supplied in ./images/icons/ for every marker, including rail stations.
+    // If both gray and color variants are missing, show the intentional "no icon" fallback.
     window.handlePlannerMarkerIconError = function (img) {
         if (!img) return;
-        img.style.display = "none";
+        img.classList.add("is-load-error");
         const marker = img.closest(".custom-map-marker");
         if (!marker) return;
-        if (marker.classList.contains("is-railway")) {
-            const variant = img.classList.contains("icon-color") ? ".railway-fallback.icon-color" : ".railway-fallback.icon-gray";
-            const fallback = marker.querySelector(variant);
-            if (fallback) fallback.style.display = "grid";
-            return;
-        }
+
         const images = Array.from(marker.querySelectorAll("img.icon-image"));
         const allFailed = images.length > 0 && images.every(function (image) {
-            return image.style.display === "none" || (image.complete && image.naturalWidth === 0);
+            return image.classList.contains("is-load-error") ||
+                (image.complete && image.naturalWidth === 0);
         });
+
         if (allFailed) {
             const fallback = marker.querySelector(".marker-fallback");
-            if (fallback) fallback.style.display = "grid";
+            if (fallback) fallback.classList.add("is-visible");
         }
     };
 
@@ -245,7 +255,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setFoodCategorySwitcherOpen(false);
         window.setTimeout(function () {
             foodCategoryTrigger?.focus({ preventScroll: true });
-        }, 700);
+        }, 260);
     });
 
     const plannerBottomSheet =
@@ -275,7 +285,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const map =
         L.map("map", {
-            zoomControl: true,
+            zoomControl: false,
             preferCanvas: true
         }).setView(
             [34.96705, 135.7743],
@@ -2482,110 +2492,57 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    function getIconType(
-        spot
-    ) {
+    function getIconType(spot) {
+        const id = String(spot?.id ?? "").trim();
+        const category = normalizeCategory(spot?.category);
+        const rawName = spot?.name;
+        const nameText = (rawName && typeof rawName === "object")
+            ? Object.values(rawName).join(" ").toLowerCase()
+            : String(rawName ?? "").toLowerCase();
+        const explicitRaw = spot?.iconType || spot?.icon || spot?.markerIcon || "";
+        const explicitText = String(explicitRaw).trim().toLowerCase().replace(/\.svg$/i, "").replace(/-gray$/i, "");
+        const explicit = normalizeIconType(explicitText);
 
-        const explicit =
-            spot.iconType ||
-            spot.icon ||
-            spot.markerIcon;
+        // Transport pins must never inherit a restroom/facility icon from stale or
+        // inconsistent icon metadata. Their station identity comes from the data.
+        const isStation = category === "transport" ||
+            /駅|station|railway|train|keihan|\bjr\b|奈良線/i.test(nameText) ||
+            ["station", "railway", "train", "station-jr", "station-keihan"].includes(explicitText) ||
+            ["station-jr", "station-keihan"].includes(explicit);
 
-        if (explicit) {
-
-            const normalized =
-                normalizeIconType(
-                    explicit
-                );
-
-            if (normalized) {
-                return normalized;
+        if (isStation) {
+            if (id === "7" || /京阪|keihan/i.test(nameText) || explicit === "station-keihan") {
+                return "station-keihan";
             }
-        }
-
-        if (
-            String(spot.id) ===
-            "7"
-        ) {
-            return "station-keihan";
-        }
-
-        if (
-            String(spot.id) ===
-            "8"
-        ) {
+            if (id === "8" || /\bjr\b|奈良線|japan railway|inari station/i.test(nameText) || explicit === "station-jr") {
+                return "station-jr";
+            }
+            // The local project already uses the paired station-jr icon files as its
+            // generic rail-station fallback; avoid falling through to the toilet icon.
             return "station-jr";
         }
 
-        const category =
-            normalizeCategory(
-                spot.category
-            );
+        if (explicit) return explicit;
 
-        const categoryMap = {
-
-            toilet:
-                "toilet",
-
-            scenery:
-                "viewpoint",
-
-            shrine:
-                "shrine",
-
-            hiking:
-                "hiking",
-
-            restaurant:
-                "restaurant",
-
-            guide:
-                "guide"
-        };
-
-        if (
-            categoryMap[category]
-        ) {
-            return categoryMap[
-                category
-            ];
-        }
+        if (category === "toilet") return "toilet";
+        if (category === "scenery") return "viewpoint";
+        if (category === "shrine") return "shrine";
+        if (category === "hiking") return "hiking";
+        if (category === "restaurant") return "restaurant";
+        if (category === "guide") return "guide";
 
         const otherMap = {
-
-            "喫煙所":
-                "smoking",
-
-            "両替機":
-                "exchange",
-
-            "公衆電話":
-                "public-phone",
-
-            "ごみ箱":
-                "trash-box",
-
-            "広域避難場所":
-                "evacuation-shelter",
-
-            "手荷物一時預かり所":
-                "baggage-storage",
-
-            "コインロッカー":
-                "coin-locker",
-
-            "休憩所":
-                "rest-area"
+            "喫煙所": "smoking",
+            "両替機": "exchange",
+            "公衆電話": "public-phone",
+            "ごみ箱": "trash-box",
+            "広域避難場所": "evacuation-shelter",
+            "手荷物一時預かり所": "baggage-storage",
+            "コインロッカー": "coin-locker",
+            "休憩所": "rest-area"
         };
 
-        return (
-            otherMap[
-                String(
-                    spot.category ?? ""
-                ).trim()
-            ] ||
-            "guide"
-        );
+        return otherMap[String(spot?.category ?? "").trim()] || "guide";
     }
 
     function getIconFileName(
@@ -2686,20 +2643,14 @@ document.addEventListener("DOMContentLoaded", function () {
         ];
 
         if (
-            priorityIcons.includes(
-                iconType
-            )
+            iconType === "station-jr" ||
+            iconType === "station-keihan"
         ) {
-            return 1400;
+            return 900;
         }
 
-        if (
-            iconType ===
-                "station-jr" ||
-            iconType ===
-                "station-keihan"
-        ) {
-            return 1200;
+        if (priorityIcons.includes(iconType)) {
+            return 850;
         }
 
         return 100;
@@ -2768,7 +2719,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         ></span>
 
                         <span class="marker-fallback" aria-hidden="true">no icon</span>
-                        ${isRailway ? `<span class="railway-fallback icon-gray" aria-hidden="true" style="display:none"><svg viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="16" rx="4"/><path d="M5 12h14M8 7h.2M16 7h.2M8 22l3-3.5M16 22l-3-3.5M8 15h.2M16 15h.2"/></svg></span><span class="railway-fallback icon-color" aria-hidden="true" style="display:none"><svg viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="16" rx="4"/><path d="M5 12h14M8 7h.2M16 7h.2M8 22l3-3.5M16 22l-3-3.5M8 15h.2M16 15h.2"/></svg></span>` : ""}
 
                         <img
                             class="icon-image icon-gray"
@@ -2793,14 +2743,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
             `,
 
+            // Keep the hit target close to the actual circular pin. The long name
+            // pill is an overlay with pointer-events:none, so nearby markers can
+            // no longer steal station taps because their labels overlap.
             iconSize: [
-                150,
-                68
+                46,
+                46
             ],
 
             iconAnchor: [
-                75,
-                24
+                23,
+                21
             ],
 
             popupAnchor: [
@@ -5908,6 +5861,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         routeLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
+            className: "planner-route-base-line",
             color: ROUTE_COLOR,
             weight: 6,
             opacity: 0.98,
