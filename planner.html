@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=52-share-save-only">
+    <link rel="stylesheet" href="css/planner.css?v=52-spot-save-qr-share">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -46,6 +46,10 @@
                     <button type="button" id="openMapSearchBtn" class="map-action-tile map-search-action" aria-label="スポットを検索" aria-expanded="false" aria-controls="mapSearchPopover">
                         <span class="map-action-icon map-action-no-icon" aria-hidden="true">no icon</span>
                         <span class="map-action-label">検索</span>
+                    </button>
+                    <button type="button" id="openSavedSpotsBtn" class="map-action-tile map-saved-action" aria-label="保存したスポットを表示" aria-controls="savedSpotsDialog">
+                        <span class="map-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-3.8L6 21Z"/></svg></span>
+                        <span class="map-action-label" data-saved-ui="open">保存済み</span>
                     </button>
                     <button type="button" id="createRouteBtn" class="map-action-tile map-route-action" aria-label="選択したスポットでルートを作成">
                         <span class="map-action-icon map-action-no-icon" aria-hidden="true">no icon</span>
@@ -214,12 +218,27 @@
                 <p id="spotShareStatus" class="spot-share-status" role="status" aria-live="polite"></p>
             </section>
         </div>
+
+        <div id="savedSpotsDialog" class="spot-share-dialog saved-spots-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="savedSpotsTitle">
+            <button type="button" class="spot-share-backdrop" data-saved-close aria-label="閉じる"></button>
+            <section class="spot-share-dialog-panel saved-spots-dialog-panel">
+                <header class="spot-share-dialog-header">
+                    <div>
+                        <p class="spot-share-eyebrow">FUSHIMI INARI SMART GUIDE</p>
+                        <h2 id="savedSpotsTitle">保存したスポット</h2>
+                    </div>
+                    <button type="button" class="spot-share-close" data-saved-close aria-label="閉じる">×</button>
+                </header>
+                <p id="savedSpotsCount" class="saved-spots-count" aria-live="polite"></p>
+                <div id="savedSpotsList" class="saved-spots-list"></div>
+            </section>
+        </div>
     </div>
 </main>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="js/language.js?v=52"></script>
-<script src="js/planner.js?v=52-share-save-only"></script>
+<script src="js/language.js?v=51"></script>
+<script src="js/planner.js?v=52-spot-save-qr-share"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");

@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V52-SPOT-SAVE-QR-SHARE";
-    console.log("[Fushimi Inari Smart Guide] planner.js V52-SPOT-SAVE-QR-SHARE loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V55-AUTO-ROUTE-TRAVELING-LIGHTS";
+    console.log("[Fushimi Inari Smart Guide] planner.js V55-AUTO-ROUTE-TRAVELING-LIGHTS loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -158,6 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let routeLine = null;
     let routeOutlineLine = null;
     let routeFlowLine = null;
+    let routeParticleLines = [];
     let routeSegments = [];
     let routeNumberMarkers = [];
 
@@ -296,6 +297,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const spotShareStatus = document.getElementById("spotShareStatus");
     const copySpotShareUrlButton = document.getElementById("copySpotShareUrl");
     const nativeSpotShareButton = document.getElementById("nativeSpotShare");
+    const openSavedSpotsButton = document.getElementById("openSavedSpotsBtn");
+    const savedSpotsDialog = document.getElementById("savedSpotsDialog");
+    const savedSpotsTitle = document.getElementById("savedSpotsTitle");
+    const savedSpotsCount = document.getElementById("savedSpotsCount");
+    const savedSpotsList = document.getElementById("savedSpotsList");
 
     // ============================================================
     // Leaflet地図
@@ -3865,6 +3871,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (nextSaved) saved.add(id); else saved.delete(id);
         writeIdSet(SAVED_SPOTS_STORAGE_KEY, saved);
         updateSpotEngagementButtons(spot);
+        if (savedSpotsDialog && !savedSpotsDialog.hidden) renderSavedSpotsList();
         setEngagementStatus(nextSaved
             ? (getCurrentLanguage() === "en" ? "Saved on this device." : getCurrentLanguage() === "zh" ? "已保存在此设备。" : getCurrentLanguage() === "ko" ? "이 기기에 저장했습니다." : "この端末に保存しました。")
             : (getCurrentLanguage() === "en" ? "Removed from saved spots." : getCurrentLanguage() === "zh" ? "已从收藏中移除。" : getCurrentLanguage() === "ko" ? "저장 목록에서 삭제했습니다." : "保存を解除しました。"));
@@ -3876,6 +3883,97 @@ document.addEventListener("DOMContentLoaded", function () {
         url.hash = "";
         return url.toString();
     }
+
+    function savedSpotsText(key) {
+        const lang = getCurrentLanguage();
+        const dict = {
+            open: { ja: "保存済み", en: "Saved", zh: "已收藏", ko: "저장됨" },
+            title: { ja: "保存したスポット", en: "Saved spots", zh: "已收藏地点", ko: "저장한 장소" },
+            empty: { ja: "保存したスポットはまだありません。スポット詳細の「保存」から追加できます。", en: "No saved spots yet. Use Save in a spot's details to add one.", zh: "还没有收藏地点。请在地点详情中点击“收藏”添加。", ko: "저장한 장소가 없습니다. 장소 상세에서 ‘저장’을 눌러 추가하세요." },
+            count: { ja: "{n}件のスポットを保存中", en: "{n} saved spot(s)", zh: "已收藏 {n} 个地点", ko: "{n}개 장소 저장됨" },
+            view: { ja: "地図で見る", en: "View on map", zh: "在地图查看", ko: "지도에서 보기" },
+            remove: { ja: "削除", en: "Remove", zh: "移除", ko: "삭제" },
+            close: { ja: "閉じる", en: "Close", zh: "关闭", ko: "닫기" }
+        };
+        return (dict[key] && (dict[key][lang] || dict[key].ja)) || key;
+    }
+
+    function updateSavedSpotsDialogLanguage() {
+        if (savedSpotsTitle) savedSpotsTitle.textContent = savedSpotsText("title");
+        openSavedSpotsButton?.setAttribute("aria-label", savedSpotsText("open"));
+        openSavedSpotsButton?.querySelector(".map-action-label") && (openSavedSpotsButton.querySelector(".map-action-label").textContent = savedSpotsText("open"));
+        savedSpotsDialog?.querySelectorAll("[data-saved-close]").forEach(function (el) {
+            el.setAttribute("aria-label", savedSpotsText("close"));
+        });
+    }
+
+    function renderSavedSpotsList() {
+        if (!savedSpotsList) return;
+        updateSavedSpotsDialogLanguage();
+        const savedIds = readIdSet(SAVED_SPOTS_STORAGE_KEY);
+        const saved = spots.filter(function (spot) { return savedIds.has(String(spot.id)); });
+        if (savedSpotsCount) savedSpotsCount.textContent = savedSpotsText("count").replace("{n}", String(saved.length));
+        if (!saved.length) {
+            savedSpotsList.innerHTML = `<p class="saved-spots-empty">${escapeHTML(savedSpotsText("empty"))}</p>`;
+            return;
+        }
+        savedSpotsList.innerHTML = saved.map(function (spot) {
+            const id = escapeHTML(String(spot.id));
+            const name = escapeHTML(getLocalizedValue(spot.name) || String(spot.id));
+            const category = escapeHTML(getCategoryLabel(spot.category));
+            return `<article class="saved-spot-item">
+                <div class="saved-spot-copy"><strong>${name}</strong><span>${category}</span></div>
+                <div class="saved-spot-item-actions">
+                    <button type="button" class="saved-spot-view" data-saved-spot-open="${id}">${escapeHTML(savedSpotsText("view"))}</button>
+                    <button type="button" class="saved-spot-remove" data-saved-spot-remove="${id}" aria-label="${escapeHTML(savedSpotsText("remove"))}: ${name}">${escapeHTML(savedSpotsText("remove"))}</button>
+                </div>
+            </article>`;
+        }).join("");
+    }
+
+    function openSavedSpotsDialog() {
+        if (!savedSpotsDialog) return;
+        renderSavedSpotsList();
+        savedSpotsDialog.hidden = false;
+        document.body.classList.add("saved-spots-open");
+        savedSpotsDialog.querySelector("[data-saved-close].spot-share-close")?.focus({ preventScroll: true });
+    }
+
+    function closeSavedSpotsDialog() {
+        if (!savedSpotsDialog) return;
+        savedSpotsDialog.hidden = true;
+        document.body.classList.remove("saved-spots-open");
+    }
+
+    openSavedSpotsButton?.addEventListener("click", openSavedSpotsDialog);
+    savedSpotsDialog?.addEventListener("click", function (event) {
+        if (event.target.closest("[data-saved-close]")) {
+            closeSavedSpotsDialog();
+            return;
+        }
+        const openButton = event.target.closest("[data-saved-spot-open]");
+        if (openButton) {
+            const spot = spots.find(function (item) { return String(item.id) === openButton.dataset.savedSpotOpen; });
+            if (spot) {
+                closeSavedSpotsDialog();
+                showSpotOnMap(spot);
+            }
+            return;
+        }
+        const removeButton = event.target.closest("[data-saved-spot-remove]");
+        if (removeButton) {
+            const ids = readIdSet(SAVED_SPOTS_STORAGE_KEY);
+            ids.delete(String(removeButton.dataset.savedSpotRemove));
+            writeIdSet(SAVED_SPOTS_STORAGE_KEY, ids);
+            renderSavedSpotsList();
+            if (currentDetailSpot && String(currentDetailSpot.id) === String(removeButton.dataset.savedSpotRemove)) {
+                updateSpotEngagementButtons(currentDetailSpot);
+            }
+        }
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && savedSpotsDialog && !savedSpotsDialog.hidden) closeSavedSpotsDialog();
+    });
 
     function updateSpotShareDialogLanguage() {
         const title = document.getElementById("spotShareTitle");
@@ -4217,6 +4315,17 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             const small = mapSpotDetailContent.querySelector(".map-route-endpoint-start .map-route-endpoint-copy small");
             if (small) small.textContent = newStart ? getCategoryLabel(newStart.category || "") : text("chooseSpot");
+            // V55: both endpoints are now set, so start routing automatically.
+            if (newStart && state.destinationSpot && String(newStart.id) !== String(state.destinationSpot.id)) {
+                createRoute({
+                    destinationSpot: state.destinationSpot,
+                    originMode: "spot",
+                    startSpot: newStart,
+                    travelMode: state.travelMode || "walking"
+                }).catch(function (error) {
+                    console.error("出発地選択後の自動ルート作成に失敗しました:", error);
+                });
+            }
         });
         swapButton?.addEventListener("click", function () {
             if (state.originMode !== "spot" || !state.startSpotId) return;
@@ -4624,6 +4733,28 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
                 marker.on("click", function () {
+                    // V55: when the route planner is open, tapping a map pin chooses
+                    // that pin as the departure point and immediately builds the route.
+                    // This works with direct map interaction; the route button is optional.
+                    const plannerState = activeRoutePlannerState;
+                    if (plannerState && plannerState.destinationSpot) {
+                        if (String(spot.id) === String(plannerState.destinationSpot.id)) {
+                            showSpotOnMap(spot);
+                            return;
+                        }
+                        plannerState.originMode = "spot";
+                        plannerState.startSpotId = String(spot.id);
+                        plannerState.startSpot = spot;
+                        createRoute({
+                            destinationSpot: plannerState.destinationSpot,
+                            originMode: "spot",
+                            startSpot: spot,
+                            travelMode: plannerState.travelMode || "walking"
+                        }).catch(function (error) {
+                            console.error("地図からの自動ルート作成に失敗しました:", error);
+                        });
+                        return;
+                    }
                     showSpotOnMap(spot);
                 });
 
@@ -6145,6 +6276,8 @@ document.addEventListener("DOMContentLoaded", function () {
             map.removeLayer(routeFlowLine);
             routeFlowLine = null;
         }
+        routeParticleLines.forEach(function (line) { try { map.removeLayer(line); } catch (_) {} });
+        routeParticleLines = [];
 
         clearRouteNumberMarkers();
 
@@ -6364,21 +6497,34 @@ document.addEventListener("DOMContentLoaded", function () {
             interactive: false
         }).addTo(map);
 
-        // Tiny glowing dashes travel along the route in coordinate order
-        // (current location -> first stop -> next stops) toward the destination.
+        // V55: SVG strokes follow the exact route geometry. The base route remains
+        // visible underneath while several animated dash layers create bright,
+        // forward-moving particles and a short glowing trail.
         routeFlowLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
-            className: "planner-route-flow-line",
+            className: "planner-route-flow-line planner-route-light-trail",
             color: "#fffdf5",
-            weight: 3.2,
-            opacity: 0.98,
-            dashArray: "1 22",
+            weight: 4.2,
+            opacity: 1,
+            dashArray: "2 34",
             dashOffset: "0",
             lineCap: "round",
             lineJoin: "round",
             interactive: false,
             bubblingMouseEvents: false
         }).addTo(map);
+        routeParticleLines = [
+            L.polyline(allCoordinates, {
+                pane: "plannerRoutePane", className: "planner-route-flow-line planner-route-particle-a",
+                color: "#ffffff", weight: 5, opacity: 1, dashArray: "0.1 76 3 180", dashOffset: "0",
+                lineCap: "round", lineJoin: "round", interactive: false, bubblingMouseEvents: false
+            }).addTo(map),
+            L.polyline(allCoordinates, {
+                pane: "plannerRoutePane", className: "planner-route-flow-line planner-route-particle-b",
+                color: "#fff0b8", weight: 3.4, opacity: .96, dashArray: "0.1 118 2 210", dashOffset: "0",
+                lineCap: "round", lineJoin: "round", interactive: false, bubblingMouseEvents: false
+            }).addTo(map)
+        ];
 
         map.fitBounds(
             routeLine.getBounds(),
@@ -6642,6 +6788,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             routeFlowLine = null;
         }
+        routeParticleLines.forEach(function (line) {
+            try { map.removeLayer(line); } catch (error) { console.warn("route particle cleanup warning:", error); }
+        });
+        routeParticleLines = [];
 
         clearRouteNumberMarkers();
         routeSegments = [];
