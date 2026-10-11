@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const plannerCategoryFront = document.getElementById("plannerCategoryFront");
     const foodCategoryClose = document.getElementById("foodCategoryClose");
 
-    // Keep the solid cuboid's left/right side planes aligned to the full-width body.
+    // Keep the sliding category track responsive to the available width (the V45 interaction moves vertically; it does not rotate).
     const foodCategoryFlipInner = foodCategorySwitcher?.querySelector(".food-category-flip-inner");
     const syncFoodCategorySolidWidth = () => {
         if (!foodCategorySwitcher || !foodCategoryFlipInner) return;
@@ -217,8 +217,9 @@ document.addEventListener("DOMContentLoaded", function () {
         window.addEventListener("resize", syncFoodCategorySolidWidth, { passive: true });
     }
 
-    // The capsule is a fixed-size, single-glass surface. Only its contents switch
-    // front/back; no individual category tile rotates and the bar never unmounts.
+    // The outer Liquid Glass capsule stays fixed. The category face and the Eat/Shop face are
+    // stacked vertically on one track; opening slides that track upward, closing slides it down.
+    // Neither the card nor individual buttons rotate, and the bar never unmounts.
     let activeCategoryFilter = "all";
     let activeFoodFilter = "all";
 
@@ -244,7 +245,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setFoodCategorySwitcherOpen(false);
         window.setTimeout(function () {
             foodCategoryTrigger?.focus({ preventScroll: true });
-        }, 500);
+        }, 700);
     });
 
     const plannerBottomSheet =
