@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V58-AUTO-ROUTE-TRAVELING-LIGHTS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V55-AUTO-ROUTE-TRAVELING-LIGHTS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V59-SVG-ROUTE-PATH-GLOWING-PARTICLES";
+    console.log("[Fushimi Inari Smart Guide] planner.js V59-SVG-ROUTE-PATH-GLOWING-PARTICLES loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -376,6 +376,13 @@ document.addEventListener("DOMContentLoaded", function () {
     map.getPane(
         "plannerRoutePane"
     ).style.zIndex = "450";
+
+    // V59: use a real SVG renderer for the route so stroke-dashoffset animations
+    // can move along the actual routed geometry even though the base map prefers Canvas.
+    const routeSvgRenderer = L.svg({
+        pane: "plannerRoutePane",
+        padding: 0.5
+    });
 
     map.createPane(
         "plannerNumberPane"
@@ -6478,6 +6485,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         routeOutlineLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
+            className: "planner-route-outline-line",
             color: "#ffffff",
             weight: 12,
             opacity: 0.96,
@@ -6488,6 +6497,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         routeLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
             className: "planner-route-base-line",
             color: ROUTE_COLOR,
             weight: 6,
@@ -6502,6 +6512,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // forward-moving particles and a short glowing trail.
         routeFlowLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
             className: "planner-route-flow-line planner-route-light-trail",
             color: "#fffdf5",
             weight: 4.2,
@@ -6515,12 +6526,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }).addTo(map);
         routeParticleLines = [
             L.polyline(allCoordinates, {
-                pane: "plannerRoutePane", className: "planner-route-flow-line planner-route-particle-a",
+                pane: "plannerRoutePane", renderer: routeSvgRenderer, className: "planner-route-flow-line planner-route-particle-a",
                 color: "#ffffff", weight: 5, opacity: 1, dashArray: "0.1 76 3 180", dashOffset: "0",
                 lineCap: "round", lineJoin: "round", interactive: false, bubblingMouseEvents: false
             }).addTo(map),
             L.polyline(allCoordinates, {
-                pane: "plannerRoutePane", className: "planner-route-flow-line planner-route-particle-b",
+                pane: "plannerRoutePane", renderer: routeSvgRenderer, className: "planner-route-flow-line planner-route-particle-b",
                 color: "#fff0b8", weight: 3.4, opacity: .96, dashArray: "0.1 118 2 210", dashOffset: "0",
                 lineCap: "round", lineJoin: "round", interactive: false, bubblingMouseEvents: false
             }).addTo(map)

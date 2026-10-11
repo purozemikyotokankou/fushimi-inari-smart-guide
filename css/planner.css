@@ -5728,3 +5728,115 @@ body.spot-share-open { overflow: hidden; }
 #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
   color: var(--category-active-text, #FFFFFF) !important;
 }
+
+
+/* ============================================================
+   V59 — category text contrast + transport alignment
+   ============================================================ */
+#plannerCategoryTray #plannerCategoryFront [data-category="all"],
+#plannerCategoryTray #plannerCategoryFront [data-category="施設"],
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
+  --category-active-text: #FFFFFF !important;
+}
+
+/* White selected labels requested for All, Facilities, Eat and Buy. */
+#plannerCategoryTray #plannerCategoryFront [data-category="all"].active .category-label,
+#plannerCategoryTray #plannerCategoryFront [data-category="施設"].active .category-label,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"].active .category-label,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"].active .category-label {
+  color: #FFFFFF !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.18) !important;
+}
+
+/* Tiny optical correction: the transport pictogram sits 2px to the right. */
+#plannerCategoryTray #plannerCategoryFront [data-category="交通"] .category-glyph-image {
+  transform: translateX(2px) !important;
+}
+
+/* ============================================================
+   V59 — Animated SVG Route Path + Glowing Traveling Light Particles
+   The base orange path stays visible. The other SVG paths use animated dash
+   offsets, so light streaks and particles travel forward along the same real
+   route geometry rather than blinking the whole line.
+   ============================================================ */
+.planner-route-outline-line {
+  stroke: #FFFFFF !important;
+  stroke-width: 12px !important;
+  stroke-opacity: .96 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  pointer-events: none !important;
+}
+.planner-route-base-line {
+  stroke: #FF9900 !important;
+  stroke-width: 6px !important;
+  stroke-opacity: 1 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 2px rgba(102,51,0,.75)) drop-shadow(0 0 3px rgba(255,255,255,.95)) !important;
+  pointer-events: none !important;
+}
+.planner-route-flow-line {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke !important;
+  will-change: stroke-dashoffset, filter;
+}
+.planner-route-light-trail {
+  stroke: #FFFDEB !important;
+  stroke-width: 4.4px !important;
+  stroke-opacity: 1 !important;
+  stroke-dasharray: 3 33 !important;
+  filter: drop-shadow(0 0 2px rgba(255,255,255,1))
+          drop-shadow(0 0 6px rgba(255,245,156,.98))
+          drop-shadow(0 0 12px rgba(255,153,0,.92)) !important;
+  animation: fushimi-route-flow 0.88s linear infinite,
+             fushimi-route-pulse 0.46s ease-in-out infinite alternate !important;
+}
+.planner-route-particle-a {
+  stroke: #FFFFFF !important;
+  stroke-width: 5.2px !important;
+  stroke-opacity: 1 !important;
+  stroke-dasharray: .1 70 4 185 !important;
+  filter: drop-shadow(0 0 3px #FFFFFF)
+          drop-shadow(0 0 8px rgba(118,221,255,.98))
+          drop-shadow(0 0 15px rgba(82,171,255,.88)) !important;
+  animation: fushimi-route-particle-a 1.7s linear infinite !important;
+}
+.planner-route-particle-b {
+  stroke: #FFF0B8 !important;
+  stroke-width: 3.7px !important;
+  stroke-opacity: 1 !important;
+  stroke-dasharray: .1 112 2.5 205 !important;
+  filter: drop-shadow(0 0 3px rgba(255,255,255,1))
+          drop-shadow(0 0 8px rgba(255,173,75,1))
+          drop-shadow(0 0 14px rgba(255,128,45,.86)) !important;
+  animation: fushimi-route-particle-b 2.2s linear infinite !important;
+}
+@keyframes fushimi-route-flow {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -72; }
+}
+@keyframes fushimi-route-particle-a {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -259; }
+}
+@keyframes fushimi-route-particle-b {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -320; }
+}
+@keyframes fushimi-route-pulse {
+  from { stroke-opacity: .80; }
+  to   { stroke-opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-route-light-trail,
+  .planner-route-particle-a,
+  .planner-route-particle-b {
+    animation: none !important;
+  }
+}
