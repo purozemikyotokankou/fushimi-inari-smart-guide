@@ -5594,3 +5594,137 @@ body.spot-share-open { overflow: hidden; }
     transition: none !important;
   }
 }
+
+
+/* ============================================================
+   V58 FIX — reliable self-made SVG masks + white knockout state
+   Uses direct stylesheet-relative paths to images/icons, rather than relying
+   only on a URL stored in an inline CSS custom property. The stylesheet lives
+   in /css, so ../images/icons/ resolves to the project's /images/icons/ folder.
+   ============================================================ */
+
+/* Category colors from the supplied CUD accent palette. */
+#plannerCategoryTray #plannerCategoryFront [data-category="all"] {
+  --category-accent: #FF2800 !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #000000 !important;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="sightseeing"] {
+  --category-accent: #9A0079 !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="交通"] {
+  --category-accent: #0041FF !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="施設"] {
+  --category-accent: #35A16B !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #000000 !important;
+}
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
+  --category-accent: #FF9900 !important;
+  --category-active-icon: #000000 !important;
+  --category-active-text: #000000 !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-close-button {
+  --category-accent: #7F878F !important;
+  --category-active-icon: #000000 !important;
+  --category-active-text: #000000 !important;
+}
+
+/* Treat each self-made SVG as a true alpha mask: CSS paints its visible strokes/shapes. */
+#plannerCategoryTray .category-glyph-image {
+  display: block !important;
+  position: relative !important;
+  width: 25px !important;
+  min-width: 25px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  flex: 0 0 25px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  background: var(--category-accent, #FF2800) !important;
+  background-color: var(--category-accent, #FF2800) !important;
+  background-image: none !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+  mask-mode: alpha !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-all.svg"] {
+  -webkit-mask-image: url("../images/icons/category-all.svg") !important;
+  mask-image: url("../images/icons/category-all.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-sightseeing.svg"] {
+  -webkit-mask-image: url("../images/icons/category-sightseeing.svg") !important;
+  mask-image: url("../images/icons/category-sightseeing.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-food-shop.svg"] {
+  -webkit-mask-image: url("../images/icons/category-food-shop.svg") !important;
+  mask-image: url("../images/icons/category-food-shop.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-transport.svg"] {
+  -webkit-mask-image: url("../images/icons/category-transport.svg") !important;
+  mask-image: url("../images/icons/category-transport.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-facilities.svg"] {
+  -webkit-mask-image: url("../images/icons/category-facilities.svg") !important;
+  mask-image: url("../images/icons/category-facilities.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-eat.svg"] {
+  -webkit-mask-image: url("../images/icons/category-eat.svg") !important;
+  mask-image: url("../images/icons/category-eat.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-buy.svg"] {
+  -webkit-mask-image: url("../images/icons/category-buy.svg") !important;
+  mask-image: url("../images/icons/category-buy.svg") !important;
+}
+#plannerCategoryTray .category-glyph-image[style*="category-back.svg"] {
+  -webkit-mask-image: url("../images/icons/category-back.svg") !important;
+  mask-image: url("../images/icons/category-back.svg") !important;
+}
+
+/* Force the intended category fill, even when legacy category styles exist above. */
+#plannerCategoryTray #plannerCategoryFront .category-button,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button {
+  color: var(--category-accent, #FF2800) !important;
+}
+#plannerCategoryTray #plannerCategoryFront .category-button.active,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active {
+  background: var(--category-accent, #FF2800) !important;
+  background-color: var(--category-accent, #FF2800) !important;
+  border-color: var(--category-accent, #FF2800) !important;
+  color: var(--category-active-text, #FFFFFF) !important;
+}
+
+/* White knockout for active non-orange icons. Orange stays black for contrast. */
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-glyph-image,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-glyph-image {
+  background: var(--category-active-icon, #FFFFFF) !important;
+  background-color: var(--category-active-icon, #FFFFFF) !important;
+  background-image: none !important;
+}
+#plannerCategoryTray #foodCategoryOptions .food-close-button .category-glyph-image {
+  background: #7F878F !important;
+  background-color: #7F878F !important;
+}
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
+  color: var(--category-active-text, #FFFFFF) !important;
+}

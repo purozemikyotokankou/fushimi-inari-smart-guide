@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V55-AUTO-ROUTE-TRAVELING-LIGHTS";
+    window.__FUSHIMI_PLANNER_BUILD__ = "V58-AUTO-ROUTE-TRAVELING-LIGHTS";
     console.log("[Fushimi Inari Smart Guide] planner.js V55-AUTO-ROUTE-TRAVELING-LIGHTS loaded");
 
     // ============================================================
