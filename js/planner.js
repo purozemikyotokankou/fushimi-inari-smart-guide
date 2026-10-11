@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V40-WHOLE-GLASS-CARD-FLIP";
-    console.log("[Fushimi Inari Smart Guide] planner.js V40-WHOLE-GLASS-CARD-FLIP loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V41-DOUBLE-GLASS-CARD-FLIP";
+    console.log("[Fushimi Inari Smart Guide] planner.js V41-DOUBLE-GLASS-CARD-FLIP loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
