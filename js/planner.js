@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V41-DOUBLE-GLASS-CARD-FLIP";
-    console.log("[Fushimi Inari Smart Guide] planner.js V41-DOUBLE-GLASS-CARD-FLIP loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V42-SOLID-3D-GLASS-PRISM";
+    console.log("[Fushimi Inari Smart Guide] planner.js V42-SOLID-3D-GLASS-PRISM loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -201,6 +201,23 @@ document.addEventListener("DOMContentLoaded", function () {
     const foodCategoryOptions = document.getElementById("foodCategoryOptions");
     const plannerCategoryFront = document.getElementById("plannerCategoryFront");
     const foodCategoryClose = document.getElementById("foodCategoryClose");
+
+    // Keep the solid prism's left/right side planes attached to the real card width.
+    const foodCategoryFlipInner = foodCategorySwitcher?.querySelector(".food-category-flip-inner");
+    const syncFoodCategorySolidWidth = () => {
+        if (!foodCategorySwitcher || !foodCategoryFlipInner) return;
+        const width = foodCategorySwitcher.getBoundingClientRect().width;
+        const styles = getComputedStyle(foodCategorySwitcher);
+        const halfDepth = parseFloat(styles.getPropertyValue("--solid-half-depth")) || 0;
+        if (width > 0) foodCategorySwitcher.style.setProperty("--solid-half-width", `${Math.max(0, width / 2 - halfDepth)}px`);
+    };
+    syncFoodCategorySolidWidth();
+    if (foodCategorySwitcher && "ResizeObserver" in window) {
+        const foodCategorySolidResizeObserver = new ResizeObserver(syncFoodCategorySolidWidth);
+        foodCategorySolidResizeObserver.observe(foodCategorySwitcher);
+    } else {
+        window.addEventListener("resize", syncFoodCategorySolidWidth, { passive: true });
+    }
 
     // The capsule is a fixed-size, single-glass surface. Only its contents switch
     // front/back; no individual category tile rotates and the bar never unmounts.

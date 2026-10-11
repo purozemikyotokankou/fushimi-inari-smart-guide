@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=41-double-glass-card-flip">
+    <link rel="stylesheet" href="css/planner.css?v=42-solid-3d-capsule">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -88,6 +88,11 @@
                 <section class="planner-category-tray" aria-label="Spot categories" id="plannerCategoryTray">
     <div class="food-category-switcher planner-category-deck" id="foodCategorySwitcher" data-face="categories">
         <div class="food-category-flip-inner">
+            <!-- Real side faces give the rotating capsule physical thickness. -->
+            <span class="food-category-edge food-category-edge-top" aria-hidden="true"></span>
+            <span class="food-category-edge food-category-edge-bottom" aria-hidden="true"></span>
+            <span class="food-category-edge food-category-edge-left" aria-hidden="true"></span>
+            <span class="food-category-edge food-category-edge-right" aria-hidden="true"></span>
             <div class="food-category-face food-category-front-face" id="plannerCategoryFront">
                 <div class="planner-category-grid planner-category-main-grid">
                     <button type="button" class="category category-button active" data-category="all"><span class="category-glyph" aria-hidden="true"><svg class="category-svg" viewBox="0 0 24 24"><path d="M3 6.2 9 3l6 3.2L21 3v14.8L15 21l-6-3.2L3 21Z"/><path d="M9 3v14.8M15 6.2V21"/></svg></span><span class="category-label" data-ja="すべて" data-en="All" data-zh="全部" data-ko="전체">すべて</span></button>
@@ -181,7 +186,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js"></script>
-<script src="js/planner.js?v=41-double-glass-card-flip"></script>
+<script src="js/planner.js?v=42-solid-3d-capsule"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");
