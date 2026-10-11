@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V60-CATEGORY-FOOD-WHITE-SOLID-ROUTE";
-    console.log("[Fushimi Inari Smart Guide] planner.js V60-CATEGORY-FOOD-WHITE-SOLID-ROUTE loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V61-DEPTH-AWARE-ROUTE-LIGHTS";
+    console.log("[Fushimi Inari Smart Guide] planner.js V61-DEPTH-AWARE-ROUTE-LIGHTS loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -159,6 +159,9 @@ document.addEventListener("DOMContentLoaded", function () {
     let routeOutlineLine = null;
     let routeSegments = [];
     let routeNumberMarkers = [];
+    let routeLightAnimationFrame = null;
+    let routeLightAnimation = null;
+    let routeLightResizeObserver = null;
 
     let currentLocationMarker = null;
     let currentLocation = null;
@@ -6269,6 +6272,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        stopRouteLightAnimation();
         if (routeLine) {
             map.removeLayer(routeLine);
             routeLine = null;
@@ -6511,6 +6515,9 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
 
+        // V61: 光は実際に作成したルート線の形状に沿って流れます。
+        startRouteLightAnimation(routeLine);
+
         renderRouteNumberMarkers();
 
         const routeDistance =
@@ -6734,8 +6741,150 @@ document.addEventListener("DOMContentLoaded", function () {
             );
     }
 
+    // ============================================================
+    // V61: 奥行きに応じて速度が変わるルート上の流れる光
+    // 実際のLeafletルートSVG pathをサンプリングするため、曲線・折れ線に追従します。
+    // ============================================================
+    const ROUTE_LIGHT_CONFIG = {
+        enabled: true,
+        particleCount: 9,
+        farSpeed: 260,       // 画面上部（奥）：px/sec
+        nearSpeed: 55,       // 画面下部（手前）：px/sec
+        tailLength: 26,      // 光の尾の長さ（SVG path座標単位）
+        glow: 1,             // 発光強度 0.5〜1.5 程度
+        color: "#8beaff",
+        coreColor: "#ffffff"
+    };
+
+    function stopRouteLightAnimation() {
+        if (routeLightAnimationFrame !== null) {
+            cancelAnimationFrame(routeLightAnimationFrame);
+            routeLightAnimationFrame = null;
+        }
+        if (routeLightResizeObserver) {
+            routeLightResizeObserver.disconnect();
+            routeLightResizeObserver = null;
+        }
+        if (routeLightAnimation && typeof routeLightAnimation.cleanupMapEvents === "function") {
+            routeLightAnimation.cleanupMapEvents();
+        }
+        if (routeLightAnimation && routeLightAnimation.group && routeLightAnimation.group.parentNode) {
+            routeLightAnimation.group.parentNode.removeChild(routeLightAnimation.group);
+        }
+        routeLightAnimation = null;
+    }
+
+    function startRouteLightAnimation(polyline) {
+        stopRouteLightAnimation();
+        if (!ROUTE_LIGHT_CONFIG.enabled || !polyline || !polyline.getElement) return;
+        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+        const path = polyline.getElement();
+        const svg = path && path.ownerSVGElement;
+        const mapElement = document.getElementById("map");
+        if (!path || !svg || !mapElement || typeof path.getTotalLength !== "function" || typeof path.getPointAtLength !== "function") return;
+
+        const ns = "http://www.w3.org/2000/svg";
+        const group = document.createElementNS(ns, "g");
+        group.setAttribute("class", "planner-route-lights-v61");
+        group.setAttribute("aria-hidden", "true");
+        group.style.pointerEvents = "none";
+        svg.appendChild(group);
+
+        const particles = [];
+        const count = Math.max(1, Math.min(24, Math.round(ROUTE_LIGHT_CONFIG.particleCount)));
+        for (let i = 0; i < count; i++) {
+            const tail = document.createElementNS(ns, "path");
+            tail.setAttribute("class", "planner-route-light-tail-v61");
+            tail.setAttribute("fill", "none");
+            tail.setAttribute("stroke", ROUTE_LIGHT_CONFIG.color);
+            tail.setAttribute("stroke-linecap", "round");
+            tail.setAttribute("stroke-width", i % 3 === 0 ? "3.2" : "2.2");
+            tail.setAttribute("opacity", i % 3 === 0 ? "0.95" : "0.72");
+            tail.style.filter = `drop-shadow(0 0 ${4 * ROUTE_LIGHT_CONFIG.glow}px ${ROUTE_LIGHT_CONFIG.color}) drop-shadow(0 0 ${8 * ROUTE_LIGHT_CONFIG.glow}px rgba(77,204,255,.78))`;
+            group.appendChild(tail);
+
+            const halo = document.createElementNS(ns, "circle");
+            halo.setAttribute("r", i % 3 === 0 ? "4.0" : "3.0");
+            halo.setAttribute("fill", ROUTE_LIGHT_CONFIG.color);
+            halo.setAttribute("class", "planner-route-light-halo-v61");
+            halo.style.filter = `drop-shadow(0 0 ${4 * ROUTE_LIGHT_CONFIG.glow}px ${ROUTE_LIGHT_CONFIG.color}) drop-shadow(0 0 ${9 * ROUTE_LIGHT_CONFIG.glow}px rgba(68,194,255,.95))`;
+            group.appendChild(halo);
+
+            const core = document.createElementNS(ns, "circle");
+            core.setAttribute("r", i % 3 === 0 ? "1.9" : "1.45");
+            core.setAttribute("fill", ROUTE_LIGHT_CONFIG.coreColor);
+            core.setAttribute("class", "planner-route-light-core-v61");
+            group.appendChild(core);
+            particles.push({ tail, halo, core, progress: i / count, phase: Math.random() * Math.PI * 2, sparkle: i % 3 === 0 });
+        }
+
+        routeLightAnimation = { path, svg, group, particles, length: 0, lastTime: 0, mapElement };
+        const refreshLength = () => {
+            if (!routeLightAnimation || routeLightAnimation.path !== path) return;
+            try { routeLightAnimation.length = path.getTotalLength(); } catch (_) { routeLightAnimation.length = 0; }
+        };
+        refreshLength();
+        map.on("moveend zoomend resize", refreshLength);
+        routeLightAnimation.cleanupMapEvents = () => map.off("moveend zoomend resize", refreshLength);
+        if (typeof ResizeObserver !== "undefined") {
+            routeLightResizeObserver = new ResizeObserver(refreshLength);
+            routeLightResizeObserver.observe(mapElement);
+        }
+
+        function frame(now) {
+            const state = routeLightAnimation;
+            if (!state || state.path !== path || !path.isConnected) {
+                stopRouteLightAnimation();
+                return;
+            }
+            const length = state.length;
+            if (!(length > 1)) {
+                routeLightAnimationFrame = requestAnimationFrame(frame);
+                return;
+            }
+            const dt = state.lastTime ? Math.min(0.05, Math.max(0, (now - state.lastTime) / 1000)) : 0;
+            state.lastTime = now;
+            let matrix = null;
+            try { matrix = path.getScreenCTM(); } catch (_) { matrix = null; }
+            const mapRect = mapElement.getBoundingClientRect();
+            const scale = matrix ? Math.max(0.25, Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b)) : 1;
+            const screenPoint = (point) => {
+                if (!matrix || typeof DOMPoint === "undefined") return { x: point.x, y: point.y };
+                const transformed = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+                return { x: transformed.x, y: transformed.y };
+            };
+            for (const particle of particles) {
+                let distance = particle.progress * length;
+                let point;
+                try { point = path.getPointAtLength(distance); } catch (_) { continue; }
+                const screen = screenPoint(point);
+                const depth = Math.max(0, Math.min(1, (screen.y - mapRect.top) / Math.max(1, mapRect.height)));
+                // 上方（远处）快、下方（近处）慢；smoothstep 避免速度变化生硬。
+                const easedDepth = depth * depth * (3 - 2 * depth);
+                const speed = ROUTE_LIGHT_CONFIG.farSpeed + (ROUTE_LIGHT_CONFIG.nearSpeed - ROUTE_LIGHT_CONFIG.farSpeed) * easedDepth;
+                distance = (distance + (speed / scale) * dt) % length;
+                particle.progress = distance / length;
+                point = path.getPointAtLength(distance);
+                const behindDistance = (distance - ROUTE_LIGHT_CONFIG.tailLength + length) % length;
+                const behind = path.getPointAtLength(behindDistance);
+                const flicker = particle.sparkle ? (0.78 + 0.22 * Math.sin(now / 115 + particle.phase)) : (0.86 + 0.14 * Math.sin(now / 210 + particle.phase));
+                particle.tail.setAttribute("d", `M ${behind.x.toFixed(2)} ${behind.y.toFixed(2)} L ${point.x.toFixed(2)} ${point.y.toFixed(2)}`);
+                particle.halo.setAttribute("cx", point.x.toFixed(2));
+                particle.halo.setAttribute("cy", point.y.toFixed(2));
+                particle.halo.setAttribute("opacity", (flicker * (particle.sparkle ? 0.9 : 0.66)).toFixed(2));
+                particle.core.setAttribute("cx", point.x.toFixed(2));
+                particle.core.setAttribute("cy", point.y.toFixed(2));
+                particle.core.setAttribute("opacity", flicker.toFixed(2));
+            }
+            routeLightAnimationFrame = requestAnimationFrame(frame);
+        }
+        routeLightAnimationFrame = requestAnimationFrame(frame);
+    }
+
     function clearRouteVisuals() {
 
+        stopRouteLightAnimation();
         if (routeLine) {
             try {
                 map.removeLayer(routeLine);
