@@ -5119,3 +5119,294 @@ body { overflow:hidden !important; background:#e9ece8; }
 .planner-workspace.has-spot-detail .map-search-popover {
   display: none !important;
 }
+
+/* ==========================================================
+   V52 — spot save, QR share and route-sheet close
+   Iconography is inline SVG so no user-authored map-marker files are replaced.
+   ========================================================== */
+.spot-engagement-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 14px 0 11px;
+  align-items: stretch;
+}
+.spot-engagement-button {
+  display: flex;
+  min-width: 0;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 7px;
+  border: 1px solid rgba(127,135,143,.25);
+  border-radius: 14px;
+  background: rgba(255,255,255,.46);
+  color: #343b41;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.60);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+.spot-engagement-button:active { transform: scale(.975); }
+.spot-engagement-button svg {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.spot-engagement-button .spot-action-count {
+  min-width: 9px;
+  margin-left: -2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.spot-engagement-button .spot-action-count[hidden] { display: none !important; }
+.spot-engagement-button.is-active {
+  border-color: rgba(196,0,24,.30);
+  background: rgba(255,209,209,.42);
+  color: #9e0013;
+}
+.spot-save-button.is-active svg { fill: rgba(196,0,24,.14); }
+.spot-engagement-button:focus-visible {
+  outline: 3px solid #0041FF;
+  outline-offset: 2px;
+}
+.spot-engagement-button:disabled { opacity: .60; cursor: wait; }
+.spot-engagement-status {
+  margin: -2px 1px 10px !important;
+  padding: 7px 9px;
+  border: 1px solid rgba(127,135,143,.18);
+  border-radius: 10px;
+  background: rgba(255,255,255,.34);
+  color: #535b63 !important;
+  font-size: 10px !important;
+  line-height: 1.45 !important;
+  overflow-wrap: anywhere;
+}
+.spot-engagement-status[hidden] { display: none !important; }
+.spot-engagement-status.is-error {
+  color: #780015 !important;
+  border-color: rgba(196,0,24,.22);
+  background: rgba(255,209,209,.50);
+}
+.map-spot-detail-route-button-summary { margin-top: 2px !important; }
+
+/* The share dialog is a single, separate overlay above Leaflet and the detail sheet. */
+.spot-share-dialog[hidden] { display: none !important; }
+.spot-share-dialog {
+  position: fixed;
+  z-index: 20000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+.spot-share-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(22,26,31,.38);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  cursor: default;
+}
+.spot-share-dialog-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 370px);
+  max-height: min(88dvh, 720px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 19px;
+  border: 1px solid rgba(255,255,255,.66);
+  border-radius: 25px;
+  background: rgba(248,248,250,.78);
+  box-shadow: 0 22px 70px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.8);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  color: #202428;
+}
+.spot-share-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+.spot-share-eyebrow {
+  margin: 0 0 4px !important;
+  color: #7f878f !important;
+  font-size: 8px !important;
+  line-height: 1.3 !important;
+  font-weight: 900 !important;
+  letter-spacing: .12em;
+}
+.spot-share-dialog-header h2 {
+  margin: 0 !important;
+  color: #22272b !important;
+  font-size: 20px !important;
+  line-height: 1.25 !important;
+  font-weight: 900 !important;
+}
+.spot-share-close {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(127,135,143,.18);
+  border-radius: 50%;
+  background: rgba(255,255,255,.55);
+  color: #30363b;
+  font-size: 24px;
+  line-height: 1;
+}
+.spot-share-spot-name {
+  margin: 0 0 13px !important;
+  color: #626970 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  line-height: 1.45 !important;
+  overflow-wrap: anywhere;
+}
+.spot-share-qr-frame {
+  width: 220px;
+  min-height: 220px;
+  max-width: 100%;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  margin: 0 auto 12px;
+  padding: 10px;
+  border: 1px solid rgba(127,135,143,.14);
+  border-radius: 19px;
+  background: rgba(255,255,255,.82);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 5px 16px rgba(0,0,0,.04);
+}
+.spot-share-qr-image {
+  display: block;
+  width: 200px;
+  height: 200px;
+  max-width: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.spot-share-qr-image[hidden] { display: none !important; }
+.spot-share-qr-fallback {
+  margin: 0 !important;
+  padding: 12px !important;
+  color: #626970 !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  text-align: center;
+}
+.spot-share-qr-fallback[hidden] { display: none !important; }
+.spot-share-hint {
+  margin: 0 0 14px !important;
+  color: #505860 !important;
+  font-size: 11px !important;
+  text-align: center;
+  line-height: 1.55 !important;
+}
+.spot-share-link-label {
+  display: block;
+  margin: 0 0 5px;
+  color: #58616a;
+  font-size: 10px;
+  font-weight: 850;
+}
+.spot-share-url-input {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid rgba(127,135,143,.24);
+  border-radius: 11px;
+  background: rgba(255,255,255,.62);
+  color: #333a40;
+  font: inherit;
+  font-size: 10px;
+  outline-offset: 2px;
+}
+.spot-share-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr .7fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.spot-share-copy-button,
+.spot-share-native-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+}
+.spot-share-copy-button {
+  border: 1px solid rgba(196,0,24,.18);
+  background: #c40018;
+  color: #fff;
+  box-shadow: 0 4px 11px rgba(196,0,24,.14), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.spot-share-native-button {
+  border: 1px solid rgba(127,135,143,.24);
+  background: rgba(255,255,255,.52);
+  color: #343b41;
+}
+.spot-share-copy-button svg,
+.spot-share-native-button svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.spot-share-copy-button:focus-visible,
+.spot-share-native-button:focus-visible,
+.spot-share-close:focus-visible { outline: 3px solid #0041FF; outline-offset: 2px; }
+.spot-share-status {
+  min-height: 0;
+  margin: 8px 0 0 !important;
+  color: #3d474f !important;
+  font-size: 10px !important;
+  line-height: 1.45 !important;
+  overflow-wrap: anywhere;
+}
+.spot-share-status:empty { display: none; }
+body.spot-share-open { overflow: hidden; }
+
+@media (max-width: 420px) {
+  .spot-engagement-actions { gap: 6px; margin-top: 12px; }
+  .spot-engagement-button { min-height: 42px; gap: 4px; padding: 7px 4px; font-size: 11px; }
+  .spot-engagement-button svg { width: 17px; height: 17px; flex-basis: 17px; }
+  .spot-share-dialog-panel { padding: 16px; border-radius: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spot-engagement-button { transition: none !important; }
+}

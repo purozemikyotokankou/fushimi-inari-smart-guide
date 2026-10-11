@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=50-route-builder-video-ui">
+    <link rel="stylesheet" href="css/planner.css?v=52-share-save-only">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -182,12 +182,44 @@
             <button type="button" id="closeMapSpotDetail" class="map-spot-detail-close" aria-label="スポット詳細を閉じる">×</button>
             <div id="mapSpotDetailContent" class="map-spot-detail-content"></div>
         </section>
+
+        <div id="spotShareDialog" class="spot-share-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="spotShareTitle">
+            <button type="button" class="spot-share-backdrop" data-share-close aria-label="閉じる"></button>
+            <section class="spot-share-dialog-panel">
+                <header class="spot-share-dialog-header">
+                    <div>
+                        <p class="spot-share-eyebrow">FUSHIMI INARI SMART GUIDE</p>
+                        <h2 id="spotShareTitle">スポットをシェア</h2>
+                    </div>
+                    <button type="button" class="spot-share-close" data-share-close aria-label="閉じる">×</button>
+                </header>
+                <p id="spotShareSpotName" class="spot-share-spot-name"></p>
+                <div class="spot-share-qr-frame">
+                    <img id="spotShareQrImage" class="spot-share-qr-image" alt="別の端末でスポットを開くQRコード" referrerpolicy="no-referrer">
+                    <p id="spotShareQrFallback" class="spot-share-qr-fallback" hidden>QRコードを読み込めませんでした。リンクをコピーして共有してください。</p>
+                </div>
+                <p id="spotShareHint" class="spot-share-hint">QRコードを読み取ると、同じスポットを開けます。</p>
+                <label class="spot-share-link-label" for="spotShareUrlInput">共有リンク</label>
+                <input id="spotShareUrlInput" class="spot-share-url-input" type="url" readonly>
+                <div class="spot-share-dialog-actions">
+                    <button type="button" id="copySpotShareUrl" class="spot-share-copy-button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1.5 1.5 0 0 0-1.5-1.5h-9A1.5 1.5 0 0 0 4 5v10.5A1.5 1.5 0 0 0 5.5 17H8"></path></svg>
+                        <span>リンクをコピー</span>
+                    </button>
+                    <button type="button" id="nativeSpotShare" class="spot-share-native-button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"></path></svg>
+                        <span>共有</span>
+                    </button>
+                </div>
+                <p id="spotShareStatus" class="spot-share-status" role="status" aria-live="polite"></p>
+            </section>
+        </div>
     </div>
 </main>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="js/language.js"></script>
-<script src="js/planner.js?v=50-route-builder-video-ui"></script>
+<script src="js/language.js?v=52"></script>
+<script src="js/planner.js?v=52-share-save-only"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");

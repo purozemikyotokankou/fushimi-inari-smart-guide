@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V50-ROUTE-BUILDER-VIDEO-INSPIRED";
-    console.log("[Fushimi Inari Smart Guide] planner.js V50-ROUTE-BUILDER-VIDEO-INSPIRED loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V52-SPOT-SAVE-QR-SHARE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V52-SPOT-SAVE-QR-SHARE loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
     const SAVED_ROUTE_KEY = "selectedRoute";
+    const SAVED_SPOTS_STORAGE_KEY = "fushimiSavedSpotsV51";
 
     // 写真ファイルが未配置でもスポット一覧・地図が停止しないようにする。
     // 写真を追加したあと true に変更すれば画像表示を有効化できる。
@@ -286,6 +287,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const openMapSearchButton = document.getElementById("openMapSearchBtn");
     const mapSearchPopover = document.getElementById("mapSearchPopover");
     const closeMapSearchButton = document.getElementById("closeMapSearchBtn");
+    const spotShareDialog = document.getElementById("spotShareDialog");
+    const spotShareQrImage = document.getElementById("spotShareQrImage");
+    const spotShareQrFallback = document.getElementById("spotShareQrFallback");
+    const spotShareUrlInput = document.getElementById("spotShareUrlInput");
+    const spotShareSpotName = document.getElementById("spotShareSpotName");
+    const spotShareHint = document.getElementById("spotShareHint");
+    const spotShareStatus = document.getElementById("spotShareStatus");
+    const copySpotShareUrlButton = document.getElementById("copySpotShareUrl");
+    const nativeSpotShareButton = document.getElementById("nativeSpotShare");
 
     // ============================================================
     // Leaflet地図
@@ -3783,6 +3793,194 @@ document.addEventListener("DOMContentLoaded", function () {
         return routeSetupText("icon");
     }
 
+
+    // ============================================================
+    // Spot save / QR share
+    // ============================================================
+    function readIdSet(storageKey) {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
+            return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+        } catch (_) {
+            return new Set();
+        }
+    }
+
+    function writeIdSet(storageKey, values) {
+        try { localStorage.setItem(storageKey, JSON.stringify(Array.from(values))); } catch (_) {}
+    }
+
+    function isSpotSaved(spot) {
+        return Boolean(spot && readIdSet(SAVED_SPOTS_STORAGE_KEY).has(String(spot.id)));
+    }
+
+    function getEngagementText(key) {
+        const lang = getCurrentLanguage();
+        const dict = {
+            save: { ja: "保存", en: "Save", zh: "收藏", ko: "저장" },
+            saved: { ja: "保存済み", en: "Saved", zh: "已收藏", ko: "저장됨" },
+            share: { ja: "シェア", en: "Share", zh: "分享", ko: "공유" },
+            shareTitle: { ja: "スポットをシェア", en: "Share this spot", zh: "分享地点", ko: "장소 공유" },
+            scan: { ja: "QRコードを別のスマホで読み取ると、このスポットを開けます。", en: "Scan this QR code on another phone to open this spot.", zh: "用另一部手机扫描二维码即可打开此地点。", ko: "다른 휴대폰으로 QR 코드를 스캔하면 이 장소가 열립니다." },
+            localUrl: { ja: "別のスマホで開くには、GitHub Pagesなど公開済みのURLが必要です。", en: "To open on another phone, deploy this app to a public URL such as GitHub Pages.", zh: "要在另一部手机上打开，请先部署到 GitHub Pages 等公开网址。", ko: "다른 휴대폰에서 열려면 GitHub Pages 등 공개 URL에 배포해야 합니다." },
+            copied: { ja: "リンクをコピーしました。", en: "Link copied.", zh: "链接已复制。", ko: "링크를 복사했습니다." },
+            copiedManual: { ja: "リンクを選択してコピーしてください。", en: "Select and copy the link.", zh: "请选择并复制链接。", ko: "링크를 선택해 복사해 주세요." },
+            noShare: { ja: "このブラウザでは共有機能を利用できません。リンクをコピーしてください。", en: "Sharing is unavailable in this browser. Copy the link instead.", zh: "此浏览器不支持系统分享，请复制链接。", ko: "이 브라우저에서는 공유를 사용할 수 없습니다. 링크를 복사해 주세요." },
+            copyLink: { ja: "リンクをコピー", en: "Copy link", zh: "复制链接", ko: "링크 복사" },
+            nativeShare: { ja: "共有", en: "Share", zh: "分享", ko: "공유" },
+            shareLinkLabel: { ja: "共有リンク", en: "Share link", zh: "分享链接", ko: "공유 링크" },
+            qrAlt: { ja: "別の端末でスポットを開くQRコード", en: "QR code to open this spot on another device", zh: "在其他设备打开此地点的二维码", ko: "다른 기기에서 장소를 여는 QR 코드" },
+            qrFallback: { ja: "QRコードを読み込めませんでした。リンクをコピーして共有してください。", en: "The QR code could not be loaded. Copy and share the link instead.", zh: "无法加载二维码，请复制链接进行分享。", ko: "QR 코드를 불러오지 못했습니다. 링크를 복사해 공유해 주세요." },
+            close: { ja: "閉じる", en: "Close", zh: "关闭", ko: "닫기" }
+        };
+        return dict[key]?.[lang] || dict[key]?.ja || key;
+    }
+
+    function setEngagementStatus(message, isError = false) {
+        const status = mapSpotDetailContent?.querySelector(".spot-engagement-status");
+        if (!status) return;
+        status.textContent = message || "";
+        status.classList.toggle("is-error", Boolean(isError));
+        status.hidden = !message;
+    }
+
+    function updateSpotEngagementButtons(spot) {
+        if (!spot || !mapSpotDetailContent) return;
+        const saveButton = mapSpotDetailContent.querySelector('[data-spot-action="save"]');
+        const saved = isSpotSaved(spot);
+        if (saveButton) {
+            saveButton.classList.toggle("is-active", saved);
+            saveButton.setAttribute("aria-pressed", String(saved));
+            saveButton.title = saved ? getEngagementText("saved") : getEngagementText("save");
+            const label = saveButton.querySelector("[data-save-label]");
+            if (label) label.textContent = saved ? getEngagementText("saved") : getEngagementText("save");
+        }
+    }
+
+    function toggleSpotSaved(spot) {
+        if (!spot) return;
+        const saved = readIdSet(SAVED_SPOTS_STORAGE_KEY);
+        const id = String(spot.id);
+        const nextSaved = !saved.has(id);
+        if (nextSaved) saved.add(id); else saved.delete(id);
+        writeIdSet(SAVED_SPOTS_STORAGE_KEY, saved);
+        updateSpotEngagementButtons(spot);
+        setEngagementStatus(nextSaved
+            ? (getCurrentLanguage() === "en" ? "Saved on this device." : getCurrentLanguage() === "zh" ? "已保存在此设备。" : getCurrentLanguage() === "ko" ? "이 기기에 저장했습니다." : "この端末に保存しました。")
+            : (getCurrentLanguage() === "en" ? "Removed from saved spots." : getCurrentLanguage() === "zh" ? "已从收藏中移除。" : getCurrentLanguage() === "ko" ? "저장 목록에서 삭제했습니다." : "保存を解除しました。"));
+    }
+
+    function buildSpotShareUrl(spot) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("spot", String(spot.id));
+        url.hash = "";
+        return url.toString();
+    }
+
+    function updateSpotShareDialogLanguage() {
+        const title = document.getElementById("spotShareTitle");
+        const linkLabel = document.querySelector('label[for="spotShareUrlInput"]');
+        const copyLabel = copySpotShareUrlButton?.querySelector("span");
+        const shareLabel = nativeSpotShareButton?.querySelector("span");
+        if (title) title.textContent = getEngagementText("shareTitle");
+        if (linkLabel) linkLabel.textContent = getEngagementText("shareLinkLabel");
+        if (copyLabel) copyLabel.textContent = getEngagementText("copyLink");
+        if (shareLabel) shareLabel.textContent = getEngagementText("nativeShare");
+        if (spotShareQrFallback) spotShareQrFallback.textContent = getEngagementText("qrFallback");
+        spotShareDialog?.querySelectorAll("[data-share-close]").forEach(function (el) {
+            if (el.tagName === "BUTTON" && el.classList.contains("spot-share-close")) {
+                el.setAttribute("aria-label", getEngagementText("close"));
+            }
+        });
+    }
+
+    function openSpotShareDialog(spot) {
+        if (!spotShareDialog || !spotShareUrlInput || !spotShareQrImage) return;
+        updateSpotShareDialogLanguage();
+        const shareUrl = buildSpotShareUrl(spot);
+        spotShareUrlInput.value = shareUrl;
+        if (spotShareSpotName) spotShareSpotName.textContent = getLocalizedValue(spot.name);
+        if (spotShareHint) spotShareHint.textContent = getEngagementText("scan");
+        if (spotShareStatus) spotShareStatus.textContent = "";
+        if (spotShareQrFallback) spotShareQrFallback.hidden = true;
+        spotShareQrImage.hidden = false;
+        // The QR is rendered by a public QR image endpoint. The shared URL itself is public.
+        spotShareQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&format=svg&data=${encodeURIComponent(shareUrl)}`;
+        spotShareQrImage.alt = `${getLocalizedValue(spot.name)} — ${getEngagementText("qrAlt")}`;
+        const host = window.location.hostname;
+        if ((host === "localhost" || host === "127.0.0.1" || window.location.protocol === "file:") && spotShareHint) {
+            spotShareHint.textContent = getEngagementText("localUrl");
+        }
+        spotShareDialog.hidden = false;
+        document.body.classList.add("spot-share-open");
+        spotShareDialog.querySelector("[data-share-close]")?.focus({ preventScroll: true });
+    }
+
+    function closeSpotShareDialog() {
+        if (!spotShareDialog) return;
+        spotShareDialog.hidden = true;
+        document.body.classList.remove("spot-share-open");
+    }
+
+    spotShareQrImage?.addEventListener("error", function () {
+        spotShareQrImage.hidden = true;
+        if (spotShareQrFallback) spotShareQrFallback.hidden = false;
+    });
+
+    spotShareDialog?.addEventListener("click", function (event) {
+        if (event.target.closest("[data-share-close]")) closeSpotShareDialog();
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && spotShareDialog && !spotShareDialog.hidden) closeSpotShareDialog();
+    });
+
+    copySpotShareUrlButton?.addEventListener("click", async function () {
+        if (!spotShareUrlInput) return;
+        try {
+            await navigator.clipboard.writeText(spotShareUrlInput.value);
+            if (spotShareStatus) spotShareStatus.textContent = getEngagementText("copied");
+        } catch (_) {
+            spotShareUrlInput.focus();
+            spotShareUrlInput.select();
+            let copied = false;
+            try { copied = document.execCommand("copy"); } catch (_) {}
+            if (spotShareStatus) spotShareStatus.textContent = copied ? getEngagementText("copied") : getEngagementText("copiedManual");
+        }
+    });
+
+    nativeSpotShareButton?.addEventListener("click", async function () {
+        if (!spotShareUrlInput) return;
+        const shareData = { title: spotShareSpotName?.textContent || "Fushimi Inari Smart Guide", text: spotShareHint?.textContent || "", url: spotShareUrlInput.value };
+        if (navigator.share) {
+            try { await navigator.share(shareData); }
+            catch (error) { if (error?.name !== "AbortError" && spotShareStatus) spotShareStatus.textContent = String(error.message || error); }
+        } else if (spotShareStatus) {
+            spotShareStatus.textContent = getEngagementText("noShare");
+        }
+    });
+
+    mapSpotDetailContent?.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-spot-action]");
+        if (!button || !currentDetailSpot) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const action = button.dataset.spotAction;
+        if (action === "save") toggleSpotSaved(currentDetailSpot);
+        else if (action === "share") openSpotShareDialog(currentDetailSpot);
+    });
+
+    function openSharedSpotFromUrl() {
+        let spotId = "";
+        try { spotId = new URLSearchParams(window.location.search).get("spot") || ""; } catch (_) {}
+        if (!spotId) return;
+        const sharedSpot = spots.find(item => String(item.id) === String(spotId));
+        if (!sharedSpot) {
+            console.warn("共有リンクのスポットIDが見つかりません:", spotId);
+            return;
+        }
+        window.setTimeout(function () { showSpotOnMap(sharedSpot); }, 180);
+    }
+
     function setSpotAsSingleDestination(spot) {
         if (!spot) return;
         selectedSpots = [spot];
@@ -3834,6 +4032,16 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 </div>
                 <p class="map-spot-detail-short-description">${escapeHTML(description)}</p>
+                <div class="spot-engagement-actions" role="group" aria-label="スポットの操作">
+                    <button type="button" class="spot-engagement-button spot-save-button${isSpotSaved(spot) ? " is-active" : ""}" data-spot-action="save" aria-pressed="${isSpotSaved(spot) ? "true" : "false"}">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-3.8L6 21Z"/></svg>
+                        <span data-save-label>${escapeHTML(getEngagementText(isSpotSaved(spot) ? "saved" : "save"))}</span>
+                    </button>
+                    <button type="button" class="spot-engagement-button spot-share-button" data-spot-action="share">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg><span>${escapeHTML(getEngagementText("share"))}</span>
+                    </button>
+                </div>
+                <p class="spot-engagement-status" role="status" aria-live="polite" hidden></p>
                 <button type="button" class="map-spot-detail-route-button map-spot-detail-route-button-summary"><span class="route-button-symbol" aria-hidden="true">↗</span><span>${escapeHTML(routeSetupText("route"))}</span></button>
             </div>
             <div class="map-spot-detail-body">
@@ -3851,6 +4059,7 @@ document.addEventListener("DOMContentLoaded", function () {
         mapSpotDetail.classList.toggle("is-expanded", Boolean(expanded));
         mapSpotDetail.classList.toggle("is-compact", !expanded);
         plannerWorkspace?.classList.add("has-spot-detail");
+        updateSpotEngagementButtons(spot);
 
         const routeButton = mapSpotDetailContent.querySelector(".map-spot-detail-route-button-summary");
         routeButton?.addEventListener("click", function (event) {
@@ -3872,6 +4081,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // a left-side glass panel; on small screens it stays a bottom sheet over the map.
     function renderRoutePlanner(state) {
         if (!state || !mapSpotDetail || !mapSpotDetailContent) return;
+        // Route planning should not leave the spot/category drawer expanded behind the panel.
+        setFoodCategorySwitcherOpen(false);
+        setPlannerSheetState("collapsed");
         activeRoutePlannerState = state;
         currentDetailSpot = state.destinationSpot;
         const destination = state.destinationSpot;
@@ -6257,16 +6469,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (routeOptions?.destinationSpot) {
             hideSpotDetail();
-            setPlannerSheetState("expanded");
         }
+        // After any route is built, collapse the category/list drawer.
+        setFoodCategorySwitcherOpen(false);
+        setPlannerSheetState("collapsed");
     }
 
     if (createRouteBtn) {
-
-        createRouteBtn.addEventListener(
-            "click",
-            createRoute
-        );
+        createRouteBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            setFoodCategorySwitcherOpen(false);
+            setPlannerSheetState("collapsed");
+            createRoute();
+        });
     }
 
     // Route direction arrows removed; the animated light on the route shows direction.
@@ -7285,6 +7500,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         updateRoutePreviewState();
         updatePlannerSheetSummary();
+        openSharedSpotFromUrl();
 
         console.log(
             "planner initialized:",
