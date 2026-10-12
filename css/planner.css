@@ -5828,26 +5828,24 @@ body.spot-share-open { overflow: hidden; }
 
 
 /* ================================================================
-   V61: depth-aware animated route lights (SVG path followers)
-   The light elements are positioned by planner.js on the actual route path.
+   V62: white route streaks — the base route never moves or changes color.
+   Each overlay stroke is the same 6px width as the orange route underneath.
    ================================================================ */
-.leaflet-plannerRoutePane .planner-route-lights-v61,
-.planner-route-lights-v61 {
+.leaflet-plannerRoutePane .planner-route-streaks-v62,
+.planner-route-streaks-v62 {
   pointer-events: none !important;
 }
-.planner-route-lights-v61 .planner-route-light-tail-v61 {
+.planner-route-streaks-v62 .planner-route-streak-v62 {
+  fill: none !important;
+  stroke: #ffffff !important;
+  stroke-width: 6px !important;
+  stroke-opacity: .98 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  vector-effect: non-scaling-stroke;
-  opacity: .88;
-}
-.planner-route-lights-v61 .planner-route-light-halo-v61 {
+  vector-effect: non-scaling-stroke !important;
+  filter: none !important;
   pointer-events: none !important;
-}
-.planner-route-lights-v61 .planner-route-light-core-v61 {
-  pointer-events: none !important;
-  filter: drop-shadow(0 0 2px rgba(255,255,255,.98));
 }
 @media (prefers-reduced-motion: reduce) {
-  .planner-route-lights-v61 { display: none !important; }
+  .planner-route-streaks-v62 { display: none !important; }
 }
