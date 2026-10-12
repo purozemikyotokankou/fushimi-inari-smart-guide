@@ -5827,29 +5827,48 @@ body.spot-share-open { overflow: hidden; }
 }
 
 
-/* ================================================================
-   V63: moving luminous heads and thin tails. The base route remains static.
-   ================================================================ */
-.leaflet-plannerRoutePane .planner-route-streaks-v63,
-.planner-route-streaks-v63 {
-  pointer-events: none !important;
+/* V64: selection reset action in the selected-spots section. */
+.selected-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
 }
-.planner-route-streaks-v63 .planner-route-streak-glow-v63 {
-  fill: none !important; stroke: #bfeaff !important; stroke-width: 8px !important;
-  stroke-opacity: .42 !important; stroke-linecap: round !important; stroke-linejoin: round !important;
-  vector-effect: non-scaling-stroke !important; filter: drop-shadow(0 0 3px rgba(191,234,255,.65)) !important;
-  pointer-events: none !important;
+.cancel-selected-spots-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 27px;
+    padding: 5px 9px;
+    border: 1px solid rgba(190, 54, 54, .2);
+    border-radius: 999px;
+    background: rgba(255, 247, 247, .96);
+    color: #ad3030;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.15;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
 }
-.planner-route-streaks-v63 .planner-route-streak-core-v63 {
-  fill: none !important; stroke: #ffffff !important; stroke-width: 2.6px !important;
-  stroke-opacity: .98 !important; stroke-linecap: round !important; stroke-linejoin: round !important;
-  vector-effect: non-scaling-stroke !important; filter: drop-shadow(0 0 2px rgba(255,255,255,.9)) !important;
-  pointer-events: none !important;
+.cancel-selected-spots-button:hover {
+    background: #fff0f0;
+    border-color: rgba(190, 54, 54, .38);
 }
-.planner-route-streaks-v63 .planner-route-streak-head-glow-v63,
-.planner-route-streaks-v63 .planner-route-streak-head-v63 { pointer-events: none !important; }
-.planner-route-streaks-v63 .planner-route-streak-head-glow-v63 { filter: blur(1.6px) !important; }
-.planner-route-streaks-v63 .planner-route-streak-head-v63 { filter: drop-shadow(0 0 2px #fff) !important; }
-@media (prefers-reduced-motion: reduce) {
-  .planner-route-streaks-v63 { display: none !important; }
+.cancel-selected-spots-button:active {
+    transform: scale(.97);
+}
+.cancel-selected-spots-button:focus-visible {
+    outline: 2px solid #ad3030;
+    outline-offset: 2px;
+}
+.cancel-selected-spots-button[hidden] {
+    display: none !important;
+}
+@media (max-width: 420px) {
+    .selected-heading-actions { gap: 5px; }
+    .cancel-selected-spots-button { padding-inline: 7px; font-size: 9px; }
 }

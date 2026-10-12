@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=63-depth-based-glowing-route-lights">
+    <link rel="stylesheet" href="css/planner.css?v=64-cancel-selection-no-route-animation">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -139,7 +139,10 @@
                 <section class="selected-section">
                     <div class="sheet-section-heading">
                         <h2 data-i18n="selectedSpots">選択したスポット</h2>
-                        <span class="sheet-section-note">ルート順</span>
+                        <div class="selected-heading-actions">
+                            <span class="sheet-section-note">ルート順</span>
+                            <button type="button" id="cancelSelectedSpotsBtn" class="cancel-selected-spots-button" hidden>選択をキャンセル</button>
+                        </div>
                     </div>
                     <div id="selectedSpots">
                         <div id="selectedList">
@@ -238,7 +241,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=63-depth-based-glowing-route-lights"></script>
+<script src="js/planner.js?v=64-cancel-selection-no-route-animation"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");

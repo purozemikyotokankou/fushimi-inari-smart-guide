@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V63-DEPTH-BASED-GLOWING-ROUTE-LIGHTS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V63-DEPTH-BASED-GLOWING-ROUTE-LIGHTS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V64-CANCEL-SELECTION-NO-ROUTE-ANIMATION";
+    console.log("[Fushimi Inari Smart Guide] planner.js V64-CANCEL-SELECTION-NO-ROUTE-ANIMATION loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -159,9 +159,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let routeOutlineLine = null;
     let routeSegments = [];
     let routeNumberMarkers = [];
-    let routeLightAnimationFrame = null;
-    let routeLightAnimation = null;
-    let routeLightResizeObserver = null;
 
     let currentLocationMarker = null;
     let currentLocation = null;
@@ -181,6 +178,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const selectedList =
         document.getElementById("selectedList");
+
+    const cancelSelectedSpotsBtn =
+        document.getElementById("cancelSelectedSpotsBtn");
 
     const searchInput =
         document.getElementById("searchInput");
@@ -652,6 +652,21 @@ document.addEventListener("DOMContentLoaded", function () {
         if (language === "zh") return "移除";
         if (language === "ko") return "선택 해제";
         return "選択解除";
+    }
+
+    function updateCancelSelectedSpotsButton() {
+        if (!cancelSelectedSpotsBtn) return;
+        const language = getCurrentLanguage();
+        const labels = {
+            ja: "選択をキャンセル",
+            en: "Cancel selection",
+            zh: "取消选择",
+            ko: "선택 취소"
+        };
+        const label = labels[language] || labels.ja;
+        cancelSelectedSpotsBtn.textContent = label;
+        cancelSelectedSpotsBtn.setAttribute("aria-label", label);
+        cancelSelectedSpotsBtn.hidden = selectedSpots.length === 0;
     }
 
     function getViewOnMapText() {
@@ -4516,6 +4531,33 @@ document.addEventListener("DOMContentLoaded", function () {
         updateRoutePreviewState();
     }
 
+    function cancelAllSelectedSpots() {
+        if (!selectedSpots.length) return;
+
+        const previouslySelected = selectedSpots.slice();
+        if (navigationActive) {
+            stopNavigation();
+        }
+
+        selectedSpots = [];
+        saveSelectedIDs();
+        clearRouteVisuals();
+        updateSelected();
+        updateInfo();
+        updateCardSelection();
+        previouslySelected.forEach(function (spot) {
+            updateMarkerSelection(spot.id);
+        });
+        updateRoutePreviewState();
+    }
+
+    if (cancelSelectedSpotsBtn) {
+        cancelSelectedSpotsBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            cancelAllSelectedSpots();
+        });
+    }
+
     function updateCardSelection() {
 
         const cards =
@@ -4601,6 +4643,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateSelected() {
+
+        updateCancelSelectedSpotsButton();
 
         if (!selectedList) {
             return;
@@ -6272,7 +6316,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        stopRouteLightAnimation();
         if (routeLine) {
             map.removeLayer(routeLine);
             routeLine = null;
@@ -6515,9 +6558,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
 
-        // V62: ルート線は固定したまま、同じ太さの白い短い線だけをルート上で流します。
-        startRouteStreakAnimation(routeLine);
-
         renderRouteNumberMarkers();
 
         const routeDistance =
@@ -6611,7 +6651,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Route direction arrows removed; the animated light on the route shows direction.
+    // Route direction arrows and moving light are temporarily disabled; keep the route line static.
 
     // ============================================================
     // ナビ開始
@@ -6741,205 +6781,8 @@ document.addEventListener("DOMContentLoaded", function () {
             );
     }
 
-    // ============================================================
-    // V63: 曲線上を走る発光ライト + 奥行き連動の速度制御
-    // - 元のルート線は固定。ライトと細長い残像だけを上に描画
-    // - SVG path.getPointAtLength() でカーブに正確に追従
-    // - 画面上の位置を基本に、奥は速く手前は遅くなる
-    // - routeDepthOverride / routeDepthOverrides で奥行きを個別指定可能
-    // ============================================================
-    const ROUTE_STREAK_CONFIG = {
-        enabled: true,
-        streakCount: 5,          // ルート上のライト数（1〜16）
-        farSpeed: 330,            // 奥側の速度（画面px/秒）
-        nearSpeed: 62,            // 手前側の速度（画面px/秒）
-        tailLength: 38,           // 残像の長さ（画面px）
-        glowWidth: 8,             // 青白い外側の光の幅
-        coreWidth: 2.6,           // 白い芯の幅
-        headRadius: 2.1,          // 光の粒の半径
-        headGlowRadius: 5.8,      // 頭のグロー半径
-        glowColor: '#bfeaff',
-        coreColor: '#ffffff',
-        opacity: 0.98,
-        depthCurve: 1.65,         // 奥行きによる速度差の強さ
-        routeDepthOverride: null, // 0=画面上部/遠い, 1=下部/近い。nullなら画面位置を使う
-        routeDepthOverrides: {}   // pathのid/classをキーに個別指定。例: {'leaflet-xxxxx': 0.25}
-    };
-
-    function stopRouteLightAnimation() {
-        if (routeLightAnimationFrame !== null) {
-            cancelAnimationFrame(routeLightAnimationFrame);
-            routeLightAnimationFrame = null;
-        }
-        if (routeLightResizeObserver) {
-            routeLightResizeObserver.disconnect();
-            routeLightResizeObserver = null;
-        }
-        if (routeLightAnimation && typeof routeLightAnimation.cleanupMapEvents === 'function') {
-            routeLightAnimation.cleanupMapEvents();
-        }
-        if (routeLightAnimation && routeLightAnimation.group && routeLightAnimation.group.parentNode) {
-            routeLightAnimation.group.parentNode.removeChild(routeLightAnimation.group);
-        }
-        routeLightAnimation = null;
-    }
-
-    function startRouteStreakAnimation(polyline) {
-        stopRouteLightAnimation();
-        if (!ROUTE_STREAK_CONFIG.enabled || !polyline || !polyline.getElement) return;
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-        const path = polyline.getElement();
-        const mapElement = document.getElementById('map');
-        if (!path || !path.ownerSVGElement || !mapElement ||
-            typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') return;
-        const ns = 'http://www.w3.org/2000/svg';
-        const pathParent = path.parentNode;
-        if (!pathParent) return;
-
-        // Overlay lives beside the Leaflet route path, inheriting the exact pan/zoom transform.
-        const group = document.createElementNS(ns, 'g');
-        group.setAttribute('class', 'planner-route-streaks-v63');
-        group.setAttribute('aria-hidden', 'true');
-        group.style.pointerEvents = 'none';
-        pathParent.appendChild(group);
-
-        const count = Math.max(1, Math.min(16, Math.round(ROUTE_STREAK_CONFIG.streakCount)));
-        const lights = [];
-        function makePath(className, width, color, opacity) {
-            const el = document.createElementNS(ns, 'path');
-            el.setAttribute('class', className);
-            el.setAttribute('fill', 'none');
-            el.setAttribute('stroke', color);
-            el.setAttribute('stroke-width', String(width));
-            el.setAttribute('stroke-linecap', 'round');
-            el.setAttribute('stroke-linejoin', 'round');
-            el.setAttribute('vector-effect', 'non-scaling-stroke');
-            el.setAttribute('opacity', String(opacity));
-            group.appendChild(el);
-            return el;
-        }
-        for (let i = 0; i < count; i++) {
-            const item = {
-                progress: (i / count + (i % 2 ? 0.027 : 0.006)) % 1,
-                glow: makePath('planner-route-streak-glow-v63', ROUTE_STREAK_CONFIG.glowWidth, ROUTE_STREAK_CONFIG.glowColor, 0.42),
-                core: makePath('planner-route-streak-core-v63', ROUTE_STREAK_CONFIG.coreWidth, ROUTE_STREAK_CONFIG.coreColor, ROUTE_STREAK_CONFIG.opacity),
-                headGlow: document.createElementNS(ns, 'circle'),
-                head: document.createElementNS(ns, 'circle')
-            };
-            item.headGlow.setAttribute('class', 'planner-route-streak-head-glow-v63');
-            item.headGlow.setAttribute('r', String(ROUTE_STREAK_CONFIG.headGlowRadius));
-            item.headGlow.setAttribute('fill', ROUTE_STREAK_CONFIG.glowColor);
-            item.headGlow.setAttribute('opacity', '0.52');
-            item.headGlow.setAttribute('filter', 'url(#plannerRouteLightBlurV63)');
-            item.head.setAttribute('class', 'planner-route-streak-head-v63');
-            item.head.setAttribute('r', String(ROUTE_STREAK_CONFIG.headRadius));
-            item.head.setAttribute('fill', ROUTE_STREAK_CONFIG.coreColor);
-            item.head.setAttribute('opacity', String(ROUTE_STREAK_CONFIG.opacity));
-            group.appendChild(item.headGlow);
-            group.appendChild(item.head);
-            lights.push(item);
-        }
-        // Soft blur filter scoped to this overlay only.
-        const defs = document.createElementNS(ns, 'defs');
-        const filter = document.createElementNS(ns, 'filter');
-        filter.setAttribute('id', 'plannerRouteLightBlurV63');
-        filter.setAttribute('x', '-100%'); filter.setAttribute('y', '-100%');
-        filter.setAttribute('width', '300%'); filter.setAttribute('height', '300%');
-        const blur = document.createElementNS(ns, 'feGaussianBlur');
-        blur.setAttribute('stdDeviation', '2.2');
-        filter.appendChild(blur); defs.appendChild(filter); group.insertBefore(defs, group.firstChild);
-
-        routeLightAnimation = { path, group, lights, length: 0, lastTime: 0, mapElement };
-        const refreshLength = () => {
-            if (!routeLightAnimation || routeLightAnimation.path !== path) return;
-            try { routeLightAnimation.length = path.getTotalLength(); }
-            catch (_) { routeLightAnimation.length = 0; }
-        };
-        refreshLength();
-        map.on('moveend zoomend resize', refreshLength);
-        routeLightAnimation.cleanupMapEvents = () => map.off('moveend zoomend resize', refreshLength);
-        if (typeof ResizeObserver !== 'undefined') {
-            routeLightResizeObserver = new ResizeObserver(refreshLength);
-            routeLightResizeObserver.observe(mapElement);
-        }
-
-        const pathDepthOverride = () => {
-            if (Number.isFinite(ROUTE_STREAK_CONFIG.routeDepthOverride)) {
-                return Math.max(0, Math.min(1, ROUTE_STREAK_CONFIG.routeDepthOverride));
-            }
-            const keys = [path.id, path.getAttribute('class') || ''];
-            for (const key of keys) {
-                if (key && Number.isFinite(ROUTE_STREAK_CONFIG.routeDepthOverrides[key])) {
-                    return Math.max(0, Math.min(1, ROUTE_STREAK_CONFIG.routeDepthOverrides[key]));
-                }
-            }
-            const layerDepth = polyline.options && Number(polyline.options.routeDepth);
-            return Number.isFinite(layerDepth) ? Math.max(0, Math.min(1, layerDepth)) : null;
-        };
-        const fixedRouteDepth = pathDepthOverride();
-
-        function samplePath(distance, length) {
-            const d = Math.max(0, Math.min(length, distance));
-            return path.getPointAtLength(d);
-        }
-        function pathSegment(from, to, length, samples = 14) {
-            if (to <= from || to - from < 0.25) return '';
-            let d = '';
-            for (let j = 0; j <= samples; j++) {
-                const p = samplePath(from + (to - from) * j / samples, length);
-                d += `${j === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)} `;
-            }
-            return d.trim();
-        }
-
-        function frame(now) {
-            const state = routeLightAnimation;
-            if (!state || state.path !== path || !path.isConnected) { stopRouteLightAnimation(); return; }
-            const length = state.length;
-            if (!(length > 1)) { routeLightAnimationFrame = requestAnimationFrame(frame); return; }
-            const dt = state.lastTime ? Math.min(0.06, Math.max(0, (now - state.lastTime) / 1000)) : 0;
-            state.lastTime = now;
-            let matrix = null;
-            try { matrix = path.getScreenCTM(); } catch (_) { matrix = null; }
-            const mapRect = mapElement.getBoundingClientRect();
-            const scale = matrix ? Math.max(0.25, Math.hypot(matrix.a, matrix.b)) : 1;
-            const screenPoint = (p) => {
-                if (!matrix || typeof DOMPoint === 'undefined') return { x: p.x, y: p.y };
-                try { const s = new DOMPoint(p.x, p.y).matrixTransform(matrix); return { x: s.x, y: s.y }; }
-                catch (_) { return { x: p.x, y: p.y }; }
-            };
-            for (const light of lights) {
-                let distance = light.progress * length;
-                let p = samplePath(distance, length);
-                let screen = screenPoint(p);
-                const screenDepth = Math.max(0, Math.min(1, (screen.y - mapRect.top) / Math.max(1, mapRect.height)));
-                const depth = fixedRouteDepth === null ? screenDepth : fixedRouteDepth;
-                const eased = Math.pow(depth, ROUTE_STREAK_CONFIG.depthCurve);
-                const speed = ROUTE_STREAK_CONFIG.farSpeed + (ROUTE_STREAK_CONFIG.nearSpeed - ROUTE_STREAK_CONFIG.farSpeed) * eased;
-                distance += (speed / scale) * dt;
-                if (distance >= length) distance %= length;
-                light.progress = distance / length;
-                p = samplePath(distance, length);
-                screen = screenPoint(p);
-                const tailUnits = ROUTE_STREAK_CONFIG.tailLength / scale;
-                const from = Math.max(0, distance - tailUnits);
-                const d = pathSegment(from, distance, length, 12);
-                light.glow.setAttribute('d', d);
-                light.core.setAttribute('d', d);
-                light.headGlow.setAttribute('cx', p.x.toFixed(2));
-                light.headGlow.setAttribute('cy', p.y.toFixed(2));
-                light.head.setAttribute('cx', p.x.toFixed(2));
-                light.head.setAttribute('cy', p.y.toFixed(2));
-            }
-            routeLightAnimationFrame = requestAnimationFrame(frame);
-        }
-        routeLightAnimationFrame = requestAnimationFrame(frame);
-    }
-
     function clearRouteVisuals() {
 
-        stopRouteLightAnimation();
         if (routeLine) {
             try {
                 map.removeLayer(routeLine);
