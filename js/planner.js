@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V62-WHITE-ROUTE-STREAKS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V62-WHITE-ROUTE-STREAKS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V63-DEPTH-BASED-GLOWING-ROUTE-LIGHTS";
+    console.log("[Fushimi Inari Smart Guide] planner.js V63-DEPTH-BASED-GLOWING-ROUTE-LIGHTS loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -6742,19 +6742,28 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ============================================================
-    // V62: ルート線は固定し、短い白いストリークのみを線上に流す
-    // - Leaflet が描画した実際の SVG path を追従
-    // - ストリークの太さはルート本体（6px）と同じ
-    // - 画面奥では速く、手前ではゆっくり
+    // V63: 曲線上を走る発光ライト + 奥行き連動の速度制御
+    // - 元のルート線は固定。ライトと細長い残像だけを上に描画
+    // - SVG path.getPointAtLength() でカーブに正確に追従
+    // - 画面上の位置を基本に、奥は速く手前は遅くなる
+    // - routeDepthOverride / routeDepthOverrides で奥行きを個別指定可能
     // ============================================================
     const ROUTE_STREAK_CONFIG = {
         enabled: true,
-        streakCount: 4,       // 白い短線の数（1〜12）
-        farSpeed: 230,        // 画面上部・奥側の速度（画面px/秒）
-        nearSpeed: 55,        // 画面下部・手前側の速度（画面px/秒）
-        segmentLength: 24,    // 白い短線の長さ（画面px）
-        strokeWidth: 6,       // ルート本体と同じ太さ（画面px）
-        opacity: 0.98         // 白い短線の不透明度
+        streakCount: 5,          // ルート上のライト数（1〜16）
+        farSpeed: 330,            // 奥側の速度（画面px/秒）
+        nearSpeed: 62,            // 手前側の速度（画面px/秒）
+        tailLength: 38,           // 残像の長さ（画面px）
+        glowWidth: 8,             // 青白い外側の光の幅
+        coreWidth: 2.6,           // 白い芯の幅
+        headRadius: 2.1,          // 光の粒の半径
+        headGlowRadius: 5.8,      // 頭のグロー半径
+        glowColor: '#bfeaff',
+        coreColor: '#ffffff',
+        opacity: 0.98,
+        depthCurve: 1.65,         // 奥行きによる速度差の強さ
+        routeDepthOverride: null, // 0=画面上部/遠い, 1=下部/近い。nullなら画面位置を使う
+        routeDepthOverrides: {}   // pathのid/classをキーに個別指定。例: {'leaflet-xxxxx': 0.25}
     };
 
     function stopRouteLightAnimation() {
@@ -6766,7 +6775,7 @@ document.addEventListener("DOMContentLoaded", function () {
             routeLightResizeObserver.disconnect();
             routeLightResizeObserver = null;
         }
-        if (routeLightAnimation && typeof routeLightAnimation.cleanupMapEvents === "function") {
+        if (routeLightAnimation && typeof routeLightAnimation.cleanupMapEvents === 'function') {
             routeLightAnimation.cleanupMapEvents();
         }
         if (routeLightAnimation && routeLightAnimation.group && routeLightAnimation.group.parentNode) {
@@ -6778,137 +6787,151 @@ document.addEventListener("DOMContentLoaded", function () {
     function startRouteStreakAnimation(polyline) {
         stopRouteLightAnimation();
         if (!ROUTE_STREAK_CONFIG.enabled || !polyline || !polyline.getElement) return;
-        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
         const path = polyline.getElement();
-        const mapElement = document.getElementById("map");
+        const mapElement = document.getElementById('map');
         if (!path || !path.ownerSVGElement || !mapElement ||
-            typeof path.getTotalLength !== "function" ||
-            typeof path.getPointAtLength !== "function") return;
-
-        const ns = "http://www.w3.org/2000/svg";
+            typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') return;
+        const ns = 'http://www.w3.org/2000/svg';
         const pathParent = path.parentNode;
         if (!pathParent) return;
 
-        // Put the overlay beside the original Leaflet path so it inherits precisely
-        // the same map pan/zoom transform. Only the short white strokes are animated.
-        const group = document.createElementNS(ns, "g");
-        group.setAttribute("class", "planner-route-streaks-v62");
-        group.setAttribute("aria-hidden", "true");
-        group.style.pointerEvents = "none";
+        // Overlay lives beside the Leaflet route path, inheriting the exact pan/zoom transform.
+        const group = document.createElementNS(ns, 'g');
+        group.setAttribute('class', 'planner-route-streaks-v63');
+        group.setAttribute('aria-hidden', 'true');
+        group.style.pointerEvents = 'none';
         pathParent.appendChild(group);
 
-        const count = Math.max(1, Math.min(12, Math.round(ROUTE_STREAK_CONFIG.streakCount)));
-        const streaks = [];
-        for (let i = 0; i < count; i++) {
-            const streakPath = document.createElementNS(ns, "path");
-            streakPath.setAttribute("class", "planner-route-streak-v62");
-            streakPath.setAttribute("fill", "none");
-            streakPath.setAttribute("stroke", "#ffffff");
-            streakPath.setAttribute("stroke-width", String(ROUTE_STREAK_CONFIG.strokeWidth));
-            streakPath.setAttribute("stroke-linecap", "round");
-            streakPath.setAttribute("stroke-linejoin", "round");
-            streakPath.setAttribute("vector-effect", "non-scaling-stroke");
-            streakPath.setAttribute("opacity", String(ROUTE_STREAK_CONFIG.opacity));
-            group.appendChild(streakPath);
-            // Even spacing means the animation continuously appears along the route.
-            // A small alternating offset prevents a rigid, mechanical-looking rhythm.
-            const offset = (i / count + (i % 2 ? 0.018 : 0)) % 1;
-            streaks.push({ path: streakPath, progress: offset });
+        const count = Math.max(1, Math.min(16, Math.round(ROUTE_STREAK_CONFIG.streakCount)));
+        const lights = [];
+        function makePath(className, width, color, opacity) {
+            const el = document.createElementNS(ns, 'path');
+            el.setAttribute('class', className);
+            el.setAttribute('fill', 'none');
+            el.setAttribute('stroke', color);
+            el.setAttribute('stroke-width', String(width));
+            el.setAttribute('stroke-linecap', 'round');
+            el.setAttribute('stroke-linejoin', 'round');
+            el.setAttribute('vector-effect', 'non-scaling-stroke');
+            el.setAttribute('opacity', String(opacity));
+            group.appendChild(el);
+            return el;
         }
+        for (let i = 0; i < count; i++) {
+            const item = {
+                progress: (i / count + (i % 2 ? 0.027 : 0.006)) % 1,
+                glow: makePath('planner-route-streak-glow-v63', ROUTE_STREAK_CONFIG.glowWidth, ROUTE_STREAK_CONFIG.glowColor, 0.42),
+                core: makePath('planner-route-streak-core-v63', ROUTE_STREAK_CONFIG.coreWidth, ROUTE_STREAK_CONFIG.coreColor, ROUTE_STREAK_CONFIG.opacity),
+                headGlow: document.createElementNS(ns, 'circle'),
+                head: document.createElementNS(ns, 'circle')
+            };
+            item.headGlow.setAttribute('class', 'planner-route-streak-head-glow-v63');
+            item.headGlow.setAttribute('r', String(ROUTE_STREAK_CONFIG.headGlowRadius));
+            item.headGlow.setAttribute('fill', ROUTE_STREAK_CONFIG.glowColor);
+            item.headGlow.setAttribute('opacity', '0.52');
+            item.headGlow.setAttribute('filter', 'url(#plannerRouteLightBlurV63)');
+            item.head.setAttribute('class', 'planner-route-streak-head-v63');
+            item.head.setAttribute('r', String(ROUTE_STREAK_CONFIG.headRadius));
+            item.head.setAttribute('fill', ROUTE_STREAK_CONFIG.coreColor);
+            item.head.setAttribute('opacity', String(ROUTE_STREAK_CONFIG.opacity));
+            group.appendChild(item.headGlow);
+            group.appendChild(item.head);
+            lights.push(item);
+        }
+        // Soft blur filter scoped to this overlay only.
+        const defs = document.createElementNS(ns, 'defs');
+        const filter = document.createElementNS(ns, 'filter');
+        filter.setAttribute('id', 'plannerRouteLightBlurV63');
+        filter.setAttribute('x', '-100%'); filter.setAttribute('y', '-100%');
+        filter.setAttribute('width', '300%'); filter.setAttribute('height', '300%');
+        const blur = document.createElementNS(ns, 'feGaussianBlur');
+        blur.setAttribute('stdDeviation', '2.2');
+        filter.appendChild(blur); defs.appendChild(filter); group.insertBefore(defs, group.firstChild);
 
-        routeLightAnimation = { path, group, streaks, length: 0, lastTime: 0, mapElement };
-
+        routeLightAnimation = { path, group, lights, length: 0, lastTime: 0, mapElement };
         const refreshLength = () => {
             if (!routeLightAnimation || routeLightAnimation.path !== path) return;
-            try {
-                routeLightAnimation.length = path.getTotalLength();
-            } catch (_) {
-                routeLightAnimation.length = 0;
-            }
+            try { routeLightAnimation.length = path.getTotalLength(); }
+            catch (_) { routeLightAnimation.length = 0; }
         };
         refreshLength();
-        map.on("moveend zoomend resize", refreshLength);
-        routeLightAnimation.cleanupMapEvents = () => map.off("moveend zoomend resize", refreshLength);
-        if (typeof ResizeObserver !== "undefined") {
+        map.on('moveend zoomend resize', refreshLength);
+        routeLightAnimation.cleanupMapEvents = () => map.off('moveend zoomend resize', refreshLength);
+        if (typeof ResizeObserver !== 'undefined') {
             routeLightResizeObserver = new ResizeObserver(refreshLength);
             routeLightResizeObserver.observe(mapElement);
         }
 
+        const pathDepthOverride = () => {
+            if (Number.isFinite(ROUTE_STREAK_CONFIG.routeDepthOverride)) {
+                return Math.max(0, Math.min(1, ROUTE_STREAK_CONFIG.routeDepthOverride));
+            }
+            const keys = [path.id, path.getAttribute('class') || ''];
+            for (const key of keys) {
+                if (key && Number.isFinite(ROUTE_STREAK_CONFIG.routeDepthOverrides[key])) {
+                    return Math.max(0, Math.min(1, ROUTE_STREAK_CONFIG.routeDepthOverrides[key]));
+                }
+            }
+            const layerDepth = polyline.options && Number(polyline.options.routeDepth);
+            return Number.isFinite(layerDepth) ? Math.max(0, Math.min(1, layerDepth)) : null;
+        };
+        const fixedRouteDepth = pathDepthOverride();
+
+        function samplePath(distance, length) {
+            const d = Math.max(0, Math.min(length, distance));
+            return path.getPointAtLength(d);
+        }
+        function pathSegment(from, to, length, samples = 14) {
+            if (to <= from || to - from < 0.25) return '';
+            let d = '';
+            for (let j = 0; j <= samples; j++) {
+                const p = samplePath(from + (to - from) * j / samples, length);
+                d += `${j === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)} `;
+            }
+            return d.trim();
+        }
+
         function frame(now) {
             const state = routeLightAnimation;
-            if (!state || state.path !== path || !path.isConnected) {
-                stopRouteLightAnimation();
-                return;
-            }
-
+            if (!state || state.path !== path || !path.isConnected) { stopRouteLightAnimation(); return; }
             const length = state.length;
-            if (!(length > 1)) {
-                routeLightAnimationFrame = requestAnimationFrame(frame);
-                return;
-            }
-
-            const dt = state.lastTime
-                ? Math.min(0.08, Math.max(0, (now - state.lastTime) / 1000))
-                : 0;
+            if (!(length > 1)) { routeLightAnimationFrame = requestAnimationFrame(frame); return; }
+            const dt = state.lastTime ? Math.min(0.06, Math.max(0, (now - state.lastTime) / 1000)) : 0;
             state.lastTime = now;
-
             let matrix = null;
             try { matrix = path.getScreenCTM(); } catch (_) { matrix = null; }
             const mapRect = mapElement.getBoundingClientRect();
-            // Convert speeds in screen pixels/second to SVG path units/second.
-            const scale = matrix
-                ? Math.max(0.25, Math.hypot(matrix.a, matrix.b))
-                : 1;
-            const screenYForPoint = (point) => {
-                if (!matrix || typeof DOMPoint === "undefined") return point.y;
-                try {
-                    return new DOMPoint(point.x, point.y).matrixTransform(matrix).y;
-                } catch (_) {
-                    return point.y;
-                }
+            const scale = matrix ? Math.max(0.25, Math.hypot(matrix.a, matrix.b)) : 1;
+            const screenPoint = (p) => {
+                if (!matrix || typeof DOMPoint === 'undefined') return { x: p.x, y: p.y };
+                try { const s = new DOMPoint(p.x, p.y).matrixTransform(matrix); return { x: s.x, y: s.y }; }
+                catch (_) { return { x: p.x, y: p.y }; }
             };
-
-            for (const streak of streaks) {
-                // Pick the depth where this streak currently sits; speeds are based on
-                // screen Y, never on the overall route length.
-                let distance = streak.progress * length;
-                let point;
-                try { point = path.getPointAtLength(distance); } catch (_) { continue; }
-                const depth = Math.max(0, Math.min(1,
-                    (screenYForPoint(point) - mapRect.top) / Math.max(1, mapRect.height)));
-                const easedDepth = depth * depth * (3 - 2 * depth);
-                const speed = ROUTE_STREAK_CONFIG.farSpeed +
-                    (ROUTE_STREAK_CONFIG.nearSpeed - ROUTE_STREAK_CONFIG.farSpeed) * easedDepth;
-
+            for (const light of lights) {
+                let distance = light.progress * length;
+                let p = samplePath(distance, length);
+                let screen = screenPoint(p);
+                const screenDepth = Math.max(0, Math.min(1, (screen.y - mapRect.top) / Math.max(1, mapRect.height)));
+                const depth = fixedRouteDepth === null ? screenDepth : fixedRouteDepth;
+                const eased = Math.pow(depth, ROUTE_STREAK_CONFIG.depthCurve);
+                const speed = ROUTE_STREAK_CONFIG.farSpeed + (ROUTE_STREAK_CONFIG.nearSpeed - ROUTE_STREAK_CONFIG.farSpeed) * eased;
                 distance += (speed / scale) * dt;
                 if (distance >= length) distance %= length;
-                streak.progress = distance / length;
-
-                // The streak is a solid, short white segment following the exact path.
-                // It is clipped at route endpoints; it never draws a line across the gap
-                // from the route end back to its start.
-                const center = distance;
-                const halfLength = (ROUTE_STREAK_CONFIG.segmentLength / scale) / 2;
-                const from = Math.max(0, center - halfLength);
-                const to = Math.min(length, center + halfLength);
-                if (to - from < 0.5) {
-                    streak.path.setAttribute("d", "");
-                    continue;
-                }
-
-                // Sample along the real SVG path so corners and curves are followed.
-                const sampleCount = 8;
-                let d = "";
-                for (let j = 0; j <= sampleCount; j++) {
-                    const sampleDistance = from + (to - from) * (j / sampleCount);
-                    let samplePoint;
-                    try { samplePoint = path.getPointAtLength(sampleDistance); } catch (_) { continue; }
-                    d += `${j === 0 ? "M" : "L"} ${samplePoint.x.toFixed(2)} ${samplePoint.y.toFixed(2)} `;
-                }
-                streak.path.setAttribute("d", d.trim());
+                light.progress = distance / length;
+                p = samplePath(distance, length);
+                screen = screenPoint(p);
+                const tailUnits = ROUTE_STREAK_CONFIG.tailLength / scale;
+                const from = Math.max(0, distance - tailUnits);
+                const d = pathSegment(from, distance, length, 12);
+                light.glow.setAttribute('d', d);
+                light.core.setAttribute('d', d);
+                light.headGlow.setAttribute('cx', p.x.toFixed(2));
+                light.headGlow.setAttribute('cy', p.y.toFixed(2));
+                light.head.setAttribute('cx', p.x.toFixed(2));
+                light.head.setAttribute('cy', p.y.toFixed(2));
             }
-
             routeLightAnimationFrame = requestAnimationFrame(frame);
         }
         routeLightAnimationFrame = requestAnimationFrame(frame);

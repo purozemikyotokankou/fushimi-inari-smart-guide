@@ -5828,24 +5828,28 @@ body.spot-share-open { overflow: hidden; }
 
 
 /* ================================================================
-   V62: white route streaks — the base route never moves or changes color.
-   Each overlay stroke is the same 6px width as the orange route underneath.
+   V63: moving luminous heads and thin tails. The base route remains static.
    ================================================================ */
-.leaflet-plannerRoutePane .planner-route-streaks-v62,
-.planner-route-streaks-v62 {
+.leaflet-plannerRoutePane .planner-route-streaks-v63,
+.planner-route-streaks-v63 {
   pointer-events: none !important;
 }
-.planner-route-streaks-v62 .planner-route-streak-v62 {
-  fill: none !important;
-  stroke: #ffffff !important;
-  stroke-width: 6px !important;
-  stroke-opacity: .98 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-  vector-effect: non-scaling-stroke !important;
-  filter: none !important;
+.planner-route-streaks-v63 .planner-route-streak-glow-v63 {
+  fill: none !important; stroke: #bfeaff !important; stroke-width: 8px !important;
+  stroke-opacity: .42 !important; stroke-linecap: round !important; stroke-linejoin: round !important;
+  vector-effect: non-scaling-stroke !important; filter: drop-shadow(0 0 3px rgba(191,234,255,.65)) !important;
   pointer-events: none !important;
 }
+.planner-route-streaks-v63 .planner-route-streak-core-v63 {
+  fill: none !important; stroke: #ffffff !important; stroke-width: 2.6px !important;
+  stroke-opacity: .98 !important; stroke-linecap: round !important; stroke-linejoin: round !important;
+  vector-effect: non-scaling-stroke !important; filter: drop-shadow(0 0 2px rgba(255,255,255,.9)) !important;
+  pointer-events: none !important;
+}
+.planner-route-streaks-v63 .planner-route-streak-head-glow-v63,
+.planner-route-streaks-v63 .planner-route-streak-head-v63 { pointer-events: none !important; }
+.planner-route-streaks-v63 .planner-route-streak-head-glow-v63 { filter: blur(1.6px) !important; }
+.planner-route-streaks-v63 .planner-route-streak-head-v63 { filter: drop-shadow(0 0 2px #fff) !important; }
 @media (prefers-reduced-motion: reduce) {
-  .planner-route-streaks-v62 { display: none !important; }
+  .planner-route-streaks-v63 { display: none !important; }
 }
