@@ -4620,7 +4620,9 @@ body { overflow:hidden !important; background:#e9ece8; }
 }
 
 /* Route orange from the supplied palette; dark halo + white casing for varied map tiles. */
-.leaflet-overlay-pane .planner-route-base-line {
+.leaflet-overlay-pane .planner-route-base-line,
+.leaflet-plannerRoutePane .planner-route-base-line,
+.planner-route-base-line {
   stroke: #FF9900 !important;
   stroke-width: 6px !important;
   stroke-opacity: 1 !important;
@@ -5757,7 +5759,7 @@ body.spot-share-open { overflow: hidden; }
 }
 
 /* ============================================================
-   V60 — Category SVG corrections + static route line
+   V65 — Category SVG corrections + glowing route line
    ============================================================ */
 
 /* Selected category labels stay white, including All and Facilities. */
@@ -5795,28 +5797,82 @@ body.spot-share-open { overflow: hidden; }
   mask-image: url("../images/icons/category-food.svg") !important;
 }
 
-/* Static route only: retain the actual route geometry, remove traveling lights. */
+/* V65 — make the complete route glow, inspired by the supplied video.
+   The road geometry stays still; soft halo + white outline + small travelling glints. */
+.planner-route-glow-line {
+  stroke: #FFB84D !important;
+  stroke-width: 20px !important;
+  stroke-opacity: .30 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 4px rgba(255, 166, 32, .70)) drop-shadow(0 0 9px rgba(255, 178, 65, .40)) !important;
+  animation: fushimi-route-halo-pulse 2.25s ease-in-out infinite;
+  pointer-events: none !important;
+}
 .planner-route-outline-line {
   stroke: #FFFFFF !important;
   stroke-width: 12px !important;
-  stroke-opacity: .96 !important;
+  stroke-opacity: .98 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  filter: none !important;
-  animation: none !important;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, .90)) drop-shadow(0 0 5px rgba(255, 221, 165, .62)) !important;
+  animation: fushimi-route-outline-pulse 2.0s ease-in-out infinite;
   pointer-events: none !important;
 }
+.leaflet-overlay-pane .planner-route-base-line,
+.leaflet-plannerRoutePane .planner-route-base-line,
 .planner-route-base-line {
   stroke: #FF9900 !important;
   stroke-width: 6px !important;
   stroke-opacity: 1 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  filter: none !important;
-  animation: none !important;
+  filter: drop-shadow(0 0 2px rgba(255, 153, 0, .95)) drop-shadow(0 0 5px rgba(255, 198, 93, .76)) !important;
+  animation: fushimi-route-core-pulse 1.65s ease-in-out infinite alternate;
   pointer-events: none !important;
 }
-/* Legacy light layers are intentionally disabled for this version. */
+.planner-route-sparkle-line {
+  stroke: #FFFFFF !important;
+  stroke-width: 2px !important;
+  stroke-opacity: .90 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-dasharray: 1 12 !important;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, .98)) drop-shadow(0 0 5px rgba(255, 204, 126, .86)) !important;
+  animation: fushimi-route-sparkle-flow 1.45s linear infinite, fushimi-route-sparkle-twinkle .88s ease-in-out infinite alternate;
+  pointer-events: none !important;
+}
+@keyframes fushimi-route-halo-pulse {
+  0%, 100% { opacity: .58; }
+  50% { opacity: .96; }
+}
+@keyframes fushimi-route-outline-pulse {
+  0%, 100% { opacity: .91; }
+  50% { opacity: 1; }
+}
+@keyframes fushimi-route-core-pulse {
+  from { opacity: .91; }
+  to { opacity: 1; }
+}
+@keyframes fushimi-route-sparkle-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -26px; }
+}
+@keyframes fushimi-route-sparkle-twinkle {
+  from { opacity: .54; }
+  to { opacity: 1; }
+}
+/* Keep the route readable and still respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .planner-route-glow-line,
+  .planner-route-outline-line,
+  .planner-route-base-line,
+  .planner-route-sparkle-line {
+    animation: none !important;
+  }
+  .planner-route-sparkle-line { opacity: .78 !important; }
+}
+/* Legacy light layers are not used. */
 .planner-route-flow-line,
 .planner-route-light-trail,
 .planner-route-particle-a,
@@ -5871,4 +5927,67 @@ body.spot-share-open { overflow: hidden; }
 @media (max-width: 420px) {
     .selected-heading-actions { gap: 5px; }
     .cancel-selected-spots-button { padding-inline: 7px; font-size: 9px; }
+}
+
+
+/* V66 — fixed route + a short moving light segment only (no full-line glow). */
+.planner-route-glow-line,
+.planner-route-sparkle-line,
+.planner-route-flow-line,
+.planner-route-light-trail,
+.planner-route-particle-a,
+.planner-route-particle-b {
+  display: none !important;
+  animation: none !important;
+  filter: none !important;
+}
+.planner-route-outline-line {
+  stroke: #FFFFFF !important;
+  stroke-width: 12px !important;
+  stroke-opacity: .96 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: none !important;
+  animation: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+.planner-route-base-line {
+  stroke: #FF9900 !important;
+  stroke-width: 6px !important;
+  stroke-opacity: 1 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: none !important;
+  animation: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+.planner-route-runner-trail {
+  stroke: #FFF8E8 !important;
+  stroke-width: 4.8px !important;
+  stroke-opacity: .52 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 1.5px rgba(255,255,255,.52)) !important;
+  animation: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+.planner-route-runner-core {
+  stroke: #FFFFFF !important;
+  stroke-width: 2.2px !important;
+  stroke-opacity: 1 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 1.5px rgba(255,255,255,.66)) !important;
+  animation: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+@media (prefers-reduced-motion: reduce) {
+  .planner-route-runner-trail,
+  .planner-route-runner-core {
+    filter: none !important;
+  }
 }

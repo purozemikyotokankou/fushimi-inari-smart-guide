@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V64-CANCEL-SELECTION-NO-ROUTE-ANIMATION";
-    console.log("[Fushimi Inari Smart Guide] planner.js V64-CANCEL-SELECTION-NO-ROUTE-ANIMATION loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V66-MOVING-ROUTE-LIGHT";
+    console.log("[Fushimi Inari Smart Guide] planner.js V66-MOVING-ROUTE-LIGHT loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -157,7 +157,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let routeLine = null;
     let routeOutlineLine = null;
+    let routeRunnerTrailLine = null;
+    let routeRunnerCoreLine = null;
+    let routeRunnerAnimationFrame = null;
+    let routeRunnerAnimationStartTime = null;
+    let routeRunnerLastBasePathD = "";
+    let routeRunnerPathLength = 0;
     let routeSegments = [];
+
+    // V66: the road itself stays still. Only a short white light streak moves
+    // along the actual SVG route path. Adjust these values to tune the effect.
+    const ROUTE_RUNNER_CONFIG = {
+        enabled: true,
+        lightCount: 2,
+        speedPxPerSecond: 680,
+        trailLength: 42,
+        coreLength: 25,
+        trailSampleStep: 3.5,
+        coreSampleStep: 2.5,
+        trailWidth: 4.8,
+        coreWidth: 2.2
+    };
     let routeNumberMarkers = [];
 
     let currentLocationMarker = null;
@@ -6296,6 +6316,118 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    // V66: animate only a short local light along the route. The route's base
+    // geometry never changes. getPointAtLength() samples the rendered SVG path,
+    // so each light follows real curves and turns rather than cutting corners.
+    function stopRouteRunnerAnimation() {
+        if (routeRunnerAnimationFrame !== null) {
+            window.cancelAnimationFrame(routeRunnerAnimationFrame);
+            routeRunnerAnimationFrame = null;
+        }
+        routeRunnerAnimationStartTime = null;
+        routeRunnerLastBasePathD = "";
+        routeRunnerPathLength = 0;
+    }
+
+    function buildRouteRunnerSlice(sourcePath, headDistance, tailLength, totalLength, sampleStep) {
+        const startDistance = Math.max(0, headDistance - tailLength);
+        const endDistance = Math.min(totalLength, headDistance);
+        if (!(endDistance > startDistance)) return "";
+
+        const distances = [startDistance];
+        for (let distance = startDistance + sampleStep; distance < endDistance; distance += sampleStep) {
+            distances.push(distance);
+        }
+        distances.push(endDistance);
+
+        const commands = [];
+        for (let index = 0; index < distances.length; index++) {
+            const point = sourcePath.getPointAtLength(distances[index]);
+            const x = Number(point.x.toFixed(2));
+            const y = Number(point.y.toFixed(2));
+            commands.push(`${index === 0 ? "M" : "L"} ${x} ${y}`);
+        }
+        return commands.join(" ");
+    }
+
+    function startRouteRunnerAnimation() {
+        stopRouteRunnerAnimation();
+        if (!ROUTE_RUNNER_CONFIG.enabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            if (routeRunnerTrailLine && routeRunnerTrailLine._path) routeRunnerTrailLine._path.setAttribute("d", "");
+            if (routeRunnerCoreLine && routeRunnerCoreLine._path) routeRunnerCoreLine._path.setAttribute("d", "");
+            return;
+        }
+
+        const animate = function (timestamp) {
+            const sourcePath = routeLine && routeLine._path;
+            const trailPath = routeRunnerTrailLine && routeRunnerTrailLine._path;
+            const corePath = routeRunnerCoreLine && routeRunnerCoreLine._path;
+
+            if (!sourcePath || !trailPath || !corePath || typeof sourcePath.getPointAtLength !== "function") {
+                routeRunnerAnimationFrame = window.requestAnimationFrame(animate);
+                return;
+            }
+
+            const basePathD = sourcePath.getAttribute("d") || "";
+            if (basePathD !== routeRunnerLastBasePathD || !(routeRunnerPathLength > 0)) {
+                routeRunnerLastBasePathD = basePathD;
+                try {
+                    routeRunnerPathLength = sourcePath.getTotalLength();
+                } catch (error) {
+                    routeRunnerPathLength = 0;
+                }
+            }
+
+            if (!(routeRunnerPathLength > 1)) {
+                routeRunnerAnimationFrame = window.requestAnimationFrame(animate);
+                return;
+            }
+
+            if (routeRunnerAnimationStartTime === null) {
+                routeRunnerAnimationStartTime = timestamp;
+            }
+
+            const trailLength = Math.max(8, ROUTE_RUNNER_CONFIG.trailLength);
+            const coreLength = Math.max(5, Math.min(ROUTE_RUNNER_CONFIG.coreLength, trailLength));
+            const cycleLength = routeRunnerPathLength + trailLength;
+            const elapsedSeconds = Math.max(0, timestamp - routeRunnerAnimationStartTime) / 1000;
+            const distanceTravelled = elapsedSeconds * Math.max(1, ROUTE_RUNNER_CONFIG.speedPxPerSecond);
+            const lightCount = Math.max(1, Math.floor(ROUTE_RUNNER_CONFIG.lightCount));
+            const trailSlices = [];
+            const coreSlices = [];
+
+            for (let index = 0; index < lightCount; index++) {
+                const cycleDistance = (distanceTravelled + index * cycleLength / lightCount) % cycleLength;
+                // The light enters from just before the route start and exits just
+                // after its end, preventing a visible jump while the tail is on-screen.
+                const headDistance = cycleDistance - trailLength;
+                const trailD = buildRouteRunnerSlice(
+                    sourcePath,
+                    headDistance,
+                    trailLength,
+                    routeRunnerPathLength,
+                    ROUTE_RUNNER_CONFIG.trailSampleStep
+                );
+                const coreD = buildRouteRunnerSlice(
+                    sourcePath,
+                    headDistance,
+                    coreLength,
+                    routeRunnerPathLength,
+                    ROUTE_RUNNER_CONFIG.coreSampleStep
+                );
+                if (trailD) trailSlices.push(trailD);
+                if (coreD) coreSlices.push(coreD);
+            }
+
+            // These are short sub-paths, not a moving full route and not a full-line glow.
+            trailPath.setAttribute("d", trailSlices.join(" "));
+            corePath.setAttribute("d", coreSlices.join(" "));
+            routeRunnerAnimationFrame = window.requestAnimationFrame(animate);
+        };
+
+        routeRunnerAnimationFrame = window.requestAnimationFrame(animate);
+    }
+
     async function createRoute(routeOptions = null) {
 
         // When launched from a spot detail, that spot is the sole destination.
@@ -6316,6 +6448,11 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        stopRouteRunnerAnimation();
+        if (routeRunnerCoreLine) {
+            map.removeLayer(routeRunnerCoreLine);
+            routeRunnerCoreLine = null;
+        }
         if (routeLine) {
             map.removeLayer(routeLine);
             routeLine = null;
@@ -6323,6 +6460,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (routeOutlineLine) {
             map.removeLayer(routeOutlineLine);
             routeOutlineLine = null;
+        }
+        if (routeRunnerTrailLine) {
+            map.removeLayer(routeRunnerTrailLine);
+            routeRunnerTrailLine = null;
         }
         clearRouteNumberMarkers();
 
@@ -6521,11 +6662,13 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        // V66: keep the route completely static. A short white streak alone moves
+        // along the exact SVG route geometry; no whole-line glow or pulsing is used.
         routeOutlineLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
             renderer: routeSvgRenderer,
             className: "planner-route-outline-line",
-            color: "#ffffff",
+            color: "#FFFFFF",
             weight: 12,
             opacity: 0.96,
             lineCap: "round",
@@ -6545,7 +6688,34 @@ document.addEventListener("DOMContentLoaded", function () {
             interactive: false
         }).addTo(map);
 
-        // V60: keep only the steady route path; no animated light/particle overlays.
+        // These two layers are used only as a local light tail and bright center.
+        // Their SVG path data is replaced every frame with a short sampled section
+        // from the real route path, so the light remains on bends and corners.
+        routeRunnerTrailLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
+            className: "planner-route-runner-trail",
+            color: "#FFF8E8",
+            weight: ROUTE_RUNNER_CONFIG.trailWidth,
+            opacity: 0.8,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false
+        }).addTo(map);
+
+        routeRunnerCoreLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
+            className: "planner-route-runner-core",
+            color: "#FFFFFF",
+            weight: ROUTE_RUNNER_CONFIG.coreWidth,
+            opacity: 1,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false
+        }).addTo(map);
+
+        startRouteRunnerAnimation();
 
         map.fitBounds(
             routeLine.getBounds(),
@@ -6783,6 +6953,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function clearRouteVisuals() {
 
+        stopRouteRunnerAnimation();
+
+        if (routeRunnerCoreLine) {
+            try {
+                map.removeLayer(routeRunnerCoreLine);
+            } catch (error) {
+                console.warn("routeRunnerCoreLine cleanup warning:", error);
+            }
+            routeRunnerCoreLine = null;
+        }
+
         if (routeLine) {
             try {
                 map.removeLayer(routeLine);
@@ -6799,6 +6980,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.warn("routeOutlineLine cleanup warning:", error);
             }
             routeOutlineLine = null;
+        }
+
+        if (routeRunnerTrailLine) {
+            try {
+                map.removeLayer(routeRunnerTrailLine);
+            } catch (error) {
+                console.warn("routeRunnerTrailLine cleanup warning:", error);
+            }
+            routeRunnerTrailLine = null;
         }
 
         clearRouteNumberMarkers();
