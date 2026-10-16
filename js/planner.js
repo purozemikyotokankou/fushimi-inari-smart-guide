@@ -2995,8 +2995,8 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             const byTime = list => list.sort((a, b) => Number(a?.departureSecs) - Number(b?.departureSecs));
             const groups = [
-                { key: "keihan-kyoto-bound", routeName: "京阪本線", headsign: "七条・祇園四条・出町柳", mode: "rail", departures: byTime(kyoto) },
-                { key: "keihan-osaka-bound", routeName: "京阪本線", headsign: "京橋・大阪（淀屋橋・中之島）", mode: "rail", departures: byTime(osaka) }
+                { key: "keihan-demachiyanagi-bound", routeName: "京阪本線", headsign: "出町柳", mode: "rail", departures: byTime(kyoto) },
+                { key: "keihan-osaka-bound", routeName: "京阪本線", headsign: "大阪", mode: "rail", departures: byTime(osaka) }
             ];
             groups.unclassifiedCount = unclassifiedCount;
             groups.classifiedCount = kyoto.length + osaka.length;
@@ -3158,13 +3158,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 stationTimetableResults.hidden = false;
                 return;
             }
-            const groups = groupTransitDepartures(departures);
+            const groups = groupTransitDepartures(departures, config);
             renderTransitDirectionButtons(groups, departuresPayload?.date, departuresPayload?.timezone, token);
             if (!groups.length) {
                 stationTimetableText("発車案内データの形式を確認できませんでした。公式時刻表をご利用ください。", true);
                 return;
             }
-            stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。路線・方面を選択できます。`);
+            if (config.operator === "京阪電車") {
+                const excludedCount = Number(groups.unclassifiedCount || 0);
+                const exclusionNote = excludedCount > 0 ? ` 方面を判別できない${excludedCount}件は一覧から除外しました。` : "";
+                stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。「京阪本線・出町柳方面」と「京阪本線・大阪方面」の2択に統一しています。${exclusionNote}`);
+            } else {
+                stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。路線・方面を選択できます。`);
+            }
         } catch (error) {
             if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
             stationTimetableText(`駅情報を取得できませんでした（${error?.message || "ネットワークエラー"}）。公式時刻表をご利用ください。`, true);
