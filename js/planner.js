@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V69-HIGHLIGHT-KEIHAN-DIRECTIONS-TOGGLE";
-    console.log("[Fushimi Inari Smart Guide] planner.js V69-HIGHLIGHT-KEIHAN-DIRECTIONS-TOGGLE loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V71-KEIHAN-DIRECTION-HIERARCHY-TRAIN-INFO";
+    console.log("[Fushimi Inari Smart Guide] planner.js V71-KEIHAN-DIRECTION-HIERARCHY-TRAIN-INFO loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -2701,7 +2701,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ============================================================
-    // V68: 無料のTransit APIで駅・発車案内を取得。
+    // V71: 方面名を主役にした発車案内UIと、列車種別・行先の表示。
     // 駅ごとに発車案内データがない場合は、鉄道会社の公式時刻表へ案内。
     // ============================================================
     const TRANSIT_API_V1 = "https://api.transit.ls8h.com/api/v1";
@@ -2975,7 +2975,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const text = values.join(" ").normalize("NFKC").toLocaleLowerCase("ja-JP");
         const kyotoBound = /出町柳|三条|祇園四条|七条|清水五条|神宮丸太町|京都方面|京都行|demachiyanagi|gion[ -]?shijo|shichijo|kiyomizu[ -]?gojo|marutamachi|sanjo|northbound|north bound|upbound|上り/;
-        const osakaBound = /京橋|淀屋橋|中之島|大阪|枚方|樟葉|寝屋川|守口|淀方面|大阪方面|yodoyabashi|nakanoshima|kyobashi|osaka|hirakata|kuzuha|neyagawa|moriguchi|southbound|south bound|downbound|下り/;
+        // 京阪伏見稲荷駅で「淀」単独の行先も大阪側にまとめる（「淀屋橋」は別表記で判定）。
+        const osakaBound = /京橋|淀屋橋|中之島|大阪|枚方|樟葉|寝屋川|守口|淀方面|淀(?!屋橋)|大阪方面|yodoyabashi|nakanoshima|kyobashi|osaka|hirakata|kuzuha|neyagawa|moriguchi|southbound|south bound|downbound|下り/;
         if (kyotoBound.test(text)) return "kyoto";
         if (osakaBound.test(text)) return "osaka";
         return null;
@@ -2995,8 +2996,8 @@ document.addEventListener("DOMContentLoaded", function () {
             });
             const byTime = list => list.sort((a, b) => Number(a?.departureSecs) - Number(b?.departureSecs));
             const groups = [
-                { key: "keihan-demachiyanagi-bound", routeName: "京阪本線", headsign: "出町柳", mode: "rail", departures: byTime(kyoto) },
-                { key: "keihan-osaka-bound", routeName: "京阪本線", headsign: "大阪", mode: "rail", departures: byTime(osaka) }
+                { key: "keihan-demachiyanagi-bound", routeName: "京阪本線", lineLabel: "京阪本線", headsign: "出町柳", displayDirection: "出町柳方面", mode: "rail", departures: byTime(kyoto) },
+                { key: "keihan-osaka-bound", routeName: "京阪本線", lineLabel: "京阪本線", headsign: "大阪・淀屋橋", displayDirection: "大阪・淀屋橋方面", mode: "rail", departures: byTime(osaka) }
             ];
             groups.unclassifiedCount = unclassifiedCount;
             groups.classifiedCount = kyoto.length + osaka.length;
@@ -3018,14 +3019,58 @@ document.addEventListener("DOMContentLoaded", function () {
         }).sort((a, b) => Number(a.departures[0]?.departureSecs) - Number(b.departures[0]?.departureSecs));
     }
 
+    function getTransitDepartureText(item, keys) {
+        for (const key of keys) {
+            const value = item?.[key];
+            if (typeof value === "string" || typeof value === "number") {
+                const text = String(value).trim();
+                if (text) return text;
+            } else if (value && typeof value === "object") {
+                for (const nestedKey of ["name", "ja", "japanese", "label", "text", "value"]) {
+                    const nested = value[nestedKey];
+                    if (typeof nested === "string" || typeof nested === "number") {
+                        const text = String(nested).trim();
+                        if (text) return text;
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    function getTrainTypeLabel(item) {
+        // Transit API schema's trainType is the official class field; aliases are fallback support.
+        return getTransitDepartureText(item, ["trainType", "train_type", "serviceName", "service_name"]);
+    }
+
+    function getTrainDestinationLabel(item) {
+        const destination = getTransitDepartureText(item, ["headsign", "destination", "destinationName", "destination_name", "toName", "to_name", "terminus"]);
+        if (!destination) return "行き先情報なし";
+        if (/(行き|方面)$/.test(destination)) return destination;
+        return `${destination}行き`;
+    }
+
     function renderTransitDepartureList(group, serviceDate, timezone) {
         if (!stationTimetableResults) return;
         stationTimetableResults.replaceChildren();
+
+        const headingBlock = document.createElement("div");
+        headingBlock.className = "station-timetable-results-heading";
+        const lineLabel = document.createElement("span");
+        lineLabel.className = "station-timetable-results-line";
+        lineLabel.textContent = group.lineLabel || group.routeName || "路線情報";
         const heading = document.createElement("h3");
-        heading.textContent = group.headsign ? `${group.routeName} · ${group.headsign}方面` : group.routeName;
+        heading.className = "station-timetable-results-direction";
+        heading.textContent = group.displayDirection || (group.headsign ? `${group.headsign}方面` : group.routeName);
+        headingBlock.append(lineLabel, heading);
+
         const note = document.createElement("p");
-        note.textContent = `Transit APIから取得した発車案内（${serviceDate || localDateYYYYMMDD()}、${timezone || "Asia/Tokyo"}）。全時刻表ではなく、取得できた列車のみを表示しています。`;
-        stationTimetableResults.append(heading, note);
+        note.className = "station-timetable-results-note";
+        note.textContent = `発車案内 · ${group.departures.length}件（${serviceDate || localDateYYYYMMDD()}、${timezone || "Asia/Tokyo"}）`;
+        const disclaimer = document.createElement("p");
+        disclaimer.className = "station-timetable-results-disclaimer";
+        disclaimer.textContent = "Transit APIで取得できた列車のみを表示しています。全時刻表ではありません。";
+        stationTimetableResults.append(headingBlock, note, disclaimer);
 
         const upcoming = group.departures.filter(item => Number.isFinite(Number(item?.departureSecs)));
         if (!upcoming.length) {
@@ -3048,11 +3093,20 @@ document.addEventListener("DOMContentLoaded", function () {
             time.dateTime = time.textContent.replace(/^翌 |^前日 /, "");
             row.appendChild(time);
 
-            const info = document.createElement("span");
+            const info = document.createElement("div");
             info.className = "station-timetable-departure-info";
-            const trainType = String(item?.trainType || "").trim();
-            const destination = String(item?.headsign || group.headsign || "行き先情報なし").trim();
-            info.textContent = [trainType, destination].filter(Boolean).join(" · ");
+            const primary = document.createElement("div");
+            primary.className = "station-timetable-departure-primary";
+            const trainType = document.createElement("span");
+            trainType.className = "station-timetable-train-type";
+            const typeLabel = getTrainTypeLabel(item);
+            trainType.textContent = typeLabel || "種別情報なし";
+            if (!typeLabel) trainType.classList.add("is-unknown");
+            const destination = document.createElement("strong");
+            destination.className = "station-timetable-destination";
+            destination.textContent = getTrainDestinationLabel(item);
+            primary.append(trainType, destination);
+            info.appendChild(primary);
             row.appendChild(info);
 
             const secs = Number(item.departureSecs);
@@ -3077,11 +3131,16 @@ document.addEventListener("DOMContentLoaded", function () {
             button.type = "button";
             button.className = "station-timetable-direction-button";
             button.setAttribute("aria-pressed", "false");
+
+            const line = document.createElement("span");
+            line.className = "station-timetable-direction-line";
+            line.textContent = group.lineLabel || group.routeName;
             const title = document.createElement("strong");
-            title.textContent = group.routeName;
+            title.textContent = group.displayDirection || (group.headsign ? `${group.headsign}方面` : group.routeName);
             const detail = document.createElement("span");
-            detail.textContent = group.headsign ? `${group.headsign}方面 · ${group.departures.length}件` : `${group.departures.length}件の発車案内`;
-            button.append(title, detail);
+            detail.className = "station-timetable-direction-count";
+            detail.textContent = `${group.departures.length}件の発車案内`;
+            button.append(line, title, detail);
             button.addEventListener("click", () => {
                 if (token !== stationTimetableRequestToken) return;
                 stationTimetableDirectionList.querySelectorAll("button").forEach(node => node.setAttribute("aria-pressed", String(node === button)));
@@ -3167,7 +3226,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (config.operator === "京阪電車") {
                 const excludedCount = Number(groups.unclassifiedCount || 0);
                 const exclusionNote = excludedCount > 0 ? ` 方面を判別できない${excludedCount}件は一覧から除外しました。` : "";
-                stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。「京阪本線・出町柳方面」と「京阪本線・大阪方面」の2択に統一しています。${exclusionNote}`);
+                stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。「出町柳方面」と「大阪・淀屋橋方面」の2択に整理しました。${exclusionNote}`);
             } else {
                 stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。路線・方面を選択できます。`);
             }
