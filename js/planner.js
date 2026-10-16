@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V68-FREE-TRANSIT-API";
-    console.log("[Fushimi Inari Smart Guide] planner.js V68-FREE-TRANSIT-API loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V69-HIGHLIGHT-KEIHAN-DIRECTIONS-TOGGLE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V69-HIGHLIGHT-KEIHAN-DIRECTIONS-TOGGLE loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -165,18 +165,19 @@ document.addEventListener("DOMContentLoaded", function () {
     let routeRunnerPathLength = 0;
     let routeSegments = [];
 
-    // V66: the road itself stays still. Only a short white light streak moves
-    // along the actual SVG route path. Adjust these values to tune the effect.
+    // V69: the route remains fixed; several bright highlights sweep over the
+    // route surface. Both the highlight and its soft tail stay within the route
+    // stroke width rather than creating a broad glow outside the line.
     const ROUTE_RUNNER_CONFIG = {
         enabled: true,
-        lightCount: 2,
-        speedPxPerSecond: 680,
+        lightCount: 5,
+        speedPxPerSecond: 980,
         trailLength: 42,
-        coreLength: 25,
-        trailSampleStep: 3.5,
-        coreSampleStep: 2.5,
-        trailWidth: 4.8,
-        coreWidth: 2.2
+        coreLength: 18,
+        trailSampleStep: 2.6,
+        coreSampleStep: 1.8,
+        trailWidth: 5.8,
+        coreWidth: 5.8
     };
     let routeNumberMarkers = [];
 
@@ -2956,9 +2957,54 @@ document.addEventListener("DOMContentLoaded", function () {
         return clock.hour * 3600 + clock.minute * 60 + clock.second;
     }
 
-    function groupTransitDepartures(departures) {
+    function keihanDepartureDirection(item) {
+        // Use destination/headsign-like fields only; do not infer directions from arbitrary metadata.
+        const fields = [
+            "headsign", "destination", "destinationName", "destination_name", "to", "toName",
+            "terminus", "terminal", "direction", "directionName", "direction_name",
+            "platformName", "platform_name", "routeName", "route_name"
+        ];
+        const values = [];
+        fields.forEach(key => {
+            const value = item?.[key];
+            if (typeof value === "string" || typeof value === "number") values.push(String(value));
+            else if (value && typeof value === "object") {
+                [value.name, value.ja, value.japanese, value.label, value.text, value.value]
+                    .forEach(nested => { if (typeof nested === "string" || typeof nested === "number") values.push(String(nested)); });
+            }
+        });
+        const text = values.join(" ").normalize("NFKC").toLocaleLowerCase("ja-JP");
+        const kyotoBound = /出町柳|三条|祇園四条|七条|清水五条|神宮丸太町|京都方面|京都行|demachiyanagi|gion[ -]?shijo|shichijo|kiyomizu[ -]?gojo|marutamachi|sanjo|northbound|north bound|upbound|上り/;
+        const osakaBound = /京橋|淀屋橋|中之島|大阪|枚方|樟葉|寝屋川|守口|淀方面|大阪方面|yodoyabashi|nakanoshima|kyobashi|osaka|hirakata|kuzuha|neyagawa|moriguchi|southbound|south bound|downbound|下り/;
+        if (kyotoBound.test(text)) return "kyoto";
+        if (osakaBound.test(text)) return "osaka";
+        return null;
+    }
+
+    function groupTransitDepartures(departures, config = null) {
+        const normalizedDepartures = normalizeTransitArray(departures);
+        if (config?.operator === "京阪電車") {
+            const kyoto = [];
+            const osaka = [];
+            let unclassifiedCount = 0;
+            normalizedDepartures.forEach(item => {
+                const direction = keihanDepartureDirection(item);
+                if (direction === "kyoto") kyoto.push(item);
+                else if (direction === "osaka") osaka.push(item);
+                else unclassifiedCount++;
+            });
+            const byTime = list => list.sort((a, b) => Number(a?.departureSecs) - Number(b?.departureSecs));
+            const groups = [
+                { key: "keihan-kyoto-bound", routeName: "京阪本線", headsign: "七条・祇園四条・出町柳", mode: "rail", departures: byTime(kyoto) },
+                { key: "keihan-osaka-bound", routeName: "京阪本線", headsign: "京橋・大阪（淀屋橋・中之島）", mode: "rail", departures: byTime(osaka) }
+            ];
+            groups.unclassifiedCount = unclassifiedCount;
+            groups.classifiedCount = kyoto.length + osaka.length;
+            return groups;
+        }
+
         const groups = new Map();
-        normalizeTransitArray(departures).forEach(item => {
+        normalizedDepartures.forEach(item => {
             const routeName = String(item?.routeName || "路線情報なし");
             const headsign = String(item?.headsign || "");
             const mode = String(item?.mode || "");
@@ -3081,7 +3127,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
                 const detail = await detailPromise;
                 const routeNames = normalizeTransitArray(detail?.routes).map(route => route?.name).filter(Boolean);
-                if (routeNames.length) stationTimetableSubtitle.textContent = `${config.operator} · ${routeNames.join("・")}`;
+                if (config.operator !== "京阪電車" && routeNames.length) stationTimetableSubtitle.textContent = `${config.operator} · ${routeNames.join("・")}`;
                 const message = String(error?.message || "");
                 if (/403/.test(message)) {
                     stationTimetableText("駅情報は見つかりましたが、この駅の発車案内データはAPIから提供されていません。下の公式時刻表をご利用ください。", true);
@@ -3100,7 +3146,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const detail = await detailPromise;
             if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
             const routeNames = normalizeTransitArray(detail?.routes).map(route => route?.name).filter(Boolean);
-            if (routeNames.length) stationTimetableSubtitle.textContent = `${config.operator} · ${routeNames.join("・")}`;
+            if (config.operator !== "京阪電車" && routeNames.length) stationTimetableSubtitle.textContent = `${config.operator} · ${routeNames.join("・")}`;
 
             const departures = normalizeTransitArray(departuresPayload?.departures);
             if (!departures.length) {
@@ -3139,10 +3185,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function closeStationTimetable() {
         if (!stationTimetableDialog) return;
+        const closedSpot = activeTimetableSpot;
         stationTimetableDialog.hidden = true;
         document.body.classList.remove("station-timetable-open");
         stationTimetableRequestToken++;
         activeTimetableSpot = null;
+        if (closedSpot && String(activeViewedSpotId ?? "") === String(closedSpot.id)) {
+            activeViewedSpotId = null;
+            filterSpots();
+        }
     }
 
     stationTimetableDialog?.querySelectorAll("[data-station-timetable-close]").forEach(button => button.addEventListener("click", closeStationTimetable));
@@ -4989,7 +5040,10 @@ document.addEventListener("DOMContentLoaded", function () {
         filterSpots();
         focusSpotOnMap(spot);
         if (isRailStationSpot(spot)) {
+            // hideSpotDetail resets the viewing ID, so set it again for the station timetable.
             hideSpotDetail();
+            activeViewedSpotId = String(spot.id);
+            filterSpots();
             openStationTimetable(spot);
             return;
         }
@@ -5348,9 +5402,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
                 marker.on("click", function () {
-                    // V55: when the route planner is open, tapping a map pin chooses
-                    // that pin as the departure point and immediately builds the route.
-                    // This works with direct map interaction; the route button is optional.
+                    // When the route planner is open, a pin still chooses the route origin.
                     const plannerState = activeRoutePlannerState;
                     if (plannerState && plannerState.destinationSpot) {
                         if (String(spot.id) === String(plannerState.destinationSpot.id)) {
@@ -5370,6 +5422,61 @@ document.addEventListener("DOMContentLoaded", function () {
                         });
                         return;
                     }
+
+                    const sameId = String(spot.id);
+                    const isSameTimetableOpen = Boolean(
+                        isRailStationSpot(spot) &&
+                        stationTimetableDialog && !stationTimetableDialog.hidden &&
+                        activeTimetableSpot && String(activeTimetableSpot.id) === sameId
+                    );
+                    if (isSameTimetableOpen && !isSpotSelected(spot)) {
+                        closeStationTimetable();
+                        return;
+                    }
+
+                    // A spot picked for the route can be removed by tapping its map pin.
+                    // Keep all selected-list, route-number, timetable, and icon states in sync.
+                    if (isSpotSelected(spot)) {
+                        if (isSameTimetableOpen) closeStationTimetable();
+                        // The drawn route must not keep pointing to a waypoint that has just been removed.
+                        if (navigationActive) {
+                            stopNavigation();
+                        } else if (routeLine) {
+                            clearRouteVisuals();
+                            hideNavCard();
+                        }
+                        selectedSpots = selectedSpots.filter(function (selected) {
+                            return String(selected.id) !== sameId;
+                        });
+                        saveSelectedIDs();
+                        updateSelected();
+                        updateInfo();
+                        updateCardSelection();
+                        updateMarkerSelection(spot.id);
+                        updateRoutePreviewState();
+
+                        if (String(activeViewedSpotId ?? "") === sameId) {
+                            if (currentDetailSpot && String(currentDetailSpot.id) === sameId) {
+                                hideSpotDetail();
+                            } else {
+                                activeViewedSpotId = null;
+                                filterSpots();
+                            }
+                        }
+                        return;
+                    }
+
+                    // Tapping the currently highlighted pin again closes its detail sheet.
+                    if (String(activeViewedSpotId ?? "") === sameId) {
+                        if (currentDetailSpot && String(currentDetailSpot.id) === sameId) {
+                            hideSpotDetail();
+                        } else {
+                            activeViewedSpotId = null;
+                            filterSpots();
+                        }
+                        return;
+                    }
+
                     showSpotOnMap(spot);
                 });
 
