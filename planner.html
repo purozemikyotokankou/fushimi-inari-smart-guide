@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=66-moving-route-light">
+    <link rel="stylesheet" href="css/planner.css?v=68-free-transit-api">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 </head>
 
@@ -73,6 +73,16 @@
                 <div class="planner-map-hint" aria-hidden="true">地図を動かしてスポットを探せます</div>
             </div>
         </section>
+
+
+        <div id="plannerWeatherWidget" class="planner-weather-widget is-loading" role="status" aria-live="polite" aria-label="伏見稲荷の現在の天気">
+            <span id="plannerWeatherIcon" class="planner-weather-icon" aria-hidden="true">◌</span>
+            <span class="planner-weather-copy">
+                <strong id="plannerWeatherLabel">天気を取得中…</strong>
+                <span id="plannerWeatherDetail">伏見稲荷</span>
+            </span>
+            <a class="planner-weather-source" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" aria-label="天気データ提供元 Open-Meteo">Open-Meteo</a>
+        </div>
 
         <aside class="planner-spot-panel is-collapsed" id="plannerBottomSheet" aria-label="Spot information">
             <button
@@ -236,12 +246,40 @@
                 <div id="savedSpotsList" class="saved-spots-list"></div>
             </section>
         </div>
+
+        <div id="stationTimetableDialog" class="station-timetable-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="stationTimetableTitle">
+            <button type="button" class="station-timetable-backdrop" data-station-timetable-close aria-label="時刻表を閉じる"></button>
+            <section class="station-timetable-panel">
+                <header class="station-timetable-header">
+                    <div>
+                        <p class="station-timetable-eyebrow">FUSHIMI INARI SMART GUIDE · TRANSIT</p>
+                        <h2 id="stationTimetableTitle">駅の発車案内</h2>
+                        <p id="stationTimetableSubtitle" class="station-timetable-subtitle">Transit APIで駅情報を取得しています</p>
+                    </div>
+                    <button type="button" class="station-timetable-close" data-station-timetable-close aria-label="閉じる">×</button>
+                </header>
+                <div id="stationTimetableStatus" class="station-timetable-status" role="status" aria-live="polite">発車案内を取得しています…</div>
+                <div id="stationTimetableDirectionList" class="station-timetable-directions" hidden aria-label="路線・方面を選択"></div>
+                <section id="stationTimetableResults" class="station-timetable-results" hidden aria-live="polite"></section>
+                <p id="stationTimetableAttribution" class="station-timetable-attribution">
+                    データ取得元：<a href="https://api.transit.ls8h.com/" target="_blank" rel="noopener noreferrer">Transit API</a>
+                    · <a href="https://api.transit.ls8h.com/api/v1/feeds" target="_blank" rel="noopener noreferrer">データ出典・ライセンス</a>
+                </p>
+                <footer class="station-timetable-footer">
+                    <div class="station-timetable-official-links">
+                        <a id="stationTimetableOfficialLink" href="https://www.keihan.co.jp/traffic/station/151/info.html" target="_blank" rel="noopener noreferrer">鉄道会社の公式時刻表を開く ↗</a>
+                        <a id="stationTimetableOfficialLinkOther" href="https://timetable.jr-odekake.net/station-timetable/3021064001" target="_blank" rel="noopener noreferrer" hidden>もう一方の方面の公式時刻表 ↗</a>
+                    </div>
+                    <span>※APIで表示するのは取得できた発車案内です。終日すべての列車を網羅する時刻表ではありません。遅延・運休などのリアルタイム運行情報でもないため、最新情報は鉄道会社の公式情報をご確認ください。</span>
+                </footer>
+            </section>
+        </div>
     </div>
 </main>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=66-moving-route-light"></script>
+<script src="js/planner.js?v=68-free-transit-api"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const links = document.querySelectorAll(".planner-site-header nav a");

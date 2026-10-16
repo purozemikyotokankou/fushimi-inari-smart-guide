@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V66-MOVING-ROUTE-LIGHT";
-    console.log("[Fushimi Inari Smart Guide] planner.js V66-MOVING-ROUTE-LIGHT loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V68-FREE-TRANSIT-API";
+    console.log("[Fushimi Inari Smart Guide] planner.js V68-FREE-TRANSIT-API loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -323,6 +323,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const savedSpotsTitle = document.getElementById("savedSpotsTitle");
     const savedSpotsCount = document.getElementById("savedSpotsCount");
     const savedSpotsList = document.getElementById("savedSpotsList");
+    const plannerWeatherWidget = document.getElementById("plannerWeatherWidget");
+    const plannerWeatherIcon = document.getElementById("plannerWeatherIcon");
+    const plannerWeatherLabel = document.getElementById("plannerWeatherLabel");
+    const plannerWeatherDetail = document.getElementById("plannerWeatherDetail");
+    const stationTimetableDialog = document.getElementById("stationTimetableDialog");
+    const stationTimetableTitle = document.getElementById("stationTimetableTitle");
+    const stationTimetableSubtitle = document.getElementById("stationTimetableSubtitle");
+    const stationTimetableStatus = document.getElementById("stationTimetableStatus");
+    const stationTimetableDirectionList = document.getElementById("stationTimetableDirectionList");
+    const stationTimetableResults = document.getElementById("stationTimetableResults");
+    const stationTimetableOfficialLink = document.getElementById("stationTimetableOfficialLink");
+    const stationTimetableOfficialLinkOther = document.getElementById("stationTimetableOfficialLinkOther");
+    const stationTimetableAttribution = document.getElementById("stationTimetableAttribution");
 
     // ============================================================
     // Leaflet地図
@@ -336,6 +349,79 @@ document.addEventListener("DOMContentLoaded", function () {
             [34.96705, 135.7743],
             16
         );
+
+
+    // ============================================================
+    // V67 天気API: 伏見稲荷周辺の現在天気（Open-Meteo / APIキー不要）
+    // ============================================================
+    const FUSHIMI_WEATHER_COORDS = { latitude: 34.96705, longitude: 135.7743 };
+    const OPEN_METEO_ATTRIBUTION = "https://open-meteo.com/";
+
+    function describeWeatherCode(code, isDay) {
+        const value = Number(code);
+        if (value === 0) return { type: "sunny", icon: isDay ? "☀️" : "🌙", label: isDay ? "晴れ" : "快晴の夜" };
+        if (value === 1) return { type: "sunny", icon: isDay ? "🌤️" : "🌙", label: isDay ? "おおむね晴れ" : "晴れ" };
+        if (value === 2) return { type: "cloudy", icon: "⛅", label: "晴れ時々くもり" };
+        if (value === 3) return { type: "cloudy", icon: "☁️", label: "くもり" };
+        if ([45, 48].includes(value)) return { type: "cloudy", icon: "🌫️", label: "霧" };
+        if ([51, 53, 55, 56, 57, 61, 63, 66, 80].includes(value)) return { type: "rainy", icon: "🌦️", label: "小雨" };
+        if ([65, 67, 81, 82].includes(value)) return { type: "rainy", icon: "🌧️", label: "雨" };
+        if ([71, 73, 75, 77, 85, 86].includes(value)) return { type: "snowy", icon: "❄️", label: "雪" };
+        if ([95, 96, 99].includes(value)) return { type: "rainy", icon: "⛈️", label: "雷雨" };
+        return { type: "cloudy", icon: "☁️", label: "天気" };
+    }
+
+    async function refreshPlannerWeather() {
+        if (!plannerWeatherWidget) return;
+        plannerWeatherWidget.classList.add("is-loading");
+        const params = new URLSearchParams({
+            latitude: String(FUSHIMI_WEATHER_COORDS.latitude),
+            longitude: String(FUSHIMI_WEATHER_COORDS.longitude),
+            current: "temperature_2m,apparent_temperature,is_day,precipitation,weather_code",
+            timezone: "Asia/Tokyo"
+        });
+        try {
+            const controller = new AbortController();
+            const timeout = window.setTimeout(() => controller.abort(), 10000);
+            let response;
+            try {
+                response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
+                    method: "GET",
+                    headers: { "Accept": "application/json" },
+                    signal: controller.signal,
+                    cache: "no-store"
+                });
+            } finally {
+                window.clearTimeout(timeout);
+            }
+            if (!response.ok) throw new Error(`Weather API HTTP ${response.status}`);
+            const payload = await response.json();
+            const current = payload && payload.current;
+            if (!current || !Number.isFinite(Number(current.temperature_2m))) throw new Error("Weather response missing current values");
+            const condition = describeWeatherCode(current.weather_code, Number(current.is_day) === 1);
+            plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
+            plannerWeatherWidget.classList.add(`is-${condition.type}`);
+            plannerWeatherIcon.textContent = condition.icon;
+            plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
+            const apparent = Number(current.apparent_temperature);
+            plannerWeatherDetail.textContent = Number.isFinite(apparent)
+                ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
+                : "伏見稲荷周辺の現在天気";
+            plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
+            plannerWorkspace?.classList.remove("weather-sunny", "weather-cloudy", "weather-rainy", "weather-snowy");
+            plannerWorkspace?.classList.add(`weather-${condition.type}`);
+        } catch (error) {
+            console.warn("天気APIを取得できませんでした:", error);
+            plannerWeatherWidget.classList.remove("is-loading");
+            plannerWeatherIcon.textContent = "🌦️";
+            plannerWeatherLabel.textContent = "天気を取得できません";
+            plannerWeatherDetail.textContent = "ネット接続を確認してください";
+            plannerWeatherWidget.setAttribute("aria-label", "天気を取得できませんでした");
+        }
+    }
+    plannerWeatherWidget?.querySelector(".planner-weather-source")?.setAttribute("href", OPEN_METEO_ATTRIBUTION);
+    refreshPlannerWeather();
+    window.setInterval(refreshPlannerWeather, 30 * 60 * 1000);
 
     function refreshPlannerMapSize() {
         requestAnimationFrame(function () {
@@ -2612,6 +2698,458 @@ document.addEventListener("DOMContentLoaded", function () {
         return otherMap[String(spot?.category ?? "").trim()] || "guide";
     }
 
+
+    // ============================================================
+    // V68: 無料のTransit APIで駅・発車案内を取得。
+    // 駅ごとに発車案内データがない場合は、鉄道会社の公式時刻表へ案内。
+    // ============================================================
+    const TRANSIT_API_V1 = "https://api.transit.ls8h.com/api/v1";
+    const TRANSIT_API_HOME = "https://api.transit.ls8h.com/";
+    const TRANSIT_API_FEEDS_URL = `${TRANSIT_API_V1}/feeds`;
+    let activeTimetableSpot = null;
+    let stationTimetableRequestToken = 0;
+    let transitFeedCatalogPromise = null;
+
+    function localDateYYYYMMDD() {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(new Date());
+        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return `${values.year}${values.month}${values.day}`;
+    }
+
+    function getJapanClockParts() {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+        }).formatToParts(new Date());
+        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return { hour: Number(values.hour), minute: Number(values.minute), second: Number(values.second) };
+    }
+
+    function getStationApiConfig(spot) {
+        const iconType = getIconType(spot);
+        const names = [spot?.name, spot?.name?.ja, spot?.name?.en, spot?.name?.zh, spot?.name?.ko]
+            .filter(Boolean)
+            .map(value => typeof value === "object" ? Object.values(value).join(" ") : String(value))
+            .join(" ");
+        const isKeihan = iconType === "station-keihan" || String(spot?.id) === "7" || /京阪|keihan|伏見稲荷|fushimi.?inari/i.test(names);
+        return isKeihan
+            ? {
+                operator: "京阪電車",
+                stationName: "伏見稲荷",
+                searchTerms: ["伏見稲荷", "Fushimi Inari"],
+                routeLabel: "京阪本線",
+                operatorHints: /keihan|京阪/i,
+                officialLinks: [{ label: "京阪電車 伏見稲荷駅の公式時刻表（方面・平日／土休日）", url: "https://www.keihan.co.jp/traffic/station/151/info.html" }]
+            }
+            : {
+                operator: "JR西日本",
+                stationName: "稲荷",
+                searchTerms: ["稲荷", "Inari"],
+                routeLabel: "JR奈良線",
+                operatorHints: /JR.?West|West.?Japan|JR西日本|奈良線/i,
+                officialLinks: [
+                    { label: "JR公式時刻表（京都方面）", url: `https://timetable.jr-odekake.net/station-timetable/3021064002?date=${localDateYYYYMMDD()}` },
+                    { label: "JR公式時刻表（宇治・奈良方面）", url: `https://timetable.jr-odekake.net/station-timetable/3021064001?date=${localDateYYYYMMDD()}` }
+                ]
+            };
+    }
+
+    function isRailStationSpot(spot) {
+        if (!spot) return false;
+        const icon = getIconType(spot);
+        const nameValue = spot.name && typeof spot.name === "object" ? Object.values(spot.name).join(" ") : String(spot.name || "");
+        return ["station-jr", "station-keihan"].includes(icon) || /駅|\bstation\b|\bJR\b|京阪|keihan/i.test(nameValue);
+    }
+
+    function stationTimetableText(message, isError = false) {
+        if (!stationTimetableStatus) return;
+        stationTimetableStatus.textContent = message;
+        stationTimetableStatus.classList.toggle("is-error", Boolean(isError));
+    }
+
+    function setStationTimetableOfficialLinks(config) {
+        const links = config?.officialLinks || [];
+        const main = links[0];
+        if (stationTimetableOfficialLink) {
+            stationTimetableOfficialLink.hidden = !main;
+            if (main) {
+                stationTimetableOfficialLink.href = main.url;
+                stationTimetableOfficialLink.textContent = `${main.label} ↗`;
+            }
+        }
+        if (stationTimetableOfficialLinkOther) {
+            const other = links[1];
+            stationTimetableOfficialLinkOther.hidden = !other;
+            if (other) {
+                stationTimetableOfficialLinkOther.href = other.url;
+                stationTimetableOfficialLinkOther.textContent = `${other.label} ↗`;
+            }
+        }
+    }
+
+    async function fetchTransitJson(path, query, timeoutMs = 12000) {
+        const url = new URL(`${TRANSIT_API_V1}${path}`);
+        if (query) Object.entries(query).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
+        });
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch(url.toString(), {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+                cache: "no-store",
+                mode: "cors",
+                signal: controller.signal
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const detail = payload?.error?.message || payload?.error?.detail || payload?.error || payload?.message;
+                throw new Error(`${response.status}${detail ? `：${String(detail)}` : ""}`);
+            }
+            return payload;
+        } catch (error) {
+            if (error?.name === "AbortError") throw new Error("Transit APIへの接続がタイムアウトしました。");
+            throw error;
+        } finally {
+            window.clearTimeout(timeoutId);
+        }
+    }
+
+    function normalizeTransitArray(value) {
+        if (value == null) return [];
+        return Array.isArray(value) ? value : [value];
+    }
+
+    function normalizeStationName(value) {
+        return String(value || "")
+            .normalize("NFKC")
+            .replace(/[\s　・駅]/g, "")
+            .toLocaleLowerCase("ja-JP");
+    }
+
+    function distanceMetersBetween(lat1, lon1, lat2, lon2) {
+        const vals = [lat1, lon1, lat2, lon2].map(Number);
+        if (!vals.every(Number.isFinite)) return null;
+        const rad = Math.PI / 180;
+        const dLat = (vals[2] - vals[0]) * rad;
+        const dLon = (vals[3] - vals[1]) * rad;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(vals[0] * rad) * Math.cos(vals[2] * rad) * Math.sin(dLon / 2) ** 2;
+        return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+    }
+
+    function getSpotLatLon(spot) {
+        const lat = Number(spot?.lat ?? spot?.latitude);
+        const lon = Number(spot?.lng ?? spot?.lon ?? spot?.longitude);
+        return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+    }
+
+    function getStationCandidateScore(candidate, spot, config) {
+        const name = normalizeStationName(candidate?.name);
+        const expected = normalizeStationName(config.stationName);
+        const feedName = `${candidate?.feedName || ""} ${candidate?.feedId || ""}`;
+        let score = 0;
+        if (name === expected) score += 100;
+        else if (name.includes(expected) || expected.includes(name)) score += 55;
+        else return -10000;
+
+        if (config.operatorHints.test(feedName)) score += 45;
+        else if (/\bjr\b|japan railway|jr西日本|keihan|京阪/i.test(feedName)) score -= 30;
+
+        const loc = getSpotLatLon(spot);
+        const candidateLat = Number(candidate?.lat);
+        const candidateLon = Number(candidate?.lon);
+        if (loc && Number.isFinite(candidateLat) && Number.isFinite(candidateLon)) {
+            const distance = distanceMetersBetween(loc.lat, loc.lon, candidateLat, candidateLon);
+            if (distance !== null) {
+                if (distance > 4000) score -= 150;
+                else score += Math.max(0, 40 - distance / 100);
+            }
+        }
+        return score;
+    }
+
+    async function findTransitStation(spot, config) {
+        const found = new Map();
+        let lastError = null;
+        for (const term of config.searchTerms) {
+            try {
+                const payload = await fetchTransitJson("/locations/suggest", { q: term, limit: 30 });
+                normalizeTransitArray(payload?.stations).forEach(candidate => {
+                    const id = String(candidate?.id || "");
+                    const feedId = String(candidate?.feedId || "");
+                    if (!id && !feedId) return;
+                    const qualifiedId = id.includes(":") ? id : (feedId && id ? `${feedId}:${id}` : id);
+                    if (!qualifiedId) return;
+                    const normalized = { ...candidate, id: qualifiedId, feedId: candidate.feedId || qualifiedId.split(":")[0] };
+                    const previous = found.get(qualifiedId);
+                    if (!previous || getStationCandidateScore(normalized, spot, config) > getStationCandidateScore(previous, spot, config)) {
+                        found.set(qualifiedId, normalized);
+                    }
+                });
+                // Japanese query is the most reliable exact name; don't delay on English once we have an exact match.
+                if ([...found.values()].some(candidate => normalizeStationName(candidate.name) === normalizeStationName(config.stationName))) break;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        const ranked = [...found.values()].map(candidate => ({ candidate, score: getStationCandidateScore(candidate, spot, config) }))
+            .sort((a, b) => b.score - a.score);
+        if (!ranked.length || ranked[0].score < 45) {
+            if (lastError && !ranked.length) throw lastError;
+            throw new Error(`${config.stationName}駅をTransit APIの駅検索結果から特定できませんでした。`);
+        }
+        return ranked[0].candidate;
+    }
+
+    function loadTransitFeedCatalog() {
+        if (!transitFeedCatalogPromise) {
+            transitFeedCatalogPromise = fetchTransitJson("/feeds").then(payload => normalizeTransitArray(payload?.feeds)).catch(() => []);
+        }
+        return transitFeedCatalogPromise;
+    }
+
+    async function updateTransitAttribution(station, token) {
+        if (!stationTimetableAttribution || token !== stationTimetableRequestToken) return;
+        stationTimetableAttribution.replaceChildren();
+        const lead = document.createTextNode("データ取得元：");
+        const apiLink = document.createElement("a");
+        apiLink.href = TRANSIT_API_HOME;
+        apiLink.target = "_blank";
+        apiLink.rel = "noopener noreferrer";
+        apiLink.textContent = "Transit API";
+        stationTimetableAttribution.append(lead, apiLink);
+
+        const feedsLink = document.createElement("a");
+        feedsLink.href = TRANSIT_API_FEEDS_URL;
+        feedsLink.target = "_blank";
+        feedsLink.rel = "noopener noreferrer";
+        feedsLink.textContent = "データ出典・ライセンス";
+        stationTimetableAttribution.append(document.createTextNode(" · "), feedsLink);
+
+        try {
+            const feeds = await loadTransitFeedCatalog();
+            if (token !== stationTimetableRequestToken) return;
+            const feed = feeds.find(item => String(item?.feedId || "") === String(station?.feedId || ""));
+            if (feed) {
+                const sourceText = feed.attribution || feed.name || "";
+                if (sourceText) stationTimetableAttribution.append(document.createTextNode(` · データ出典：${sourceText}`));
+                if (feed.license) stationTimetableAttribution.append(document.createTextNode(` · ライセンス：${feed.license}`));
+            }
+        } catch (_) { /* The API source links remain available when feed metadata cannot be fetched. */ }
+    }
+
+    function formatDepartureTime(departureSecs) {
+        const total = Number(departureSecs);
+        if (!Number.isFinite(total)) return "--:--";
+        const dayOffset = Math.floor(total / 86400);
+        const withinDay = ((Math.floor(total) % 86400) + 86400) % 86400;
+        const hour = Math.floor(withinDay / 3600);
+        const minute = Math.floor((withinDay % 3600) / 60);
+        const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+        return dayOffset > 0 ? `翌 ${time}` : dayOffset < 0 ? `前日 ${time}` : time;
+    }
+
+    function currentJapanSeconds() {
+        const clock = getJapanClockParts();
+        return clock.hour * 3600 + clock.minute * 60 + clock.second;
+    }
+
+    function groupTransitDepartures(departures) {
+        const groups = new Map();
+        normalizeTransitArray(departures).forEach(item => {
+            const routeName = String(item?.routeName || "路線情報なし");
+            const headsign = String(item?.headsign || "");
+            const mode = String(item?.mode || "");
+            const key = `${routeName}\u0000${headsign}\u0000${mode}`;
+            if (!groups.has(key)) groups.set(key, { key, routeName, headsign, mode, departures: [] });
+            groups.get(key).departures.push(item);
+        });
+        return [...groups.values()].map(group => {
+            group.departures.sort((a, b) => Number(a?.departureSecs) - Number(b?.departureSecs));
+            return group;
+        }).sort((a, b) => Number(a.departures[0]?.departureSecs) - Number(b.departures[0]?.departureSecs));
+    }
+
+    function renderTransitDepartureList(group, serviceDate, timezone) {
+        if (!stationTimetableResults) return;
+        stationTimetableResults.replaceChildren();
+        const heading = document.createElement("h3");
+        heading.textContent = group.headsign ? `${group.routeName} · ${group.headsign}方面` : group.routeName;
+        const note = document.createElement("p");
+        note.textContent = `Transit APIから取得した発車案内（${serviceDate || localDateYYYYMMDD()}、${timezone || "Asia/Tokyo"}）。全時刻表ではなく、取得できた列車のみを表示しています。`;
+        stationTimetableResults.append(heading, note);
+
+        const upcoming = group.departures.filter(item => Number.isFinite(Number(item?.departureSecs)));
+        if (!upcoming.length) {
+            const empty = document.createElement("div");
+            empty.className = "station-timetable-empty";
+            empty.textContent = "この方面の発車案内がありません。下の公式時刻表をご確認ください。";
+            stationTimetableResults.appendChild(empty);
+            stationTimetableResults.hidden = false;
+            return;
+        }
+
+        const list = document.createElement("ul");
+        list.className = "station-timetable-departures";
+        const nowSeconds = currentJapanSeconds();
+        upcoming.slice(0, 20).forEach(item => {
+            const row = document.createElement("li");
+            row.className = "station-timetable-departure";
+            const time = document.createElement("time");
+            time.textContent = formatDepartureTime(item.departureSecs);
+            time.dateTime = time.textContent.replace(/^翌 |^前日 /, "");
+            row.appendChild(time);
+
+            const info = document.createElement("span");
+            info.className = "station-timetable-departure-info";
+            const trainType = String(item?.trainType || "").trim();
+            const destination = String(item?.headsign || group.headsign || "行き先情報なし").trim();
+            info.textContent = [trainType, destination].filter(Boolean).join(" · ");
+            row.appendChild(info);
+
+            const secs = Number(item.departureSecs);
+            const eta = secs - nowSeconds;
+            if (eta >= 0 && eta <= 4 * 3600) {
+                const etaBadge = document.createElement("small");
+                etaBadge.className = "station-timetable-eta";
+                etaBadge.textContent = eta < 60 ? "まもなく" : `約${Math.ceil(eta / 60)}分後`;
+                row.appendChild(etaBadge);
+            }
+            list.appendChild(row);
+        });
+        stationTimetableResults.appendChild(list);
+        stationTimetableResults.hidden = false;
+    }
+
+    function renderTransitDirectionButtons(groups, serviceDate, timezone, token) {
+        if (!stationTimetableDirectionList) return;
+        stationTimetableDirectionList.replaceChildren();
+        groups.forEach((group, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "station-timetable-direction-button";
+            button.setAttribute("aria-pressed", "false");
+            const title = document.createElement("strong");
+            title.textContent = group.routeName;
+            const detail = document.createElement("span");
+            detail.textContent = group.headsign ? `${group.headsign}方面 · ${group.departures.length}件` : `${group.departures.length}件の発車案内`;
+            button.append(title, detail);
+            button.addEventListener("click", () => {
+                if (token !== stationTimetableRequestToken) return;
+                stationTimetableDirectionList.querySelectorAll("button").forEach(node => node.setAttribute("aria-pressed", String(node === button)));
+                renderTransitDepartureList(group, serviceDate, timezone);
+            });
+            stationTimetableDirectionList.appendChild(button);
+            if (index === 0) button.dataset.defaultDirection = "true";
+        });
+        stationTimetableDirectionList.hidden = groups.length === 0;
+        const defaultButton = stationTimetableDirectionList.querySelector('[data-default-direction="true"]');
+        if (defaultButton) defaultButton.click();
+    }
+
+    async function loadStationTimetable(spot) {
+        const token = ++stationTimetableRequestToken;
+        activeTimetableSpot = spot;
+        const config = getStationApiConfig(spot);
+        const name = getLocalizedValue(spot?.name) || config.stationName;
+        stationTimetableTitle.textContent = `${name}の発車案内`;
+        stationTimetableSubtitle.textContent = `${config.operator} · ${config.routeLabel}`;
+        setStationTimetableOfficialLinks(config);
+        stationTimetableDirectionList.replaceChildren();
+        stationTimetableDirectionList.hidden = true;
+        stationTimetableResults.replaceChildren();
+        stationTimetableResults.hidden = true;
+        stationTimetableDialog.hidden = false;
+        document.body.classList.add("station-timetable-open");
+        stationTimetableText("無料のTransit APIで駅情報と発車案内を取得しています…");
+
+        try {
+            const station = await findTransitStation(spot, config);
+            if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
+            updateTransitAttribution(station, token);
+            const clock = getJapanClockParts();
+            const time = `${clock.hour}:${String(clock.minute).padStart(2, "0")}`;
+            const query = { date: localDateYYYYMMDD(), time, limit: 60 };
+            const stationIdPath = encodeURIComponent(station.id);
+            const detailPromise = fetchTransitJson(`/stations/${stationIdPath}`).catch(() => null);
+            let departuresPayload;
+            try {
+                departuresPayload = await fetchTransitJson(`/stations/${stationIdPath}/departures`, query);
+            } catch (error) {
+                if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
+                const detail = await detailPromise;
+                const routeNames = normalizeTransitArray(detail?.routes).map(route => route?.name).filter(Boolean);
+                if (routeNames.length) stationTimetableSubtitle.textContent = `${config.operator} · ${routeNames.join("・")}`;
+                const message = String(error?.message || "");
+                if (/403/.test(message)) {
+                    stationTimetableText("駅情報は見つかりましたが、この駅の発車案内データはAPIから提供されていません。下の公式時刻表をご利用ください。", true);
+                } else if (/404/.test(message)) {
+                    stationTimetableText("この駅の発車案内データはTransit APIにありません。下の公式時刻表をご利用ください。", true);
+                } else {
+                    stationTimetableText(`Transit APIから発車案内を取得できませんでした（${message}）。下の公式時刻表をご利用ください。`, true);
+                }
+                const empty = document.createElement("div");
+                empty.className = "station-timetable-empty";
+                empty.textContent = "この画面で表示できる発車案内はありません。公式時刻表リンクから、平日・土休日や方面を選んで確認できます。";
+                stationTimetableResults.replaceChildren(empty);
+                stationTimetableResults.hidden = false;
+                return;
+            }
+            const detail = await detailPromise;
+            if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
+            const routeNames = normalizeTransitArray(detail?.routes).map(route => route?.name).filter(Boolean);
+            if (routeNames.length) stationTimetableSubtitle.textContent = `${config.operator} · ${routeNames.join("・")}`;
+
+            const departures = normalizeTransitArray(departuresPayload?.departures);
+            if (!departures.length) {
+                stationTimetableText("駅は見つかりましたが、Transit APIから発車案内が提供されていません。下の公式時刻表をご利用ください。", true);
+                const empty = document.createElement("div");
+                empty.className = "station-timetable-empty";
+                empty.textContent = "発車案内データがありません。公式時刻表で全便の時刻を確認してください。";
+                stationTimetableResults.replaceChildren(empty);
+                stationTimetableResults.hidden = false;
+                return;
+            }
+            const groups = groupTransitDepartures(departures);
+            renderTransitDirectionButtons(groups, departuresPayload?.date, departuresPayload?.timezone, token);
+            if (!groups.length) {
+                stationTimetableText("発車案内データの形式を確認できませんでした。公式時刻表をご利用ください。", true);
+                return;
+            }
+            stationTimetableText(`Transit APIから発車案内を取得しました（${departures.length}件）。路線・方面を選択できます。`);
+        } catch (error) {
+            if (token !== stationTimetableRequestToken || activeTimetableSpot !== spot) return;
+            stationTimetableText(`駅情報を取得できませんでした（${error?.message || "ネットワークエラー"}）。公式時刻表をご利用ください。`, true);
+            const empty = document.createElement("div");
+            empty.className = "station-timetable-empty";
+            empty.textContent = "駅の自動検索に失敗しました。下の公式時刻表リンクから確認できます。";
+            stationTimetableResults.replaceChildren(empty);
+            stationTimetableResults.hidden = false;
+        }
+    }
+
+    function openStationTimetable(spot) {
+        if (!stationTimetableDialog || !isRailStationSpot(spot)) return false;
+        closeMapSearch();
+        loadStationTimetable(spot);
+        return true;
+    }
+
+    function closeStationTimetable() {
+        if (!stationTimetableDialog) return;
+        stationTimetableDialog.hidden = true;
+        document.body.classList.remove("station-timetable-open");
+        stationTimetableRequestToken++;
+        activeTimetableSpot = null;
+    }
+
+    stationTimetableDialog?.querySelectorAll("[data-station-timetable-close]").forEach(button => button.addEventListener("click", closeStationTimetable));
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && stationTimetableDialog && !stationTimetableDialog.hidden) closeStationTimetable();
+    });
+
     function getIconFileName(
         iconType,
         selected
@@ -4449,8 +4987,13 @@ document.addEventListener("DOMContentLoaded", function () {
         closeMapSearch();
         activeViewedSpotId = String(spot.id);
         filterSpots();
-        renderMapSpotDetail(spot, false);
         focusSpotOnMap(spot);
+        if (isRailStationSpot(spot)) {
+            hideSpotDetail();
+            openStationTimetable(spot);
+            return;
+        }
+        renderMapSpotDetail(spot, false);
     }
 
     closeMapSpotDetailButton?.addEventListener("click", function (event) {
