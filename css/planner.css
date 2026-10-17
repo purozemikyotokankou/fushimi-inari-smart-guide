@@ -1041,6 +1041,28 @@ body {
     }
 }
 
+.map-spot-detail-timetable-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(53, 105, 67, .22);
+  border-radius: 14px;
+  background: rgba(239, 247, 239, .96);
+  color: #285c39;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.map-spot-detail-timetable-link:hover { background: #e6f2e7; text-decoration: underline; text-underline-offset: 3px; }
+.map-spot-detail-timetable-link:focus-visible { outline: 2px solid #2f7443; outline-offset: 2px; }
+
 @media (prefers-reduced-motion: reduce) {
     .planner-spot-panel {
         transition: none !important;
@@ -6061,90 +6083,12 @@ body.spot-share-open { overflow: hidden; }
 @keyframes planner-weather-rain { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
 @keyframes planner-weather-loading { to { transform: rotate(360deg); } }
 
-/* V68: accessible station timetable dialog using the free Transit API */
-.station-timetable-dialog[hidden] { display: none !important; }
-.station-timetable-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 8000;
-  display: grid;
-  place-items: center;
-  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
-  box-sizing: border-box;
-}
-.station-timetable-backdrop {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: rgba(15,22,19,.38);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  cursor: pointer;
-}
-.station-timetable-panel {
-  position: relative;
-  z-index: 1;
-  width: min(580px, 100%);
-  max-height: min(83dvh, 820px);
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: 18px;
-  border: 1px solid rgba(255,255,255,.86);
-  border-radius: 24px;
-  background: rgba(250,251,249,.97);
-  color: #202520;
-  box-shadow: 0 24px 80px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.96);
-  -webkit-overflow-scrolling: touch;
-}
-.station-timetable-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding-bottom: 13px; border-bottom: 1px solid rgba(38,55,44,.1); }
-.station-timetable-eyebrow { margin: 0 0 5px; color: #6c7770; font-size: 9px; font-weight: 800; letter-spacing: .14em; }
-.station-timetable-header h2 { margin: 0; font-size: clamp(20px, 4vw, 26px); line-height: 1.2; letter-spacing: -.025em; }
-.station-timetable-subtitle { margin: 5px 0 0; color: #68716b; font-size: 12px; }
-.station-timetable-close { display: grid; flex: 0 0 36px; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(45,61,49,.1); border-radius: 50%; background: #fff; color: #253128; font-size: 23px; cursor: pointer; }
-.station-timetable-status { margin: 13px 0; padding: 11px 12px; border-radius: 12px; background: #edf3ed; color: #354a39; font-size: 12px; line-height: 1.6; }
-.station-timetable-status.is-error { background: #fff0ee; color: #9c3028; }
- .station-timetable-directions[hidden], .station-timetable-results[hidden], .station-timetable-official-links a[hidden] { display: none !important; }
-.station-timetable-footer a, .station-timetable-attribution a { color: #245e3a; font-size: 12px; font-weight: 750; text-underline-offset: 3px; }
-.station-timetable-attribution { margin: 13px 0 0; color: #7a837c; font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
-.station-timetable-official-links { display: flex; flex-wrap: wrap; gap: 10px 15px; width: 100%; }
-.station-timetable-directions { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 9px; margin: 12px 0; }
-.station-timetable-direction-button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; padding: 14px 15px; border: 1px solid #dbe4dc; border-radius: 16px; background: #fff; color: #253329; text-align: left; font: inherit; cursor: pointer; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease; }
-.station-timetable-direction-line { order: 0; color: #7a857d; font-size: 10px; font-weight: 700; letter-spacing: .04em; line-height: 1.2; }
-.station-timetable-direction-button strong { order: 1; color: #1e2921; font-size: clamp(19px, 3.5vw, 23px); font-weight: 850; line-height: 1.25; letter-spacing: -.035em; }
-.station-timetable-direction-button .station-timetable-direction-count { order: 2; color: #68776b; font-size: 11px; line-height: 1.4; }
-.station-timetable-direction-button[aria-pressed="true"] { border-color: #438a56; background: #eef7ef; box-shadow: inset 0 0 0 1px #438a56, 0 4px 14px rgba(51,105,65,.08); }
-.station-timetable-direction-button:active { transform: scale(.99); }
-.station-timetable-results { margin: 12px 0; padding: 14px; border: 1px solid #e0e6e0; border-radius: 17px; background: #fff; }
-.station-timetable-results-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 5px; }
-.station-timetable-results-line { color: #7b857d; font-size: 10px; font-weight: 750; letter-spacing: .055em; line-height: 1.3; }
-.station-timetable-results .station-timetable-results-direction { margin: 0; color: #1e2921; font-size: clamp(22px, 4.4vw, 28px); font-weight: 900; letter-spacing: -.045em; line-height: 1.2; }
-.station-timetable-results .station-timetable-results-note { margin: 5px 0 0; color: #435247; font-size: 11px; font-weight: 750; line-height: 1.5; }
-.station-timetable-results .station-timetable-results-disclaimer { margin: 2px 0 12px; color: #7a837c; font-size: 10px; line-height: 1.45; }
-.station-timetable-departures { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
-.station-timetable-departure { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 10px 11px; border-radius: 12px; background: #f2f5f1; }
-.station-timetable-departure time { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 900; letter-spacing: -.035em; }
-.station-timetable-departure-info { min-width: 0; flex: 1; color: #536057; font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
-.station-timetable-departure-primary { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
-.station-timetable-train-type { display: inline-flex; align-items: center; flex: 0 0 auto; min-height: 21px; padding: 2px 6px; border-radius: 6px; background: #2f6844; color: #fff; font-size: 10px; font-weight: 850; line-height: 1.15; white-space: nowrap; }
-.station-timetable-train-type.is-unknown { background: #e7ebe7; color: #68736b; font-size: 9px; }
-.station-timetable-destination { min-width: 0; color: #202b22; font-size: 12px; font-weight: 850; line-height: 1.3; overflow-wrap: anywhere; }
-.station-timetable-eta { flex: 0 0 auto; padding: 4px 6px; border-radius: 7px; background: #e2efe4; color: #2e6840; font-size: 9px; font-weight: 800; white-space: nowrap; }
-.station-timetable-empty { color: #68756a; font-size: 12px; line-height: 1.6; }
-.station-timetable-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 15px; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(38,55,44,.1); }
-.station-timetable-footer span { flex-basis: 100%; color: #7a837c; font-size: 10px; line-height: 1.5; }
 @media (max-width: 580px) {
   .planner-weather-widget { left: 9px; top: calc(max(8px, env(safe-area-inset-top)) + 68px); min-height: 46px; gap: 7px; padding: 7px 9px; border-radius: 14px; }
   .planner-weather-icon { width: 28px; height: 28px; flex-basis: 28px; font-size: 23px; }
   .planner-weather-copy strong { font-size: 11px; }
   .planner-weather-copy > span { font-size: 9px; }
   .planner-weather-source { font-size: 7px; }
-  .station-timetable-dialog { padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); align-items: end; }
-  .station-timetable-panel { max-height: min(87dvh, 820px); padding: 15px; border-radius: 22px 22px 18px 18px; }
-  .station-timetable-directions { grid-template-columns: 1fr; }
-  .station-timetable-departures { grid-template-columns: 1fr; }
-  .station-timetable-direction-button { padding: 13px 14px; }
-  .station-timetable-results { padding: 12px; }
-  .station-timetable-departure { padding: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .planner-weather-widget, .planner-weather-icon { animation: none !important; transition: none !important; }
