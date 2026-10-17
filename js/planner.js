@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V71-KEIHAN-DIRECTION-HIERARCHY-TRAIN-INFO";
-    console.log("[Fushimi Inari Smart Guide] planner.js V71-KEIHAN-DIRECTION-HIERARCHY-TRAIN-INFO loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V74-SPOT-PIN-MULTILINGUAL-FIX";
+    console.log("[Fushimi Inari Smart Guide] planner.js V74-SPOT-PIN-MULTILINGUAL-FIX loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -512,33 +512,149 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    // spots.json の既存データは name / description が日本語文字列のため、
+    // 言語選択を変えてもそのまま表示されていた。既存データを壊さず、
+    // 既知スポットの名称・説明を表示言語ごとに補完する。
+    // 新しいスポットで多言語オブジェクト {ja,en,zh,ko} が提供されている場合は、
+    // その翻訳をこの辞書より優先する。
+    const SPOT_TEXT_TRANSLATIONS = {
+        "千本鳥居": {
+            en: "Senbon Torii (Thousand Torii Gates)",
+            zh: "千本鸟居",
+            ko: "센본 도리이(천 개의 도리이)"
+        },
+        "伏見稲荷大社 本殿": {
+            en: "Fushimi Inari Taisha Main Shrine",
+            zh: "伏见稻荷大社本殿",
+            ko: "후시미 이나리 타이샤 본전"
+        },
+        "奥社奉拝所（奥の院）": {
+            en: "Okusha Hohaisho (Inner Shrine)",
+            zh: "奥社奉拜所（内院）",
+            ko: "오쿠샤 호하이쇼(오쿠노인)"
+        },
+        "四ツ辻": {
+            en: "Yotsutsuji Junction Viewpoint",
+            zh: "四之辻观景点",
+            ko: "요쓰쓰지 전망 지점"
+        },
+        "稲荷山 山頂（一ノ峰）": {
+            en: "Mount Inari Summit (Ichinomine)",
+            zh: "稻荷山山顶（一之峰）",
+            ko: "이나리산 정상(이치노미네)"
+        },
+        "トイレ": {
+            en: "Restroom",
+            zh: "洗手间",
+            ko: "화장실"
+        },
+        "京阪電車伏見稲荷駅": {
+            en: "Keihan Fushimi-Inari Station",
+            zh: "京阪电车伏见稻荷站",
+            ko: "게이한 후시미이나리역"
+        },
+        "JR西日本奈良線稲荷駅": {
+            en: "JR Inari Station (Nara Line)",
+            zh: "JR西日本奈良线稻荷站",
+            ko: "JR 나라선 이나리역"
+        },
+        "伏見稲荷入口": {
+            en: "Fushimi Inari Shrine Entrance",
+            zh: "伏见稻荷入口",
+            ko: "후시미 이나리 입구"
+        },
+        "Vermillion-cafe": {
+            en: "Vermillion Cafe",
+            zh: "Vermillion 咖啡馆",
+            ko: "버밀리온 카페"
+        },
+        "ちいかわ本舗": {
+            en: "Chiikawa Honpo",
+            zh: "吉伊卡哇本铺",
+            ko: "치이카와 혼포"
+        },
+        "eight": {
+            en: "Eight",
+            zh: "Eight 咖啡馆",
+            ko: "에이트"
+        },
+        "伏見稲荷を代表する朱色の鳥居が連なる人気スポットです。写真撮影にもおすすめです。": {
+            en: "A popular spot featuring rows of vermilion torii gates, one of Fushimi Inari's signature sights. Great for photos.",
+            zh: "这里排列着成排的朱红色鸟居，是伏见稻荷的代表性景点之一，也很适合拍照。",
+            ko: "후시미 이나리를 대표하는 주홍색 도리이가 줄지어 있는 인기 명소입니다. 사진 촬영에도 좋습니다."
+        },
+        "伏見稲荷大社の中心となる場所です。参拝の際はまず訪れることをおすすめします。": {
+            en: "The main sanctuary of Fushimi Inari Taisha. It is a recommended first stop for visitors paying their respects.",
+            zh: "这里是伏见稻荷大社的中心区域，建议参拜时首先到访。",
+            ko: "후시미 이나리 타이샤의 중심이 되는 곳입니다. 참배할 때 먼저 방문하는 것을 추천합니다."
+        },
+        "千本鳥居を抜けた先にある重要な参拝場所です。おもかる石でも有名です。": {
+            en: "An important place of worship beyond the Senbon Torii gates, famous for the Omokaru Stone.",
+            zh: "穿过千本鸟居后即可到达的重要参拜场所，也以“重轻石”闻名。",
+            ko: "센본 도리이를 지나면 나오는 중요한 참배 장소이며, 오모카루 돌로도 유명합니다."
+        },
+        "京都市街を見渡せる展望スポットです。休憩場所としても利用できます。": {
+            en: "A viewpoint with sweeping views over Kyoto. It is also a good place to take a break.",
+            zh: "这里可以俯瞰京都市区，也适合稍作休息。",
+            ko: "교토 시내를 한눈에 내려다볼 수 있는 전망 명소로, 휴식 장소로도 이용할 수 있습니다."
+        },
+        "稲荷山の頂上にある神聖な場所です。山歩きコースの終点になります。": {
+            en: "A sacred site at the summit of Mount Inari and the endpoint of the mountain walking route.",
+            zh: "这里是稻荷山山顶的神圣场所，也是登山步行路线的终点。",
+            ko: "이나리산 정상에 있는 신성한 장소로, 산책 코스의 종점입니다."
+        },
+        "車いす対応トイレあり": {
+            en: "Wheelchair-accessible restroom available.",
+            zh: "设有无障碍洗手间。",
+            ko: "휠체어 이용 가능 화장실이 있습니다."
+        },
+        "京阪電車の最寄り駅です。伏見稲荷観光のスタート地点として便利です。": {
+            en: "The nearest Keihan Railway station, convenient as a starting point for visiting Fushimi Inari.",
+            zh: "这是最近的京阪电车车站，适合作为游览伏见稻荷的起点。",
+            ko: "가까운 게이한 전철역으로, 후시미 이나리 관광을 시작하기에 편리합니다."
+        },
+        "JR奈良線の最寄り駅です。京都駅からアクセスできます。": {
+            en: "The nearest station on the JR Nara Line, with access from Kyoto Station.",
+            zh: "这是最近的JR奈良线车站，可从京都站前往。",
+            ko: "가까운 JR 나라선 역으로, 교토역에서 이동할 수 있습니다."
+        },
+        "伏見稲荷大社へ向かう参道入口です。ここから楼門・本殿方面へ進みます。": {
+            en: "The entrance to the approach leading to Fushimi Inari Taisha. Continue from here toward the Romon Gate and main shrine.",
+            zh: "这是通往伏见稻荷大社参道的入口，从这里可前往楼门和本殿方向。",
+            ko: "후시미 이나리 타이샤로 이어지는 참배길 입구입니다. 여기서 누문과 본전 방향으로 이동합니다."
+        },
+        "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。": {
+            en: "A cafe surrounded by the greenery of Fushimi Inari, serving coffee, brunch, and sweets.",
+            zh: "一家被伏见稻荷绿意环绕的咖啡馆，可享用咖啡、早午餐和甜点。",
+            ko: "후시미 이나리의 푸른 자연에 둘러싸인 카페로, 커피와 브런치, 디저트를 즐길 수 있습니다."
+        }
+    };
+
     function getLocalizedValue(value) {
+        if (value === null || value === undefined) return "";
 
-        if (
-            value === null ||
-            value === undefined
-        ) {
-            return "";
+        const language = getCurrentLanguage();
+
+        if (typeof value === "object") {
+            // JSONに個別翻訳が用意されていれば必ずそれを優先する。
+            const localized = value[language];
+            if (localized !== null && localized !== undefined && String(localized).trim()) {
+                return String(localized);
+            }
+
+            // 翻訳が未登録の言語は、まず日本語（または最初の値）を辞書照合する。
+            const fallback = value.ja || value.en || value.zh || value.ko || Object.values(value)[0] || "";
+            return translateSpotText(String(fallback), language) || String(fallback);
         }
 
-        if (
-            typeof value !== "object"
-        ) {
-            return String(value);
-        }
+        const text = String(value);
+        return translateSpotText(text, language) || text;
+    }
 
-        const language =
-            getCurrentLanguage();
-
-        return (
-            value[language] ||
-            value.ja ||
-            value.en ||
-            value.zh ||
-            value.ko ||
-            Object.values(value)[0] ||
-            ""
-        );
+    function translateSpotText(text, language) {
+        if (!text || language === "ja") return "";
+        const entry = SPOT_TEXT_TRANSLATIONS[String(text).trim()];
+        return entry && entry[language] ? entry[language] : "";
     }
 
     function getText(
