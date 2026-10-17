@@ -7,10 +7,10 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=75-auto-adaptive-light-fix2">
+    <link rel="stylesheet" href="css/planner.css?v=75-adaptive-light-70pct">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
-/* V75 lighting correction: continuous color updates + softer ambient edge bloom. */
+/* V75 lighting correction: continuous color updates + edge-light strength explicitly set to 70%. */
 @property --fushimi-edge-color {
     syntax: "<color>";
     inherits: true;
@@ -46,7 +46,7 @@
     --fushimi-light-strength: .82;
     --fushimi-light-blur: 13px;
     --fushimi-light-x: 94%;
-    opacity: .70; /* soften the complete ambient-light layer; pins/routes are separate panes */
+    opacity: .70 !important; /* exact 70% overall light intensity; pins/routes are separate panes */
 }
 /* A wide luminous wash rather than a small visible hotspot. The top edge is the brightest area. */
 #fushimiAdaptiveLight::before {
@@ -363,7 +363,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=75-auto-adaptive-light-fix2"></script>
+<script src="js/planner.js?v=75-adaptive-light-70pct"></script>
 <script id="fushimi-auto-adaptive-light">
 /* V75 lighting fix — no controls: smooth continuous edge bloom based on Kyoto local time, sunrise/sunset and live weather. */
 (function () {
