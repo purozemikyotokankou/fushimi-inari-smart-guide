@@ -4994,6 +4994,14 @@ body { overflow:hidden !important; background:#e9ece8; }
   letter-spacing: .01em !important;
   box-shadow: 0 8px 22px rgba(178,39,47,.22), inset 0 1px 0 rgba(255,255,255,.32) !important;
 }
+.map-spot-detail-timetable-button {
+  display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 42px;
+  margin-top: 8px; padding: 0 14px; border: 1px solid rgba(44, 76, 53, .18); border-radius: 13px;
+  background: rgba(241, 247, 241, .96); color: #2d5938; font: inherit; font-size: 12px; font-weight: 800;
+  cursor: pointer; transition: background .16s ease, transform .16s ease;
+}
+.map-spot-detail-timetable-button:hover { background: #e7f2e7; }
+.map-spot-detail-timetable-button:active { transform: scale(.99); }
 .map-spot-detail-route-button-summary .route-button-symbol {
   display: inline-grid !important;
   place-items: center !important;

@@ -2957,12 +2957,38 @@ document.addEventListener("DOMContentLoaded", function () {
         return clock.hour * 3600 + clock.minute * 60 + clock.second;
     }
 
-    function keihanDepartureDirection(item) {
-        // Use destination/headsign-like fields only; do not infer directions from arbitrary metadata.
+    function getKeihanPlatformDirection(item, stationDetail) {
+        // Some feed departures omit headsign but keep the platform/stop ID. If that ID
+        // matches a station platform, use its published platform name/code as evidence.
+        const explicitPlatformCode = String(item?.platformCode ?? item?.platform_code ?? "").normalize("NFKC").trim();
+        // Keihan Fushimi-Inari: platform 1 is Kyoto/Demachiyanagi-bound; platform 2 is Osaka-bound.
+        if (/^1(?:番(?:線|のりば)?)?$/.test(explicitPlatformCode)) return "kyoto";
+        if (/^2(?:番(?:線|のりば)?)?$/.test(explicitPlatformCode)) return "osaka";
+        const stopId = String(item?.stopId ?? item?.stop_id ?? item?.platformId ?? item?.platform_id ?? "").trim();
+        if (!stopId) return null;
+        const platforms = normalizeTransitArray(stationDetail?.platforms);
+        const stopLocalId = stopId.split(":").pop();
+        const platform = platforms.find(candidate => {
+            const id = String(candidate?.id ?? "").trim();
+            return id && (id === stopId || id.split(":").pop() === stopLocalId || stopId.endsWith(`:${id}`));
+        });
+        if (!platform) return null;
+        const code = String(platform.platformCode ?? platform.platform_code ?? "").normalize("NFKC").trim();
+        if (/^1(?:番(?:線|のりば)?)?$/.test(code)) return "kyoto";
+        if (/^2(?:番(?:線|のりば)?)?$/.test(code)) return "osaka";
+        const text = [platform.name, code]
+            .filter(Boolean).join(" ").normalize("NFKC").toLocaleLowerCase("ja-JP");
+        if (/出町柳|三条|祇園四条|七条|京都方面|platform\s*1\b|(?:^|\s)1番?(?:線|のりば)(?:$|\s)/.test(text)) return "kyoto";
+        if (/淀屋橋|中之島|大阪|京橋|platform\s*2\b|(?:^|\s)2番?(?:線|のりば)(?:$|\s)/.test(text)) return "osaka";
+        return null;
+    }
+
+    function keihanDepartureDirection(item, stationDetail = null) {
+        // First trust explicit destination/headsign/direction fields from the feed.
         const fields = [
-            "headsign", "destination", "destinationName", "destination_name", "to", "toName",
+            "headsign", "destination", "destinationName", "destination_name", "to", "toName", "to_name",
             "terminus", "terminal", "direction", "directionName", "direction_name",
-            "platformName", "platform_name", "routeName", "route_name"
+            "platformName", "platform_name", "platformCode", "platform_code", "routeName", "route_name"
         ];
         const values = [];
         fields.forEach(key => {
@@ -2979,17 +3005,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const osakaBound = /京橋|淀屋橋|中之島|大阪|枚方|樟葉|寝屋川|守口|淀方面|淀(?!屋橋)|大阪方面|yodoyabashi|nakanoshima|kyobashi|osaka|hirakata|kuzuha|neyagawa|moriguchi|southbound|south bound|downbound|下り/;
         if (kyotoBound.test(text)) return "kyoto";
         if (osakaBound.test(text)) return "osaka";
-        return null;
+        return getKeihanPlatformDirection(item, stationDetail);
     }
 
-    function groupTransitDepartures(departures, config = null) {
+    function groupTransitDepartures(departures, config = null, stationDetail = null) {
         const normalizedDepartures = normalizeTransitArray(departures);
         if (config?.operator === "京阪電車") {
             const kyoto = [];
             const osaka = [];
             let unclassifiedCount = 0;
             normalizedDepartures.forEach(item => {
-                const direction = keihanDepartureDirection(item);
+                const direction = keihanDepartureDirection(item, stationDetail);
                 if (direction === "kyoto") kyoto.push(item);
                 else if (direction === "osaka") osaka.push(item);
                 else unclassifiedCount++;
@@ -3039,8 +3065,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function getTrainTypeLabel(item) {
-        // Transit API schema's trainType is the official class field; aliases are fallback support.
-        return getTransitDepartureText(item, ["trainType", "train_type", "serviceName", "service_name"]);
+        // `trainType` is an optional field in the Transit API schema. Check aliases too,
+        // because some upstream feeds expose a class label under a slightly different key.
+        const raw = getTransitDepartureText(item, [
+            "trainType", "train_type", "trainTypeName", "train_type_name", "trainClass", "train_class",
+            "serviceType", "service_type", "serviceName", "service_name"
+        ]);
+        if (!raw) return "";
+        const key = raw.normalize("NFKC").trim().toLocaleLowerCase("en-US")
+            .replace(/[\s-]+/g, "_");
+        const labels = {
+            local: "普通", local_train: "普通", ordinary: "普通", all_stations: "普通",
+            rapid: "快速", rapid_service: "快速", semi_rapid: "快速",
+            express: "急行", limited_express: "特急", limitedexpress: "特急",
+            rapid_express: "快速急行", rapid_limited_express: "快速特急",
+            semi_express: "準急", semi_limited_express: "準急", sectional_express: "区間急行",
+            commuter_rapid: "通勤快速", commuter_express: "通勤急行", commuter_semi_express: "通勤準急"
+        };
+        return labels[key] || raw;
     }
 
     function getTrainDestinationLabel(item) {
@@ -3100,8 +3142,9 @@ document.addEventListener("DOMContentLoaded", function () {
             const trainType = document.createElement("span");
             trainType.className = "station-timetable-train-type";
             const typeLabel = getTrainTypeLabel(item);
-            trainType.textContent = typeLabel || "種別情報なし";
+            trainType.textContent = typeLabel || "種別未提供";
             if (!typeLabel) trainType.classList.add("is-unknown");
+            if (!typeLabel) trainType.title = "Transit APIのこの便データに列車種別が含まれていません。公式時刻表で確認してください。";
             const destination = document.createElement("strong");
             destination.className = "station-timetable-destination";
             destination.textContent = getTrainDestinationLabel(item);
@@ -3217,7 +3260,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 stationTimetableResults.hidden = false;
                 return;
             }
-            const groups = groupTransitDepartures(departures, config);
+            const groups = groupTransitDepartures(departures, config, detail);
             renderTransitDirectionButtons(groups, departuresPayload?.date, departuresPayload?.timezone, token);
             if (!groups.length) {
                 stationTimetableText("発車案内データの形式を確認できませんでした。公式時刻表をご利用ください。", true);
@@ -4838,6 +4881,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 </div>
                 <p class="spot-engagement-status" role="status" aria-live="polite" hidden></p>
                 <button type="button" class="map-spot-detail-route-button map-spot-detail-route-button-summary"><span class="route-button-symbol" aria-hidden="true">↗</span><span>${escapeHTML(routeSetupText("route"))}</span></button>
+                ${isRailStationSpot(spot) ? '<button type="button" class="map-spot-detail-timetable-button" data-open-station-timetable>🚉 発車案内・時刻表</button>' : ""}
             </div>
             <div class="map-spot-detail-body">
                 <div class="map-spot-detail-divider"></div>
@@ -4855,6 +4899,13 @@ document.addEventListener("DOMContentLoaded", function () {
         mapSpotDetail.classList.toggle("is-compact", !expanded);
         plannerWorkspace?.classList.add("has-spot-detail");
         updateSpotEngagementButtons(spot);
+
+        const timetableButton = mapSpotDetailContent.querySelector("[data-open-station-timetable]");
+        timetableButton?.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openStationTimetable(spot);
+        });
 
         const routeButton = mapSpotDetailContent.querySelector(".map-spot-detail-route-button-summary");
         routeButton?.addEventListener("click", function (event) {
@@ -5101,17 +5152,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function showSpotOnMap(spot) {
         if (!spot) return;
         closeMapSearch();
+        // Station markers must open the same spot detail sheet as every other place.
+        // That exposes the route button; the separate timetable button opens departures.
+        if (stationTimetableDialog && !stationTimetableDialog.hidden) closeStationTimetable();
         activeViewedSpotId = String(spot.id);
         filterSpots();
         focusSpotOnMap(spot);
-        if (isRailStationSpot(spot)) {
-            // hideSpotDetail resets the viewing ID, so set it again for the station timetable.
-            hideSpotDetail();
-            activeViewedSpotId = String(spot.id);
-            filterSpots();
-            openStationTimetable(spot);
-            return;
-        }
         renderMapSpotDetail(spot, false);
     }
 
@@ -5501,7 +5547,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     // A spot picked for the route can be removed by tapping its map pin.
                     // Keep all selected-list, route-number, timetable, and icon states in sync.
-                    if (isSpotSelected(spot)) {
+                    if (isSpotSelected(spot) && !isRailStationSpot(spot)) {
                         if (isSameTimetableOpen) closeStationTimetable();
                         // The drawn route must not keep pointing to a waypoint that has just been removed.
                         if (navigationActive) {
