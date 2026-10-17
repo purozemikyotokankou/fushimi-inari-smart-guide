@@ -344,7 +344,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ============================================================
-    // V67 天気API: 伏見稲荷周辺の現在天気（Open-Meteo / APIキー不要）
+    // V75 天気API: 現在天気は照明演出用に取得。天気バッジは画面に表示しない。
     // ============================================================
     const FUSHIMI_WEATHER_COORDS = { latitude: 34.96705, longitude: 135.7743 };
     const OPEN_METEO_ATTRIBUTION = "https://open-meteo.com/";
@@ -364,8 +364,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function refreshPlannerWeather() {
-        if (!plannerWeatherWidget) return;
-        plannerWeatherWidget.classList.add("is-loading");
+        // The weather badge is intentionally not displayed. We still fetch weather
+        // so the automatic lighting can adapt to clear, cloudy, rainy, and snowy conditions.
+        if (plannerWeatherWidget) plannerWeatherWidget.classList.add("is-loading");
         const params = new URLSearchParams({
             latitude: String(FUSHIMI_WEATHER_COORDS.latitude),
             longitude: String(FUSHIMI_WEATHER_COORDS.longitude),
@@ -391,24 +392,31 @@ document.addEventListener("DOMContentLoaded", function () {
             const current = payload && payload.current;
             if (!current || !Number.isFinite(Number(current.temperature_2m))) throw new Error("Weather response missing current values");
             const condition = describeWeatherCode(current.weather_code, Number(current.is_day) === 1);
-            plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
-            plannerWeatherWidget.classList.add(`is-${condition.type}`);
-            plannerWeatherIcon.textContent = condition.icon;
-            plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
-            const apparent = Number(current.apparent_temperature);
-            plannerWeatherDetail.textContent = Number.isFinite(apparent)
-                ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
-                : "伏見稲荷周辺の現在天気";
-            plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
+
+            // Update the card only if one is present; the current UI intentionally hides it.
+            if (plannerWeatherWidget) {
+                plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
+                plannerWeatherWidget.classList.add(`is-${condition.type}`);
+                if (plannerWeatherIcon) plannerWeatherIcon.textContent = condition.icon;
+                if (plannerWeatherLabel) plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
+                const apparent = Number(current.apparent_temperature);
+                if (plannerWeatherDetail) plannerWeatherDetail.textContent = Number.isFinite(apparent)
+                    ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
+                    : "伏見稲荷周辺の現在天気";
+                plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
+            }
+
             plannerWorkspace?.classList.remove("weather-sunny", "weather-cloudy", "weather-rainy", "weather-snowy");
             plannerWorkspace?.classList.add(`weather-${condition.type}`);
         } catch (error) {
             console.warn("天気APIを取得できませんでした:", error);
-            plannerWeatherWidget.classList.remove("is-loading");
-            plannerWeatherIcon.textContent = "🌦️";
-            plannerWeatherLabel.textContent = "天気を取得できません";
-            plannerWeatherDetail.textContent = "ネット接続を確認してください";
-            plannerWeatherWidget.setAttribute("aria-label", "天気を取得できませんでした");
+            if (plannerWeatherWidget) {
+                plannerWeatherWidget.classList.remove("is-loading");
+                if (plannerWeatherIcon) plannerWeatherIcon.textContent = "🌦️";
+                if (plannerWeatherLabel) plannerWeatherLabel.textContent = "天気を取得できません";
+                if (plannerWeatherDetail) plannerWeatherDetail.textContent = "ネット接続を確認してください";
+                plannerWeatherWidget.setAttribute("aria-label", "天気を取得できませんでした");
+            }
         }
     }
     plannerWeatherWidget?.querySelector(".planner-weather-source")?.setAttribute("href", OPEN_METEO_ATTRIBUTION);

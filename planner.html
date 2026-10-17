@@ -7,10 +7,10 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=75-auto-adaptive-light-fix1">
+    <link rel="stylesheet" href="css/planner.css?v=75-auto-adaptive-light-fix2">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
-/* V75 lighting correction: continuous color updates + a broad, soft edge bloom. */
+/* V75 lighting correction: continuous color updates + softer ambient edge bloom. */
 @property --fushimi-edge-color {
     syntax: "<color>";
     inherits: true;
@@ -46,6 +46,7 @@
     --fushimi-light-strength: .82;
     --fushimi-light-blur: 13px;
     --fushimi-light-x: 94%;
+    opacity: .70; /* soften the complete ambient-light layer; pins/routes are separate panes */
 }
 /* A wide luminous wash rather than a small visible hotspot. The top edge is the brightest area. */
 #fushimiAdaptiveLight::before {
@@ -192,16 +193,6 @@
                 <div class="planner-map-hint" aria-hidden="true">地図を動かしてスポットを探せます</div>
             </div>
         </section>
-
-
-        <div id="plannerWeatherWidget" class="planner-weather-widget is-loading" role="status" aria-live="polite" aria-label="伏見稲荷の現在の天気">
-            <span id="plannerWeatherIcon" class="planner-weather-icon" aria-hidden="true">◌</span>
-            <span class="planner-weather-copy">
-                <strong id="plannerWeatherLabel">天気を取得中…</strong>
-                <span id="plannerWeatherDetail">伏見稲荷</span>
-            </span>
-            <a class="planner-weather-source" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" aria-label="天気データ提供元 Open-Meteo">Open-Meteo</a>
-        </div>
 
         <aside class="planner-spot-panel is-collapsed" id="plannerBottomSheet" aria-label="Spot information">
             <button
@@ -372,7 +363,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=75-auto-adaptive-light-fix1"></script>
+<script src="js/planner.js?v=75-auto-adaptive-light-fix2"></script>
 <script id="fushimi-auto-adaptive-light">
 /* V75 lighting fix — no controls: smooth continuous edge bloom based on Kyoto local time, sunrise/sunset and live weather. */
 (function () {
