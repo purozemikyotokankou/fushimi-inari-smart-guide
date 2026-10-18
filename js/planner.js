@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V74-SPOT-PIN-MULTILINGUAL-FIX";
-    console.log("[Fushimi Inari Smart Guide] planner.js V74-SPOT-PIN-MULTILINGUAL-FIX loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V82-EDGE-LIGHT-PANE-FIX-HIDDEN-WEATHER";
+    console.log("[Fushimi Inari Smart Guide] planner.js V82-EDGE-LIGHT-PANE-FIX-HIDDEN-WEATHER loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -373,19 +373,25 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function applyPlannerWeatherCurrent(current) {
-        if (!plannerWeatherWidget || !current || !Number.isFinite(Number(current.temperature_2m))) return false;
+        if (!current || !Number.isFinite(Number(current.temperature_2m))) return false;
         const condition = describeWeatherCode(current.weather_code, Number(current.is_day) === 1);
-        plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
-        plannerWeatherWidget.classList.add(`is-${condition.type}`);
-        plannerWeatherIcon.textContent = condition.icon;
-        plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
-        const apparent = Number(current.apparent_temperature);
-        plannerWeatherDetail.textContent = Number.isFinite(apparent)
-            ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
-            : "伏見稲荷周辺の現在天気";
-        plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
+
+        // Weather is consumed silently by the edge-light effect; no weather card is shown.
         plannerWorkspace?.classList.remove("weather-sunny", "weather-cloudy", "weather-rainy", "weather-snowy");
         plannerWorkspace?.classList.add(`weather-${condition.type}`);
+
+        // Keep optional UI updates guarded in case a weather chip is reintroduced deliberately later.
+        if (plannerWeatherWidget) {
+            plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
+            plannerWeatherWidget.classList.add(`is-${condition.type}`);
+            if (plannerWeatherIcon) plannerWeatherIcon.textContent = condition.icon;
+            if (plannerWeatherLabel) plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
+            const apparent = Number(current.apparent_temperature);
+            if (plannerWeatherDetail) plannerWeatherDetail.textContent = Number.isFinite(apparent)
+                ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
+                : "伏見稲荷周辺の現在天気";
+            plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
+        }
         return true;
     }
 
@@ -406,12 +412,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function refreshPlannerWeather() {
-        if (!plannerWeatherWidget) return;
         const cached = readFushimiHomeCache();
         const cachedAt = Number(cached && (cached.currentFetchedAt || cached.fetchedAt));
         const hasUsableCache = cached && cached.current && Number.isFinite(cachedAt) &&
             Date.now() - cachedAt < 12 * 60 * 60 * 1000 && applyPlannerWeatherCurrent(cached.current);
-        if (!hasUsableCache) plannerWeatherWidget.classList.add("is-loading");
+        if (!hasUsableCache && plannerWeatherWidget) plannerWeatherWidget.classList.add("is-loading");
         const params = new URLSearchParams({
             latitude: String(FUSHIMI_WEATHER_COORDS.latitude),
             longitude: String(FUSHIMI_WEATHER_COORDS.longitude),
@@ -437,11 +442,11 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (error) {
             console.warn("天気APIを取得できませんでした:", error);
             // When cached weather has already been painted, keep it instead of flashing an error state.
-            if (!hasUsableCache) {
+            if (!hasUsableCache && plannerWeatherWidget) {
                 plannerWeatherWidget.classList.remove("is-loading");
-                plannerWeatherIcon.textContent = "🌦️";
-                plannerWeatherLabel.textContent = "天気を取得できません";
-                plannerWeatherDetail.textContent = "ネット接続を確認してください";
+                if (plannerWeatherIcon) plannerWeatherIcon.textContent = "🌦️";
+                if (plannerWeatherLabel) plannerWeatherLabel.textContent = "天気を取得できません";
+                if (plannerWeatherDetail) plannerWeatherDetail.textContent = "ネット接続を確認してください";
                 plannerWeatherWidget.setAttribute("aria-label", "天気を取得できませんでした");
             }
         }

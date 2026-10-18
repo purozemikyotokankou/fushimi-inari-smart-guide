@@ -7,10 +7,10 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=80-auto-adaptive-light">
+    <link rel="stylesheet" href="css/planner.css?v=82-edge-light-fix">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
-/* V80 — automatic adaptive edge light. This layer never blocks map interaction. */
+/* V82 — same adaptive edge-light look, anchored to the screen edge above Leaflet tiles. */
 #map {
     --fushimi-night-level: 0;
     --fushimi-map-brightness: 1;
@@ -21,9 +21,11 @@
     transition: filter 26s linear;
 }
 #fushimiAdaptiveLight {
-    position: absolute;
-    inset: 0;
-    z-index: 350; /* tiles (200) < light (350) < route vectors (400) < pins (600) */
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 650 !important; /* stable screen-edge layer above Leaflet's map pane; transparent + pointer-events:none */
+    display: block !important;
+    visibility: visible !important;
     overflow: hidden;
     pointer-events: none;
     isolation: isolate;
@@ -169,17 +171,6 @@
                 <div class="planner-map-hint" aria-hidden="true">地図を動かしてスポットを探せます</div>
             </div>
         </section>
-
-
-        <div id="plannerWeatherWidget" class="planner-weather-widget is-loading" role="status" aria-live="polite" aria-label="伏見稲荷の現在の天気">
-            <span id="plannerWeatherIcon" class="planner-weather-icon" aria-hidden="true">◌</span>
-            <span class="planner-weather-copy">
-                <strong id="plannerWeatherLabel">天気を取得中…</strong>
-                <span id="plannerWeatherDetail">伏見稲荷</span>
-            </span>
-            <a class="planner-weather-source" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" aria-label="天気データ提供元 Open-Meteo">Open-Meteo</a>
-        </div>
-
         <aside class="planner-spot-panel is-collapsed" id="plannerBottomSheet" aria-label="Spot information">
             <button
                 type="button"
@@ -349,7 +340,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=81-home-prefetch"></script>
+<script src="js/planner.js?v=82-hidden-weather-prefetch"></script>
 <script id="fushimi-auto-adaptive-light">
 /* V80 — no lighting controls: follows Kyoto local time, sunrise/sunset and the existing live-weather API. */
 (function () {
@@ -604,6 +595,9 @@
         lightLayer.id = "fushimiAdaptiveLight";
         lightLayer.setAttribute("aria-hidden", "true");
         lightLayer.innerHTML = '<div class="fushimi-adaptive-light-source"></div>';
+        // Keep the edge light anchored to the visible map frame, not the panning map pane.
+        // z-index 650 places it above Leaflet's transformed map pane; Leaflet controls remain above it.
+        // The light is transparent and pointer-events:none, so map interaction continues normally.
         mapElement.appendChild(lightLayer);
 
         const syncWeather = () => renderLight();
