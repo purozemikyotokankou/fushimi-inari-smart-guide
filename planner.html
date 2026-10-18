@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=75-adaptive-light-balanced-core">
+    <link rel="stylesheet" href="css/planner.css?v=75-light-balance-route-v2">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
 /* V75 balanced edge light: preserve the luminous edge core while reducing the broad wash. */
@@ -158,6 +158,128 @@
     #fushimiAdaptiveLight::after,
     #fushimiAdaptiveLight .fushimi-light-edge-core { transition-duration: 1ms !important; }
 }
+
+/* V75 v2: visible ambient edge tint. Do not screen-blend it away on pale map tiles. */
+#fushimiAdaptiveLight {
+    opacity: 1 !important;
+    isolation: auto !important;
+    background: transparent !important;
+    transition:
+        --fushimi-edge-color 2.2s ease,
+        --fushimi-light-x 3.2s linear,
+        --fushimi-light-strength 2.2s ease;
+}
+#fushimiAdaptiveLight::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 14%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 12%, transparent) 12px,
+            color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) 27px,
+            color-mix(in srgb, var(--fushimi-edge-color) 5.5%, transparent) 48px,
+            color-mix(in srgb, var(--fushimi-edge-color) 2.7%, transparent) 78px,
+            color-mix(in srgb, var(--fushimi-edge-color) 1%, transparent) 112px,
+            transparent 160px),
+        radial-gradient(ellipse 125% 245px at var(--fushimi-light-x) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 11%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 6.5%, transparent) 34%,
+            color-mix(in srgb, var(--fushimi-edge-color) 2%, transparent) 59%,
+            transparent 82%),
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 6%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 2.5%, transparent) 18%,
+            transparent 34%, transparent 66%,
+            color-mix(in srgb, var(--fushimi-edge-color) 2.5%, transparent) 82%,
+            color-mix(in srgb, var(--fushimi-edge-color) 6%, transparent) 100%) !important;
+    mix-blend-mode: normal !important;
+    filter: blur(7px) !important;
+    opacity: 1 !important;
+    transition: filter 2.4s ease, opacity 2.4s ease !important;
+    will-change: filter, opacity;
+}
+#fushimiAdaptiveLight .fushimi-light-edge-core {
+    position: absolute !important;
+    inset: 0 !important;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 17%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 14%, transparent) 10px,
+            color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) 23px,
+            color-mix(in srgb, var(--fushimi-edge-color) 5%, transparent) 39px,
+            color-mix(in srgb, var(--fushimi-edge-color) 2%, transparent) 64px,
+            transparent 104px),
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 5.5%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 2%, transparent) 16%,
+            transparent 34%, transparent 66%,
+            color-mix(in srgb, var(--fushimi-edge-color) 2%, transparent) 84%,
+            color-mix(in srgb, var(--fushimi-edge-color) 5.5%, transparent) 100%) !important;
+    mix-blend-mode: normal !important;
+    filter: none !important;
+    opacity: .95 !important;
+    transition: opacity 2s ease !important;
+}
+#fushimiAdaptiveLight::after {
+    content: "" !important;
+    box-shadow:
+        inset 0 9px 28px -10px color-mix(in srgb, var(--fushimi-edge-color) 14%, transparent),
+        inset 0 0 54px -32px color-mix(in srgb, var(--fushimi-edge-color) 7%, transparent) !important;
+    border: 0 !important;
+    mix-blend-mode: normal !important;
+    opacity: .78 !important;
+    transition: box-shadow 2.2s ease, opacity 2.2s ease !important;
+}
+#fushimiAdaptiveLight .fushimi-adaptive-light-source {
+    top: -115px !important;
+    height: 285px !important;
+    background: radial-gradient(ellipse at 50% 0%,
+        color-mix(in srgb, var(--fushimi-edge-color) 8%, transparent) 0%,
+        color-mix(in srgb, var(--fushimi-edge-color) 4%, transparent) 36%,
+        color-mix(in srgb, var(--fushimi-edge-color) 1.5%, transparent) 58%,
+        transparent 80%) !important;
+    filter: blur(30px) !important;
+    opacity: .55 !important;
+}
+#fushimiAdaptiveLight.weather-sunny::before { filter: blur(5px) !important; opacity: 1 !important; }
+#fushimiAdaptiveLight.weather-cloudy::before { filter: blur(15px) !important; opacity: .88 !important; }
+#fushimiAdaptiveLight.weather-cloudy .fushimi-light-edge-core { opacity: .78 !important; }
+#fushimiAdaptiveLight.weather-rainy::before {
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 15%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 12%, transparent) 12px,
+            color-mix(in srgb, var(--fushimi-edge-color) 8%, transparent) 28px,
+            color-mix(in srgb, var(--fushimi-edge-color) 4.5%, transparent) 50px,
+            color-mix(in srgb, var(--fushimi-edge-color) 2%, transparent) 80px,
+            transparent 155px),
+        radial-gradient(ellipse 125% 245px at var(--fushimi-light-x) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 10%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 6%, transparent) 36%,
+            transparent 82%) !important;
+    filter: blur(11px) !important;
+    opacity: .94 !important;
+}
+#fushimiAdaptiveLight.weather-snowy::before { filter: blur(14px) !important; opacity: .86 !important; }
+#map .leaflet-tile-pane {
+    transition: filter 4s ease !important;
+}
+@media (max-width: 700px) {
+    #fushimiAdaptiveLight::before { filter: blur(6px) !important; }
+    #fushimiAdaptiveLight.weather-cloudy::before { filter: blur(12px) !important; }
+    #fushimiAdaptiveLight.weather-rainy::before { filter: blur(9px) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #fushimiAdaptiveLight,
+    #fushimiAdaptiveLight::before,
+    #fushimiAdaptiveLight::after,
+    #fushimiAdaptiveLight .fushimi-light-edge-core,
+    #fushimiAdaptiveLight .fushimi-adaptive-light-source {
+        transition: none !important;
+    }
+}
+
 </style>
 </head>
 
@@ -393,7 +515,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=75-adaptive-light-70pct"></script>
+<script src="js/planner.js?v=75-light-balance-route-v2"></script>
 <script id="fushimi-auto-adaptive-light">
 /* V75 lighting fix — no controls: smooth continuous edge bloom based on Kyoto local time, sunrise/sunset and live weather. */
 (function () {

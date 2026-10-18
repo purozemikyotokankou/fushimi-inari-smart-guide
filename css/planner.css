@@ -6093,3 +6093,58 @@ body.spot-share-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .planner-weather-widget, .planner-weather-icon { animation: none !important; transition: none !important; }
 }
+
+
+/* V75 v2 — route reflection contained within the line; no broad/full-line glow. */
+.leaflet-overlay-pane .planner-route-outline-line,
+.leaflet-plannerRoutePane .planner-route-outline-line,
+.planner-route-outline-line {
+    stroke: #B96619 !important;
+    stroke-width: 7.1px !important;
+    stroke-opacity: .82 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    filter: none !important;
+    animation: none !important;
+    pointer-events: none !important;
+    vector-effect: non-scaling-stroke !important;
+}
+.leaflet-overlay-pane .planner-route-base-line,
+.leaflet-plannerRoutePane .planner-route-base-line,
+.planner-route-base-line {
+    stroke: #FF9900 !important;
+    stroke-width: 5.25px !important;
+    stroke-opacity: .99 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    filter: none !important;
+    animation: none !important;
+    pointer-events: none !important;
+    vector-effect: non-scaling-stroke !important;
+}
+.leaflet-overlay-pane .planner-route-runner-trail,
+.leaflet-plannerRoutePane .planner-route-runner-trail,
+.planner-route-runner-trail {
+    stroke: #FFF5DC !important;
+    stroke-width: 3.35px !important;
+    stroke-opacity: .56 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    filter: none !important;
+    animation: none !important;
+    pointer-events: none !important;
+    vector-effect: non-scaling-stroke !important;
+}
+.leaflet-overlay-pane .planner-route-runner-core,
+.leaflet-plannerRoutePane .planner-route-runner-core,
+.planner-route-runner-core {
+    stroke: #FFFFFF !important;
+    stroke-width: 1.75px !important;
+    stroke-opacity: .98 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    filter: none !important;
+    animation: none !important;
+    pointer-events: none !important;
+    vector-effect: non-scaling-stroke !important;
+}

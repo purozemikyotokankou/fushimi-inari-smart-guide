@@ -170,14 +170,15 @@ document.addEventListener("DOMContentLoaded", function () {
     // stroke width rather than creating a broad glow outside the line.
     const ROUTE_RUNNER_CONFIG = {
         enabled: true,
+        // Multiple staggered highlights, but thin enough to leave the route's base color visible.
         lightCount: 5,
-        speedPxPerSecond: 980,
-        trailLength: 42,
-        coreLength: 18,
-        trailSampleStep: 2.6,
-        coreSampleStep: 1.8,
-        trailWidth: 5.8,
-        coreWidth: 5.8
+        speedPxPerSecond: 560,
+        trailLength: 48,
+        coreLength: 9,
+        trailSampleStep: 1.8,
+        coreSampleStep: 1.2,
+        trailWidth: 3.35,
+        coreWidth: 1.75
     };
     let routeNumberMarkers = [];
 
@@ -6679,7 +6680,13 @@ document.addEventListener("DOMContentLoaded", function () {
             const cycleLength = routeRunnerPathLength + trailLength;
             const elapsedSeconds = Math.max(0, timestamp - routeRunnerAnimationStartTime) / 1000;
             const distanceTravelled = elapsedSeconds * Math.max(1, ROUTE_RUNNER_CONFIG.speedPxPerSecond);
-            const lightCount = Math.max(1, Math.floor(ROUTE_RUNNER_CONFIG.lightCount));
+            // On short routes, fewer streaks prevent overlap from washing the entire route white.
+            const desiredSpacing = Math.max(112, trailLength * 2.35);
+            const pathAwareCount = Math.floor(routeRunnerPathLength / desiredSpacing);
+            const lightCount = Math.max(1, Math.min(
+                Math.floor(ROUTE_RUNNER_CONFIG.lightCount),
+                Math.max(1, pathAwareCount)
+            ));
             const trailSlices = [];
             const coreSlices = [];
 
