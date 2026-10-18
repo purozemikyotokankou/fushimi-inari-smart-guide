@@ -453,7 +453,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     plannerWeatherWidget?.querySelector(".planner-weather-source")?.setAttribute("href", OPEN_METEO_ATTRIBUTION);
     refreshPlannerWeather();
-    window.setInterval(refreshPlannerWeather, 30 * 60 * 1000);
+    window.setInterval(() => { if (!document.hidden) refreshPlannerWeather(); }, 30 * 60 * 1000);
 
     function refreshPlannerMapSize() {
         requestAnimationFrame(function () {

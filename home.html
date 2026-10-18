@@ -1104,6 +1104,16 @@
     }
 </style>
 
+
+<style id="fushimi-v90-cursor-performance">
+  /* The translucent gradients keep the glass look without re-blurring the page on every move. */
+  body.home-page .liquid-cursor {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    will-change: transform;
+    pointer-events: none !important;
+  }
+</style>
 </head>
 
 <body class="home-page">
@@ -1136,7 +1146,7 @@
                 muted
                 loop
                 playsinline
-                preload="auto"
+                preload="metadata"
                 aria-label="伏見稲荷の映像"
             >
                 <source src="videos/fushimi.mp4" type="video/mp4">
@@ -1247,59 +1257,21 @@
 
             /* 動画読み込みが遅い環境でも文字を消したままにしない */
             window.setTimeout(showHero, 1200);
+
+            // Do not spend decode/GPU time looping the background video in a hidden tab.
+            const syncHeroPlayback = () => {
+                if (document.hidden) {
+                    video.pause();
+                } else if (video.paused) {
+                    const playAttempt = video.play();
+                    if (playAttempt && typeof playAttempt.catch === "function") playAttempt.catch(() => {});
+                }
+            };
+            document.addEventListener("visibilitychange", syncHeroPlayback, { passive: true });
         });
     </script>
 
-    <script id="fushimi-v87-liquid-cursor-script">
-(() => {
-    "use strict";
-    const cursor = document.querySelector(".liquid-cursor");
-    if (!cursor || !(window.matchMedia("(pointer: fine)").matches || window.matchMedia("(any-pointer: fine)").matches)) return;
-
-    const interactiveSelector = "a, button, select, input, textarea, [role='button'], .leaflet-control, .leaflet-marker-icon, .leaflet-interactive";
-    const interactiveFor = target => target instanceof Element ? target.closest(interactiveSelector) : null;
-
-    function moveCursor(event) {
-        if (event.pointerType !== "mouse") return;
-        // Keep the visual cursor precisely under the real pointer (no trailing animation).
-        cursor.style.left = `${event.clientX}px`;
-        cursor.style.top = `${event.clientY}px`;
-        cursor.classList.add("is-visible");
-    }
-
-    document.addEventListener("pointermove", moveCursor, { passive: true });
-
-    document.addEventListener("pointerover", event => {
-        if (interactiveFor(event.target)) cursor.classList.add("is-hover");
-    });
-
-    document.addEventListener("pointerout", event => {
-        const from = interactiveFor(event.target);
-        const to = interactiveFor(event.relatedTarget);
-        if (from !== to) cursor.classList.toggle("is-hover", Boolean(to));
-    });
-
-    document.addEventListener("pointerdown", event => {
-        if (event.pointerType !== "mouse") return;
-        cursor.classList.add("is-down");
-        const ripple = document.createElement("span");
-        ripple.className = "cursor-ripple";
-        ripple.style.left = `${event.clientX}px`;
-        ripple.style.top = `${event.clientY}px`;
-        document.body.appendChild(ripple);
-        ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
-    });
-
-    document.addEventListener("pointerup", () => cursor.classList.remove("is-down"));
-    document.addEventListener("pointercancel", () => cursor.classList.remove("is-down"));
-    document.addEventListener("pointerleave", event => {
-        if (event.pointerType === "mouse") cursor.classList.remove("is-visible");
-    });
-    document.addEventListener("pointerenter", event => {
-        if (event.pointerType === "mouse") cursor.classList.add("is-visible");
-    });
-})();
-</script>
+    <script src="js/liquid-cursor.js?v=90" defer></script>
 
 
 <script id="fushimi-home-prefetch-and-rhythm-omikuji">
