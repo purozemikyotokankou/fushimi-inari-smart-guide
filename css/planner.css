@@ -6099,7 +6099,7 @@ body.spot-share-open { overflow: hidden; }
    V87 — Liquid Glass cursor for planner + precise hover/click alignment
    Pointer element is click-through, so Leaflet and its controls remain usable.
    ========================================================= */
-@media (pointer: fine) {
+@media (any-pointer: fine) {
     body.planner-page,
     body.planner-page * {
         cursor: none !important;
@@ -6181,7 +6181,7 @@ body.planner-page .cursor-ripple {
     0% { opacity: .75; transform: translate3d(-50%, -50%, 0) scale(.7); }
     100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(4.8); }
 }
-@media (pointer: coarse) {
+@media (pointer: coarse) and (not (any-pointer: fine)) {
     body.planner-page .liquid-cursor,
     body.planner-page .cursor-ripple { display: none !important; }
     body.planner-page,

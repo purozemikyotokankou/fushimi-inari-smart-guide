@@ -574,7 +574,7 @@
            LIQUID GLASS CURSOR
         ========================================================= */
 
-        @media (pointer: fine) {
+        @media (any-pointer: fine) {
             body.home-page,
             body.home-page a,
             body.home-page button,
@@ -712,7 +712,7 @@
             }
         }
 
-        @media (pointer: coarse) {
+        @media (pointer: coarse) and (not (any-pointer: fine)) {
             .liquid-cursor,
             .cursor-ripple {
                 display: none;
@@ -1074,6 +1074,36 @@
     }
 </style>
 
+
+<style id="fushimi-v89-modal-cursor-clickthrough-fix">
+    /* Keep the decorative Liquid Glass cursor visible above the omikuji.
+       It is purely visual: pointer-events:none lets clicks reach the close button below it. */
+    body.home-page .liquid-cursor {
+        position: fixed !important;
+        z-index: 2147483647 !important;
+        pointer-events: none !important;
+    }
+    body.home-page .cursor-ripple {
+        z-index: 2147483646 !important;
+        pointer-events: none !important;
+    }
+    #fushimi-omikuji-overlay {
+        z-index: 100000 !important;
+    }
+    #fushimi-omikuji-overlay .fushimi-omikuji-x,
+    #fushimi-omikuji-overlay .fushimi-omikuji-again {
+        position: relative;
+        z-index: 1;
+        pointer-events: auto !important;
+    }
+    @media (any-pointer: fine) {
+        body.home-page.fushimi-omikuji-open,
+        body.home-page.fushimi-omikuji-open * {
+            cursor: none !important;
+        }
+    }
+</style>
+
 </head>
 
 <body class="home-page">
@@ -1224,12 +1254,13 @@
 (() => {
     "use strict";
     const cursor = document.querySelector(".liquid-cursor");
-    if (!cursor || !window.matchMedia("(pointer: fine)").matches) return;
+    if (!cursor || !(window.matchMedia("(pointer: fine)").matches || window.matchMedia("(any-pointer: fine)").matches)) return;
 
     const interactiveSelector = "a, button, select, input, textarea, [role='button'], .leaflet-control, .leaflet-marker-icon, .leaflet-interactive";
     const interactiveFor = target => target instanceof Element ? target.closest(interactiveSelector) : null;
 
     function moveCursor(event) {
+        if (event.pointerType !== "mouse") return;
         // Keep the visual cursor precisely under the real pointer (no trailing animation).
         cursor.style.left = `${event.clientX}px`;
         cursor.style.top = `${event.clientY}px`;
@@ -1261,8 +1292,12 @@
 
     document.addEventListener("pointerup", () => cursor.classList.remove("is-down"));
     document.addEventListener("pointercancel", () => cursor.classList.remove("is-down"));
-    document.addEventListener("pointerleave", () => cursor.classList.remove("is-visible"));
-    document.addEventListener("pointerenter", () => cursor.classList.add("is-visible"));
+    document.addEventListener("pointerleave", event => {
+        if (event.pointerType === "mouse") cursor.classList.remove("is-visible");
+    });
+    document.addEventListener("pointerenter", event => {
+        if (event.pointerType === "mouse") cursor.classList.add("is-visible");
+    });
 })();
 </script>
 
@@ -1394,10 +1429,17 @@
     function closeOmikuji() {
         if (!overlay) return;
         overlay.classList.remove("is-visible");
-        window.setTimeout(() => { if (overlay && !overlay.classList.contains("is-visible")) { overlay.hidden = true; overlay.setAttribute("aria-hidden", "true"); } }, 320);
+        window.setTimeout(() => {
+            if (overlay && !overlay.classList.contains("is-visible")) {
+                overlay.hidden = true;
+                overlay.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("fushimi-omikuji-open");
+            }
+        }, 320);
     }
 
     function drawOmikuji() {
+        document.body.classList.add("fushimi-omikuji-open");
         const lang = currentLanguage();
         const t = translations[lang];
         const index = Math.floor(Math.random() * t.grades.length);
