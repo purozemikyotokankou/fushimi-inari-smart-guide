@@ -6093,3 +6093,102 @@ body.spot-share-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .planner-weather-widget, .planner-weather-icon { animation: none !important; transition: none !important; }
 }
+
+
+/* =========================================================
+   V87 — Liquid Glass cursor for planner + precise hover/click alignment
+   Pointer element is click-through, so Leaflet and its controls remain usable.
+   ========================================================= */
+@media (pointer: fine) {
+    body.planner-page,
+    body.planner-page * {
+        cursor: none !important;
+    }
+    body.planner-page input[type="text"],
+    body.planner-page input[type="search"],
+    body.planner-page input[type="email"],
+    body.planner-page input[type="url"],
+    body.planner-page input[type="number"],
+    body.planner-page input[type="password"],
+    body.planner-page input[type="tel"],
+    body.planner-page textarea,
+    body.planner-page [contenteditable="true"] {
+        cursor: text !important;
+    }
+}
+
+body.planner-page .liquid-cursor {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    z-index: 2147483647 !important;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255,255,255,.84);
+    border-radius: 50%;
+    pointer-events: none !important;
+    opacity: 0;
+    transform: translate3d(-50%, -50%, 0);
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.96), rgba(255,255,255,.26) 38%, rgba(255,255,255,.08) 68%, rgba(196,0,24,.12) 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 10px 28px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.94);
+    backdrop-filter: blur(10px) saturate(1.4);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    transition: width .12s ease, height .12s ease, opacity .12s ease, box-shadow .12s ease;
+    will-change: left, top;
+}
+body.planner-page .liquid-cursor::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: #c40018;
+    box-shadow: 0 0 10px rgba(196,0,24,.34), 0 0 22px rgba(196,0,24,.18);
+}
+body.planner-page .liquid-cursor::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border: 1px solid rgba(196,0,24,.20);
+    border-radius: 50%;
+    opacity: .7;
+    transform: scale(.88);
+    transition: transform .12s ease, opacity .12s ease;
+}
+body.planner-page .liquid-cursor.is-visible { opacity: 1; }
+body.planner-page .liquid-cursor.is-hover {
+    width: 22px;
+    height: 22px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 8px 20px rgba(196,0,24,.10), inset 0 1px 0 rgba(255,255,255,.96);
+}
+body.planner-page .liquid-cursor.is-hover::after { transform: scale(.95); opacity: .85; }
+body.planner-page .liquid-cursor.is-down { width: 18px; height: 18px; }
+body.planner-page .cursor-ripple {
+    position: fixed;
+    z-index: 2147483646 !important;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(196,0,24,.48);
+    border-radius: 50%;
+    pointer-events: none !important;
+    transform: translate3d(-50%, -50%, 0) scale(.7);
+    animation: fushimiV87CursorRipple .62s cubic-bezier(.16,1,.3,1) forwards;
+}
+@keyframes fushimiV87CursorRipple {
+    0% { opacity: .75; transform: translate3d(-50%, -50%, 0) scale(.7); }
+    100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(4.8); }
+}
+@media (pointer: coarse) {
+    body.planner-page .liquid-cursor,
+    body.planner-page .cursor-ripple { display: none !important; }
+    body.planner-page,
+    body.planner-page * { cursor: auto !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    body.planner-page .liquid-cursor,
+    body.planner-page .liquid-cursor::after { transition: none; }
+    body.planner-page .cursor-ripple { display: none; }
+}
