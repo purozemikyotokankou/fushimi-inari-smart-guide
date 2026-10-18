@@ -7,7 +7,7 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=75-light-balance-route-v2">
+    <link rel="stylesheet" href="css/planner.css?v=75-edge-light-fix-v4">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
 /* V75 balanced edge light: preserve the luminous edge core while reducing the broad wash. */
@@ -281,6 +281,150 @@
 }
 
 </style>
+
+<style id="fushimi-edge-light-fix-v3">
+/* V75 edge-light fix v4: put the light in Leaflet map pane so it is visible, then fade smoothly into the map.
+   The layer stays pointer-transparent; map pins, route lines, and header remain operable. */
+#fushimiAdaptiveLight {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 350 !important;
+    pointer-events: none !important;
+    background: transparent !important;
+    --fushimi-edge-halo-opacity: .92;
+    --fushimi-edge-core-opacity: .96;
+    --fushimi-edge-background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 39%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 33%, transparent) 7px,
+            color-mix(in srgb, var(--fushimi-edge-color) 24%, transparent) 17px,
+            color-mix(in srgb, var(--fushimi-edge-color) 15%, transparent) 32px,
+            color-mix(in srgb, var(--fushimi-edge-color) 8%, transparent) 53px,
+            color-mix(in srgb, var(--fushimi-edge-color) 3%, transparent) 88px,
+            transparent 148px),
+        linear-gradient(180deg,
+            rgba(255,255,255,.22) 0px,
+            rgba(255,255,255,.14) 5px,
+            rgba(255,255,255,.055) 17px,
+            transparent 43px),
+        radial-gradient(ellipse 115% 235px at var(--fushimi-light-x) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 31%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 18%, transparent) 36%,
+            color-mix(in srgb, var(--fushimi-edge-color) 5%, transparent) 60%,
+            transparent 84%),
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 11%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 4%, transparent) 18%,
+            transparent 35%, transparent 65%,
+            color-mix(in srgb, var(--fushimi-edge-color) 4%, transparent) 82%,
+            color-mix(in srgb, var(--fushimi-edge-color) 11%, transparent) 100%);
+}
+#fushimiAdaptiveLight::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: var(--fushimi-edge-background) !important;
+    mix-blend-mode: normal !important;
+    filter: blur(3px) !important;
+    opacity: var(--fushimi-edge-halo-opacity, .92) !important;
+    transition: filter 2.2s ease, opacity 2.2s ease !important;
+    will-change: filter, opacity;
+}
+#fushimiAdaptiveLight .fushimi-light-edge-core {
+    position: absolute !important;
+    inset: 0 !important;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 49%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 41%, transparent) 5px,
+            color-mix(in srgb, var(--fushimi-edge-color) 29%, transparent) 13px,
+            color-mix(in srgb, var(--fushimi-edge-color) 18%, transparent) 25px,
+            color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) 43px,
+            color-mix(in srgb, var(--fushimi-edge-color) 3.5%, transparent) 66px,
+            transparent 105px),
+        linear-gradient(180deg,
+            rgba(255,255,255,.20) 0px,
+            rgba(255,255,255,.12) 4px,
+            rgba(255,255,255,.035) 16px,
+            transparent 40px),
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 8%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 3%, transparent) 16%,
+            transparent 34%, transparent 66%,
+            color-mix(in srgb, var(--fushimi-edge-color) 3%, transparent) 84%,
+            color-mix(in srgb, var(--fushimi-edge-color) 8%, transparent) 100%) !important;
+    mix-blend-mode: normal !important;
+    filter: blur(1.8px) !important;
+    opacity: var(--fushimi-edge-core-opacity, .96) !important;
+    transition: opacity 2s ease !important;
+}
+#fushimiAdaptiveLight::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    box-shadow:
+        inset 0 10px 36px -3px color-mix(in srgb, var(--fushimi-edge-color) 34%, transparent),
+        inset 0 0 58px -26px color-mix(in srgb, var(--fushimi-edge-color) 13%, transparent),
+        inset 0 -4px 28px -18px color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) !important;
+    border: 0 !important;
+    mix-blend-mode: normal !important;
+    opacity: .9 !important;
+    transition: box-shadow 2.2s ease !important;
+}
+#fushimiAdaptiveLight .fushimi-adaptive-light-source {
+    top: -118px !important;
+    height: 300px !important;
+    background: radial-gradient(ellipse at 50% 0%,
+        color-mix(in srgb, var(--fushimi-edge-color) 25%, transparent) 0%,
+        color-mix(in srgb, var(--fushimi-edge-color) 14%, transparent) 34%,
+        color-mix(in srgb, var(--fushimi-edge-color) 4%, transparent) 58%,
+        transparent 80%) !important;
+    filter: blur(27px) !important;
+    opacity: var(--fushimi-edge-halo-opacity, .92) !important;
+    pointer-events: none !important;
+}
+/* Keep the same luminous edge for every weather type; weather affects softness and tint. */
+#fushimiAdaptiveLight.weather-sunny::before,
+#fushimiAdaptiveLight.weather-cloudy::before,
+#fushimiAdaptiveLight.weather-rainy::before,
+#fushimiAdaptiveLight.weather-snowy::before {
+    background: var(--fushimi-edge-background) !important;
+}
+#fushimiAdaptiveLight.weather-sunny::before { filter: blur(2.5px) !important; }
+#fushimiAdaptiveLight.weather-cloudy::before { filter: blur(10px) !important; opacity: .95 !important; }
+#fushimiAdaptiveLight.weather-rainy::before { filter: blur(7px) !important; opacity: .96 !important; }
+#fushimiAdaptiveLight.weather-snowy::before { filter: blur(9px) !important; opacity: .94 !important; }
+#fushimiAdaptiveLight.weather-cloudy .fushimi-light-edge-core,
+#fushimiAdaptiveLight.weather-rainy .fushimi-light-edge-core,
+#fushimiAdaptiveLight.weather-snowy .fushimi-light-edge-core { opacity: .94 !important; }
+@media (max-width: 700px) {
+    #fushimiAdaptiveLight::before { filter: blur(2.5px) !important; }
+    #fushimiAdaptiveLight.weather-cloudy::before { filter: blur(8px) !important; }
+    #fushimiAdaptiveLight.weather-rainy::before { filter: blur(6px) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #fushimiAdaptiveLight::before,
+    #fushimiAdaptiveLight::after,
+    #fushimiAdaptiveLight .fushimi-light-edge-core,
+    #fushimiAdaptiveLight .fushimi-adaptive-light-source { transition: none !important; }
+}
+</style>
+<style id="fushimi-adaptive-light-pane-fix-v4">
+/* IMPORTANT: The light is a child of Leaflet's map pane, not #map itself.
+   This puts it above map tiles but below route vectors and all markers. */
+#map .leaflet-map-pane > #fushimiAdaptiveLight {
+    position: absolute !important;
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 350 !important;
+    pointer-events: none !important;
+    transform-origin: 0 0 !important;
+}
+</style>
 </head>
 
 <body data-color-theme="universal-design-v48" data-google-form-url="https://docs.google.com/forms/d/e/1FAIpQLSfZQYyVeUwdfxDnmGi2dWMtzfNxWuxCfhIR0BTycJzAO8pytQ/viewform?usp=dialog">
@@ -515,7 +659,7 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="js/language.js?v=51"></script>
-<script src="js/planner.js?v=75-light-balance-route-v2"></script>
+<script src="js/planner.js?v=75-edge-light-fix-v4"></script>
 <script id="fushimi-auto-adaptive-light">
 /* V75 lighting fix — no controls: smooth continuous edge bloom based on Kyoto local time, sunrise/sunset and live weather. */
 (function () {
@@ -675,6 +819,8 @@
         const rgb = weather.rgb.map(value => Number(value.toFixed(3))).join(", ");
         lightLayer.style.setProperty("--fushimi-edge-color", `rgb(${rgb})`);
         lightLayer.style.setProperty("--fushimi-light-strength", weather.strength.toFixed(4));
+        lightLayer.style.setProperty("--fushimi-edge-halo-opacity", (0.77 + weather.strength * 0.20).toFixed(3));
+        lightLayer.style.setProperty("--fushimi-edge-core-opacity", (0.88 + weather.strength * 0.12).toFixed(3));
         lightLayer.style.setProperty("--fushimi-light-blur", weather.blur);
         lightLayer.style.setProperty("--fushimi-light-x", `${solarPosition(now, times).toFixed(4)}%`);
         const nightLevel = Math.max(0, Math.min(1, appearance.nightLevel));
@@ -743,9 +889,127 @@
         if (!mapElement) return;
         lightLayer = document.createElement("div");
         lightLayer.id = "fushimiAdaptiveLight";
+        // Use Leaflet's own stacking context. Appending this directly to #map
+        // put it behind .leaflet-map-pane (z-index: 400), making the light
+        // completely invisible regardless of opacity or gradient strength.
+        lightLayer.classList.add("leaflet-pane", "fushimi-adaptive-light-pane");
         lightLayer.setAttribute("aria-hidden", "true");
         lightLayer.innerHTML = '<div class="fushimi-light-edge-core"></div><div class="fushimi-adaptive-light-source"></div>';
-        mapElement.appendChild(lightLayer);
+        lightLayer.style.width = "100%";
+        lightLayer.style.height = "100%";
+        lightLayer.style.left = "0";
+        lightLayer.style.top = "0";
+        lightLayer.style.zIndex = "350";
+        lightLayer.style.transformOrigin = "0 0";
+
+        let paneTransformObserver = null;
+        let paneMutationObserver = null;
+        let lightSizeObserver = null;
+        let paneTransformFrame = 0;
+        let paneTransformAnimating = false;
+        let trackedMapPane = null;
+
+        const sizeLightLayerToMap = () => {
+            if (!mapElement || !lightLayer) return;
+            // Explicit pixel dimensions avoid relying on Leaflet's transformed pane
+            // to establish its own percentage height/width.
+            const width = Math.max(1, mapElement.clientWidth);
+            const height = Math.max(1, mapElement.clientHeight);
+            lightLayer.style.setProperty("width", `${width}px`, "important");
+            lightLayer.style.setProperty("height", `${height}px`, "important");
+        };
+
+        const syncLightPaneTransform = (mapPane) => {
+            if (!mapPane || !lightLayer || lightLayer.parentElement !== mapPane) return;
+            const transformValue = window.getComputedStyle(mapPane).transform;
+            if (!transformValue || transformValue === "none") {
+                if (lightLayer.style.transform !== "none") lightLayer.style.transform = "none";
+                return;
+            }
+            try {
+                // The parent Leaflet map pane translates while panning/zooming.
+                // Apply the inverse matrix to keep the lighting locked to the screen edges.
+                const matrix = new DOMMatrixReadOnly(transformValue);
+                const inverse = matrix.inverse();
+                const inverseTransform = inverse.toString();
+                if (lightLayer.style.transform !== inverseTransform) {
+                    lightLayer.style.transform = inverseTransform;
+                }
+            } catch (error) {
+                // Translation-only fallback for browsers without DOMMatrixReadOnly.
+                const matrix2d = transformValue.match(/^matrix\(([^)]+)\)$/);
+                if (matrix2d) {
+                    const values = matrix2d[1].split(",").map(Number);
+                    if (values.length === 6 && values.every(Number.isFinite)) {
+                        const inverseTransform = `translate(${-values[4]}px, ${-values[5]}px)`;
+                        if (lightLayer.style.transform !== inverseTransform) {
+                            lightLayer.style.transform = inverseTransform;
+                        }
+                    }
+                }
+            }
+        };
+
+        const startPaneTransformTracking = (mapPane) => {
+            trackedMapPane = mapPane;
+            const sync = () => syncLightPaneTransform(mapPane);
+            sizeLightLayerToMap();
+            sync();
+            paneTransformObserver = new MutationObserver(() => {
+                sizeLightLayerToMap();
+                sync();
+            });
+            paneTransformObserver.observe(mapPane, { attributes: true, attributeFilter: ["style"] });
+            mapPane.addEventListener("transitionrun", (event) => {
+                if (event.propertyName !== "transform") return;
+                paneTransformAnimating = true;
+                if (paneTransformFrame) return;
+                const tick = () => {
+                    sync();
+                    if (paneTransformAnimating) paneTransformFrame = requestAnimationFrame(tick);
+                    else paneTransformFrame = 0;
+                };
+                paneTransformFrame = requestAnimationFrame(tick);
+            });
+            mapPane.addEventListener("transitionend", (event) => {
+                if (event.propertyName !== "transform") return;
+                paneTransformAnimating = false;
+                sync();
+            });
+            mapPane.addEventListener("transitioncancel", (event) => {
+                if (event.propertyName !== "transform") return;
+                paneTransformAnimating = false;
+                sync();
+            });
+        };
+
+        const attachLightToLeafletPane = () => {
+            const mapPane = mapElement.querySelector(".leaflet-map-pane");
+            if (!mapPane) return false;
+            if (lightLayer.parentElement !== mapPane) mapPane.appendChild(lightLayer);
+            // The pane sits at z-index 350: above GSI tiles (200), below route vectors (450),
+            // marker pins (600+), and popups. It is pointer-transparent by design.
+            if (!paneTransformObserver || trackedMapPane !== mapPane) {
+                paneTransformObserver?.disconnect();
+                startPaneTransformTracking(mapPane);
+            }
+            if (!lightSizeObserver && "ResizeObserver" in window) {
+                lightSizeObserver = new ResizeObserver(sizeLightLayerToMap);
+                lightSizeObserver.observe(mapElement);
+            }
+            return true;
+        };
+
+        if (!attachLightToLeafletPane()) {
+            paneMutationObserver = new MutationObserver(() => {
+                if (attachLightToLeafletPane()) {
+                    paneMutationObserver?.disconnect();
+                    paneMutationObserver = null;
+                }
+            });
+            paneMutationObserver.observe(mapElement, { childList: true, subtree: true });
+        }
+        window.addEventListener("resize", sizeLightLayerToMap, { passive: true });
 
         const syncWeather = () => renderLight();
         if (workspaceElement && "MutationObserver" in window) {
