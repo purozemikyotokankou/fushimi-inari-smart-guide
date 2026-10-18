@@ -170,15 +170,14 @@ document.addEventListener("DOMContentLoaded", function () {
     // stroke width rather than creating a broad glow outside the line.
     const ROUTE_RUNNER_CONFIG = {
         enabled: true,
-        // Multiple staggered highlights, but thin enough to leave the route's base color visible.
         lightCount: 5,
-        speedPxPerSecond: 560,
-        trailLength: 48,
-        coreLength: 9,
-        trailSampleStep: 1.8,
-        coreSampleStep: 1.2,
-        trailWidth: 3.35,
-        coreWidth: 1.75
+        speedPxPerSecond: 980,
+        trailLength: 42,
+        coreLength: 18,
+        trailSampleStep: 2.6,
+        coreSampleStep: 1.8,
+        trailWidth: 5.8,
+        coreWidth: 5.8
     };
     let routeNumberMarkers = [];
 
@@ -345,7 +344,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ============================================================
-    // V75 天気API: 現在天気は照明演出用に取得。天気バッジは画面に表示しない。
+    // V67 天気API: 伏見稲荷周辺の現在天気（Open-Meteo / APIキー不要）
     // ============================================================
     const FUSHIMI_WEATHER_COORDS = { latitude: 34.96705, longitude: 135.7743 };
     const OPEN_METEO_ATTRIBUTION = "https://open-meteo.com/";
@@ -364,10 +363,55 @@ document.addEventListener("DOMContentLoaded", function () {
         return { type: "cloudy", icon: "☁️", label: "天気" };
     }
 
+    const FUSHIMI_HOME_PREFETCH_KEY = "fushimiMetaMapApiCacheV1";
+    function readFushimiHomeCache() {
+        try {
+            const cache = JSON.parse(localStorage.getItem(FUSHIMI_HOME_PREFETCH_KEY) || "null");
+            if (!cache || Number(cache.latitude) !== FUSHIMI_WEATHER_COORDS.latitude || Number(cache.longitude) !== FUSHIMI_WEATHER_COORDS.longitude) return null;
+            return cache;
+        } catch (_) { return null; }
+    }
+
+    function applyPlannerWeatherCurrent(current) {
+        if (!plannerWeatherWidget || !current || !Number.isFinite(Number(current.temperature_2m))) return false;
+        const condition = describeWeatherCode(current.weather_code, Number(current.is_day) === 1);
+        plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
+        plannerWeatherWidget.classList.add(`is-${condition.type}`);
+        plannerWeatherIcon.textContent = condition.icon;
+        plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
+        const apparent = Number(current.apparent_temperature);
+        plannerWeatherDetail.textContent = Number.isFinite(apparent)
+            ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
+            : "伏見稲荷周辺の現在天気";
+        plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
+        plannerWorkspace?.classList.remove("weather-sunny", "weather-cloudy", "weather-rainy", "weather-snowy");
+        plannerWorkspace?.classList.add(`weather-${condition.type}`);
+        return true;
+    }
+
+    function cacheFushimiWeather(current) {
+        try {
+            const previous = readFushimiHomeCache() || {};
+            const now = Date.now();
+            localStorage.setItem(FUSHIMI_HOME_PREFETCH_KEY, JSON.stringify({
+                ...previous,
+                schema: 1,
+                latitude: FUSHIMI_WEATHER_COORDS.latitude,
+                longitude: FUSHIMI_WEATHER_COORDS.longitude,
+                current,
+                currentFetchedAt: now,
+                fetchedAt: Math.max(Number(previous.fetchedAt) || 0, now)
+            }));
+        } catch (_) { /* Local storage can be disabled; the live widget still works. */ }
+    }
+
     async function refreshPlannerWeather() {
-        // The weather badge is intentionally not displayed. We still fetch weather
-        // so the automatic lighting can adapt to clear, cloudy, rainy, and snowy conditions.
-        if (plannerWeatherWidget) plannerWeatherWidget.classList.add("is-loading");
+        if (!plannerWeatherWidget) return;
+        const cached = readFushimiHomeCache();
+        const cachedAt = Number(cached && (cached.currentFetchedAt || cached.fetchedAt));
+        const hasUsableCache = cached && cached.current && Number.isFinite(cachedAt) &&
+            Date.now() - cachedAt < 12 * 60 * 60 * 1000 && applyPlannerWeatherCurrent(cached.current);
+        if (!hasUsableCache) plannerWeatherWidget.classList.add("is-loading");
         const params = new URLSearchParams({
             latitude: String(FUSHIMI_WEATHER_COORDS.latitude),
             longitude: String(FUSHIMI_WEATHER_COORDS.longitude),
@@ -380,10 +424,7 @@ document.addEventListener("DOMContentLoaded", function () {
             let response;
             try {
                 response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
-                    method: "GET",
-                    headers: { "Accept": "application/json" },
-                    signal: controller.signal,
-                    cache: "no-store"
+                    method: "GET", headers: { "Accept": "application/json" }, signal: controller.signal, cache: "no-store"
                 });
             } finally {
                 window.clearTimeout(timeout);
@@ -391,31 +432,16 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!response.ok) throw new Error(`Weather API HTTP ${response.status}`);
             const payload = await response.json();
             const current = payload && payload.current;
-            if (!current || !Number.isFinite(Number(current.temperature_2m))) throw new Error("Weather response missing current values");
-            const condition = describeWeatherCode(current.weather_code, Number(current.is_day) === 1);
-
-            // Update the card only if one is present; the current UI intentionally hides it.
-            if (plannerWeatherWidget) {
-                plannerWeatherWidget.classList.remove("is-loading", "is-sunny", "is-cloudy", "is-rainy", "is-snowy");
-                plannerWeatherWidget.classList.add(`is-${condition.type}`);
-                if (plannerWeatherIcon) plannerWeatherIcon.textContent = condition.icon;
-                if (plannerWeatherLabel) plannerWeatherLabel.textContent = `${condition.label} · ${Math.round(Number(current.temperature_2m))}°C`;
-                const apparent = Number(current.apparent_temperature);
-                if (plannerWeatherDetail) plannerWeatherDetail.textContent = Number.isFinite(apparent)
-                    ? `伏見稲荷周辺 · 体感 ${Math.round(apparent)}°C`
-                    : "伏見稲荷周辺の現在天気";
-                plannerWeatherWidget.setAttribute("aria-label", `伏見稲荷周辺の現在の天気：${condition.label}、気温${Math.round(Number(current.temperature_2m))}度`);
-            }
-
-            plannerWorkspace?.classList.remove("weather-sunny", "weather-cloudy", "weather-rainy", "weather-snowy");
-            plannerWorkspace?.classList.add(`weather-${condition.type}`);
+            if (!applyPlannerWeatherCurrent(current)) throw new Error("Weather response missing current values");
+            cacheFushimiWeather(current);
         } catch (error) {
             console.warn("天気APIを取得できませんでした:", error);
-            if (plannerWeatherWidget) {
+            // When cached weather has already been painted, keep it instead of flashing an error state.
+            if (!hasUsableCache) {
                 plannerWeatherWidget.classList.remove("is-loading");
-                if (plannerWeatherIcon) plannerWeatherIcon.textContent = "🌦️";
-                if (plannerWeatherLabel) plannerWeatherLabel.textContent = "天気を取得できません";
-                if (plannerWeatherDetail) plannerWeatherDetail.textContent = "ネット接続を確認してください";
+                plannerWeatherIcon.textContent = "🌦️";
+                plannerWeatherLabel.textContent = "天気を取得できません";
+                plannerWeatherDetail.textContent = "ネット接続を確認してください";
                 plannerWeatherWidget.setAttribute("aria-label", "天気を取得できませんでした");
             }
         }
@@ -6680,13 +6706,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const cycleLength = routeRunnerPathLength + trailLength;
             const elapsedSeconds = Math.max(0, timestamp - routeRunnerAnimationStartTime) / 1000;
             const distanceTravelled = elapsedSeconds * Math.max(1, ROUTE_RUNNER_CONFIG.speedPxPerSecond);
-            // On short routes, fewer streaks prevent overlap from washing the entire route white.
-            const desiredSpacing = Math.max(112, trailLength * 2.35);
-            const pathAwareCount = Math.floor(routeRunnerPathLength / desiredSpacing);
-            const lightCount = Math.max(1, Math.min(
-                Math.floor(ROUTE_RUNNER_CONFIG.lightCount),
-                Math.max(1, pathAwareCount)
-            ));
+            const lightCount = Math.max(1, Math.floor(ROUTE_RUNNER_CONFIG.lightCount));
             const trailSlices = [];
             const coreSlices = [];
 

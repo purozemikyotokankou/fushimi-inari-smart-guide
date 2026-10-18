@@ -517,6 +517,35 @@
             }
         }
     </style>
+
+    <style id="fushimi-omikuji-styles">
+        #fushimi-omikuji-overlay {
+            position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
+            padding: 20px; background: rgba(26, 13, 14, .38); backdrop-filter: blur(16px) saturate(1.12);
+            -webkit-backdrop-filter: blur(16px) saturate(1.12); opacity: 0; visibility: hidden;
+            transition: opacity .28s ease, visibility .28s ease;
+        }
+        #fushimi-omikuji-overlay.is-visible { opacity: 1; visibility: visible; }
+        .fushimi-omikuji-card {
+            box-sizing: border-box; position: relative; width: min(420px, 100%); max-height: min(82vh, 700px); overflow: auto;
+            padding: 30px 26px 24px; text-align: center; color: #321719; border: 1px solid rgba(255,255,255,.78);
+            border-radius: 28px; background: linear-gradient(155deg, rgba(255,255,255,.96), rgba(255,248,240,.92));
+            box-shadow: 0 28px 90px rgba(32,10,12,.24), inset 0 1px 0 white;
+            transform: translateY(20px) scale(.96); transition: transform .34s cubic-bezier(.2,.8,.2,1);
+        }
+        #fushimi-omikuji-overlay.is-visible .fushimi-omikuji-card { transform: translateY(0) scale(1); }
+        .fushimi-omikuji-x { position: absolute; right: 13px; top: 9px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(90,36,38,.07); color: #632326; font-size: 26px; cursor: pointer; }
+        .fushimi-omikuji-seal { display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto 12px; color: #b5122b; border: 1px solid rgba(181,18,43,.2); border-radius: 19px; background: linear-gradient(145deg,#fff,#f8e9e8); box-shadow: 0 8px 24px rgba(181,18,43,.12); font-size: 29px; }
+        .fushimi-omikuji-subtitle { margin: 0 0 6px; color: #8b6462; font-size: 12px; letter-spacing: .08em; }
+        .fushimi-omikuji-title { margin: 0 0 15px; font-size: clamp(21px,5vw,27px); letter-spacing: -.03em; }
+        .fushimi-omikuji-grade { display: grid; place-items: center; min-height: 86px; margin: 0 auto 15px; width: 100%; max-width: 240px; color: #b5122b; border: 1px solid rgba(181,18,43,.3); border-radius: 13px; background: repeating-linear-gradient(0deg, rgba(181,18,43,.035) 0 1px, transparent 1px 7px), #fffaf5; font-family: "Yu Mincho", "Hiragino Mincho ProN", serif; font-size: clamp(31px,7vw,42px); font-weight: 800; letter-spacing: .04em; }
+        .fushimi-omikuji-message { margin: 0 auto 18px; max-width: 340px; color: #5b4543; font-size: 14px; line-height: 1.85; }
+        .fushimi-omikuji-luck-label { margin: 0 0 4px; color: #a10f26; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .fushimi-omikuji-luck { margin: 0 0 20px; font-size: 13px; line-height: 1.7; }
+        .fushimi-omikuji-again { width: 100%; min-height: 48px; padding: 10px 16px; color: white; border: 1px solid rgba(255,255,255,.35); border-radius: 15px; background: linear-gradient(135deg,#c4102b,#8e0a20); box-shadow: 0 8px 18px rgba(147,13,36,.2); font: inherit; font-weight: 650; cursor: pointer; }
+        @media (prefers-reduced-motion: reduce) { #fushimi-omikuji-overlay, .fushimi-omikuji-card { transition: none !important; } }
+    </style>
+
 </head>
 
 <body class="language-page">
@@ -650,6 +679,200 @@
             });
 
             animateCursor();
+        })();
+    </script>
+
+    <script id="fushimi-home-prefetch-and-omikuji">
+        (() => {
+            "use strict";
+            const CACHE_KEY = "fushimiMetaMapApiCacheV1";
+            const LAT = 34.96705;
+            const LNG = 135.7743;
+            const TZ = "Asia/Tokyo";
+
+            // Start retrieving weather + sunrise/sunset as soon as the language page opens.
+            // The map reads this shared cache immediately, then refreshes quietly in the background.
+            (async function prefetchFushimiConditions() {
+                try {
+                    const params = new URLSearchParams({
+                        latitude: String(LAT),
+                        longitude: String(LNG),
+                        current: "temperature_2m,apparent_temperature,is_day,precipitation,weather_code",
+                        daily: "sunrise,sunset",
+                        timezone: TZ,
+                        past_days: "1",
+                        forecast_days: "2"
+                    });
+                    const controller = new AbortController();
+                    const timeout = window.setTimeout(() => controller.abort(), 9000);
+                    let response;
+                    try {
+                        response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
+                            method: "GET",
+                            headers: { "Accept": "application/json" },
+                            signal: controller.signal,
+                            cache: "no-store"
+                        });
+                    } finally {
+                        window.clearTimeout(timeout);
+                    }
+                    if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
+                    const payload = await response.json();
+                    if (!payload.current || !payload.daily || !Array.isArray(payload.daily.time) ||
+                        !Array.isArray(payload.daily.sunrise) || !Array.isArray(payload.daily.sunset)) {
+                        throw new Error("Open-Meteo response is incomplete");
+                    }
+                    const now = Date.now();
+                    const cache = {
+                        schema: 1,
+                        latitude: LAT,
+                        longitude: LNG,
+                        fetchedAt: now,
+                        currentFetchedAt: now,
+                        dailyFetchedAt: now,
+                        current: payload.current,
+                        daily: payload.daily
+                    };
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+                } catch (error) {
+                    // Existing cached data is kept when the network is unavailable.
+                    console.debug("伏見稲荷の天気・太陽時刻は既存キャッシュを利用します。", error);
+                }
+            })();
+
+            // Secret rhythm: a short six-tap pattern inspired by a playful game-like cadence.
+            // No Mario audio or copyrighted sound is used.
+            const translations = {
+                ja: {
+                    title: "伏見稲荷のおみくじ", subtitle: "リズムが神さまに届きました", close: "閉じる", again: "もう一度引く",
+                    grades: ["大吉", "中吉", "小吉", "吉", "末吉", "凶"],
+                    fortunes: [
+                        ["最高の追い風が吹く日。思い切った一歩が、思いがけない景色につながりそう。", "新しい道をひとつ歩いてみよう。"],
+                        ["焦らず進めば、いい出会いと発見が待っています。", "気になった小道をゆっくり観察。"],
+                        ["小さな幸運を見つけられる日。足元や景色に目を向けて。", "赤いものを見つけたらラッキー。"],
+                        ["いつものペースが幸運の鍵。人への感謝を忘れずに。", "「ありがとう」をひとつ伝える。"],
+                        ["ゆっくり運気が上向きに。急がず、自分のペースで。", "休憩をとって水分補給。"],
+                        ["慎重さが味方になる日。無理せず安全第一で楽しもう。", "無理な近道をせず、案内表示を確認。"]
+                    ],
+                    luck: "今日の開運ヒント"
+                },
+                en: {
+                    title: "Fushimi Inari Omikuji", subtitle: "Your rhythm reached the shrine spirits", close: "Close", again: "Draw again",
+                    grades: ["Great Blessing", "Middle Blessing", "Small Blessing", "Blessing", "Future Blessing", "Misfortune"],
+                    fortunes: [
+                        ["A tailwind is with you today. One brave step may lead to an unexpected view.", "Try a path you have never taken."],
+                        ["Take your time and good encounters may follow.", "Explore a side path slowly."],
+                        ["Look closely and you may find a little bit of luck.", "Spot something red for good luck."],
+                        ["Your steady pace is your strength today.", "Share a small thank-you."],
+                        ["Your luck is gradually turning upward. Go at your own pace.", "Take a short rest and drink water."],
+                        ["Carefulness is your ally. Enjoy the visit safely and without rushing.", "Follow the signs instead of taking risky shortcuts."]
+                    ],
+                    luck: "A little luck for today"
+                },
+                zh: {
+                    title: "伏见稻荷神签", subtitle: "你的节奏传达到了神明那里", close: "关闭", again: "再抽一次",
+                    grades: ["大吉", "中吉", "小吉", "吉", "末吉", "凶"],
+                    fortunes: [
+                        ["今天顺风相伴，勇敢迈出一步，也许会看到意想不到的风景。", "走一条从未走过的小路。"],
+                        ["不急不躁，好相遇与新发现正在等你。", "慢慢看看旁边的小路。"],
+                        ["留心身边，就能发现小小的幸运。", "发现红色的东西会带来好运。"],
+                        ["保持自己的节奏就是今天的幸运秘诀。", "向别人说声谢谢。"],
+                        ["运势正在慢慢好转，按自己的步调前进。", "休息一下并补充水分。"],
+                        ["谨慎会成为你的帮手。不要勉强，安全地享受旅程。", "遵循指示牌，不走危险的捷径。"]
+                    ],
+                    luck: "今日开运提示"
+                },
+                ko: {
+                    title: "후시미 이나리 오미쿠지", subtitle: "당신의 리듬이 신에게 전해졌어요", close: "닫기", again: "다시 뽑기",
+                    grades: ["대길", "중길", "소길", "길", "말길", "흉"],
+                    fortunes: [
+                        ["오늘은 순풍이 함께합니다. 용기 있는 한 걸음이 뜻밖의 풍경으로 이어질 수 있어요.", "가보지 않은 길을 걸어 보세요."],
+                        ["서두르지 않으면 좋은 만남과 발견이 기다립니다.", "옆길도 천천히 둘러보세요."],
+                        ["작은 행운을 발견할 수 있는 날이에요.", "빨간색 물건을 찾으면 행운이 와요."],
+                        ["평소의 속도를 지키는 것이 행운의 열쇠예요.", "고맙다는 말을 전해 보세요."],
+                        ["운이 서서히 좋아지고 있어요. 자기 페이스를 지키세요.", "잠시 쉬고 물을 마셔요."],
+                        ["신중함이 도움이 되는 날이에요. 무리하지 말고 안전하게 즐기세요.", "위험한 지름길보다 안내 표지를 따라가세요."]
+                    ],
+                    luck: "오늘의 행운 팁"
+                }
+            };
+            let tapTimes = [];
+            let overlay = null;
+            const targetPattern = [0.55, 1.0, 1.5, 0.55, 1.0];
+
+            function language() {
+                try {
+                    const value = localStorage.getItem("language") || "ja";
+                    return translations[value] ? value : "ja";
+                } catch (_) { return "ja"; }
+            }
+
+            function rhythmMatches(times) {
+                if (times.length !== 6) return false;
+                const gaps = times.slice(1).map((value, index) => value - times[index]);
+                if (gaps.some(gap => gap < 65 || gap > 620)) return false;
+                const total = times[5] - times[0];
+                if (total < 480 || total > 2300) return false;
+                const mean = gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length;
+                const normalized = gaps.map(gap => gap / mean);
+                const difference = normalized.reduce((sum, value, index) => sum + Math.abs(value - targetPattern[index]), 0) / targetPattern.length;
+                return difference < 0.28;
+            }
+
+            function drawOmikuji() {
+                const lang = language();
+                const t = translations[lang];
+                const index = Math.floor(Math.random() * t.grades.length);
+                if (!overlay) {
+                    overlay = document.createElement("div");
+                    overlay.id = "fushimi-omikuji-overlay";
+                    overlay.innerHTML = `
+                        <section class="fushimi-omikuji-card" role="dialog" aria-modal="true" aria-labelledby="fushimi-omikuji-title">
+                            <button class="fushimi-omikuji-x" type="button" aria-label="Close">×</button>
+                            <div class="fushimi-omikuji-seal" aria-hidden="true">⛩</div>
+                            <p class="fushimi-omikuji-subtitle"></p>
+                            <h2 id="fushimi-omikuji-title" class="fushimi-omikuji-title"></h2>
+                            <div class="fushimi-omikuji-grade"></div>
+                            <p class="fushimi-omikuji-message"></p>
+                            <div class="fushimi-omikuji-luck-label"></div>
+                            <p class="fushimi-omikuji-luck"></p>
+                            <button class="fushimi-omikuji-again" type="button"></button>
+                        </section>`;
+                    document.body.appendChild(overlay);
+                    overlay.addEventListener("click", event => {
+                        if (event.target === overlay || event.target.closest(".fushimi-omikuji-x")) closeOmikuji();
+                        if (event.target.closest(".fushimi-omikuji-again")) drawOmikuji();
+                    });
+                    document.addEventListener("keydown", event => {
+                        if (event.key === "Escape" && overlay?.classList.contains("is-visible")) closeOmikuji();
+                    });
+                }
+                overlay.querySelector(".fushimi-omikuji-subtitle").textContent = t.subtitle;
+                overlay.querySelector(".fushimi-omikuji-title").textContent = t.title;
+                overlay.querySelector(".fushimi-omikuji-grade").textContent = t.grades[index];
+                overlay.querySelector(".fushimi-omikuji-message").textContent = t.fortunes[index][0];
+                overlay.querySelector(".fushimi-omikuji-luck-label").textContent = t.luck;
+                overlay.querySelector(".fushimi-omikuji-luck").textContent = t.fortunes[index][1];
+                overlay.querySelector(".fushimi-omikuji-x").setAttribute("aria-label", t.close);
+                overlay.querySelector(".fushimi-omikuji-again").textContent = t.again;
+                overlay.classList.remove("is-visible");
+                requestAnimationFrame(() => overlay.classList.add("is-visible"));
+            }
+
+            function closeOmikuji() { overlay?.classList.remove("is-visible"); }
+
+            document.addEventListener("pointerdown", event => {
+                if (event.button !== undefined && event.button !== 0) return;
+                if (event.target.closest("button, a, input, select, textarea, .liquid-cursor, .cursor-ripple, #fushimi-omikuji-overlay")) return;
+                const now = performance.now();
+                if (tapTimes.length && now - tapTimes[tapTimes.length - 1] > 650) tapTimes = [];
+                tapTimes.push(now);
+                if (tapTimes.length > 6) tapTimes = tapTimes.slice(-6);
+                if (rhythmMatches(tapTimes)) {
+                    tapTimes = [];
+                    drawOmikuji();
+                }
+            }, { passive: true });
         })();
     </script>
 
