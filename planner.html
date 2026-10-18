@@ -7,10 +7,10 @@
     <title>伏見稲荷スマートガイド</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=75-adaptive-light-70pct">
+    <link rel="stylesheet" href="css/planner.css?v=75-adaptive-light-balanced-core">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
-/* V75 lighting correction: continuous color updates + edge-light strength explicitly set to 70%. */
+/* V75 balanced edge light: preserve the luminous edge core while reducing the broad wash. */
 @property --fushimi-edge-color {
     syntax: "<color>";
     inherits: true;
@@ -38,7 +38,7 @@
 #fushimiAdaptiveLight {
     position: absolute;
     inset: 0;
-    z-index: 350; /* map tiles < soft lighting < route vectors < markers */
+    z-index: 350; /* above map tiles, beneath Leaflet vectors and markers */
     overflow: hidden;
     pointer-events: none;
     isolation: isolate;
@@ -46,54 +46,79 @@
     --fushimi-light-strength: .82;
     --fushimi-light-blur: 13px;
     --fushimi-light-x: 94%;
-    opacity: .70 !important; /* exact 70% overall light intensity; pins/routes are separate panes */
+    /* Do not fade the entire layer: that made the light core disappear along with the spread. */
+    opacity: 1 !important;
 }
-/* A wide luminous wash rather than a small visible hotspot. The top edge is the brightest area. */
+/* The broad wash is moderated to about 70% of its former reach/intensity. */
 #fushimiAdaptiveLight::before {
     content: "";
     position: absolute;
     inset: -32px -42px -80px;
     background:
         radial-gradient(ellipse 155% 300px at var(--fushimi-light-x) 0%,
-            color-mix(in srgb, var(--fushimi-edge-color) 78%, transparent) 0%,
-            color-mix(in srgb, var(--fushimi-edge-color) 56%, transparent) 23%,
-            color-mix(in srgb, var(--fushimi-edge-color) 27%, transparent) 48%,
+            color-mix(in srgb, var(--fushimi-edge-color) 52%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 34%, transparent) 23%,
+            color-mix(in srgb, var(--fushimi-edge-color) 16%, transparent) 48%,
             transparent 76%),
         linear-gradient(180deg,
-            color-mix(in srgb, var(--fushimi-edge-color) 88%, transparent) 0px,
-            color-mix(in srgb, var(--fushimi-edge-color) 80%, transparent) 14px,
-            color-mix(in srgb, var(--fushimi-edge-color) 66%, transparent) 28px,
-            color-mix(in srgb, var(--fushimi-edge-color) 48%, transparent) 48px,
-            color-mix(in srgb, var(--fushimi-edge-color) 31%, transparent) 76px,
-            color-mix(in srgb, var(--fushimi-edge-color) 17%, transparent) 116px,
-            color-mix(in srgb, var(--fushimi-edge-color) 7%, transparent) 182px,
+            color-mix(in srgb, var(--fushimi-edge-color) 48%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 39%, transparent) 14px,
+            color-mix(in srgb, var(--fushimi-edge-color) 29%, transparent) 28px,
+            color-mix(in srgb, var(--fushimi-edge-color) 20%, transparent) 48px,
+            color-mix(in srgb, var(--fushimi-edge-color) 12%, transparent) 76px,
+            color-mix(in srgb, var(--fushimi-edge-color) 6%, transparent) 116px,
+            color-mix(in srgb, var(--fushimi-edge-color) 3%, transparent) 182px,
             transparent 300px),
         linear-gradient(90deg,
-            color-mix(in srgb, var(--fushimi-edge-color) 25%, transparent) 0%,
-            color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) 18%,
+            color-mix(in srgb, var(--fushimi-edge-color) 17%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 6%, transparent) 18%,
             transparent 36%, transparent 64%,
-            color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) 82%,
-            color-mix(in srgb, var(--fushimi-edge-color) 25%, transparent) 100%);
+            color-mix(in srgb, var(--fushimi-edge-color) 6%, transparent) 82%,
+            color-mix(in srgb, var(--fushimi-edge-color) 17%, transparent) 100%);
     mix-blend-mode: screen;
     filter: blur(var(--fushimi-light-blur));
-    opacity: calc(var(--fushimi-light-strength) * .88 + .10);
+    opacity: calc(var(--fushimi-light-strength) * .78 + .12);
     transition: filter 2.5s ease, opacity 4s ease;
     will-change: opacity, filter;
 }
-/* A second, very soft inset bloom makes the light feel emitted by the map edge. */
+/* A separate, non-blurred edge core keeps the top edge visibly luminous. It fades softly downward. */
+#fushimiAdaptiveLight .fushimi-light-edge-core {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 72%, transparent) 0px,
+            color-mix(in srgb, var(--fushimi-edge-color) 64%, transparent) 10px,
+            color-mix(in srgb, var(--fushimi-edge-color) 49%, transparent) 22px,
+            color-mix(in srgb, var(--fushimi-edge-color) 31%, transparent) 38px,
+            color-mix(in srgb, var(--fushimi-edge-color) 17%, transparent) 58px,
+            color-mix(in srgb, var(--fushimi-edge-color) 7%, transparent) 88px,
+            transparent 138px),
+        linear-gradient(90deg,
+            color-mix(in srgb, var(--fushimi-edge-color) 18%, transparent) 0%,
+            color-mix(in srgb, var(--fushimi-edge-color) 7%, transparent) 16%,
+            transparent 35%, transparent 65%,
+            color-mix(in srgb, var(--fushimi-edge-color) 7%, transparent) 84%,
+            color-mix(in srgb, var(--fushimi-edge-color) 18%, transparent) 100%);
+    mix-blend-mode: screen;
+    opacity: calc(var(--fushimi-light-strength) * .82 + .15);
+    transition: opacity 2.5s ease, background 2.5s ease;
+}
+/* Fine inner bloom: glow remains tangible, but the surrounding halo is restrained. */
 #fushimiAdaptiveLight::after {
     content: "";
     position: absolute;
     inset: 0;
     box-shadow:
-        inset 0 20px 66px -7px color-mix(in srgb, var(--fushimi-edge-color) 66%, transparent),
-        inset 0 0 82px -20px color-mix(in srgb, var(--fushimi-edge-color) 36%, transparent),
-        inset 0 -5px 38px -22px color-mix(in srgb, var(--fushimi-edge-color) 22%, transparent);
+        inset 0 11px 42px -8px color-mix(in srgb, var(--fushimi-edge-color) 45%, transparent),
+        inset 0 0 58px -22px color-mix(in srgb, var(--fushimi-edge-color) 24%, transparent),
+        inset 0 -5px 32px -22px color-mix(in srgb, var(--fushimi-edge-color) 13%, transparent);
     mix-blend-mode: screen;
-    opacity: .94;
-    transition: opacity 4s ease;
+    opacity: .88;
+    transition: opacity 3s ease, box-shadow 3s ease;
 }
-/* Keep the moving source broad and indistinct; it shifts the balance of the glow, not a visible orb. */
+/* The moving source shifts the light's balance without rendering a visible orb. */
 #fushimiAdaptiveLight .fushimi-adaptive-light-source {
     position: absolute;
     top: -95px;
@@ -103,30 +128,35 @@
     transform: translateX(-50%);
     border-radius: 50%;
     background: radial-gradient(ellipse at 50% 0%,
-        color-mix(in srgb, var(--fushimi-edge-color) 62%, transparent) 0%,
-        color-mix(in srgb, var(--fushimi-edge-color) 38%, transparent) 32%,
-        color-mix(in srgb, var(--fushimi-edge-color) 16%, transparent) 56%,
+        color-mix(in srgb, var(--fushimi-edge-color) 43%, transparent) 0%,
+        color-mix(in srgb, var(--fushimi-edge-color) 25%, transparent) 32%,
+        color-mix(in srgb, var(--fushimi-edge-color) 9%, transparent) 56%,
         transparent 78%);
     filter: blur(28px);
-    opacity: calc(var(--fushimi-light-strength) * .82 + .10);
+    opacity: calc(var(--fushimi-light-strength) * .62 + .08);
     pointer-events: none;
     will-change: left;
 }
 #fushimiAdaptiveLight.weather-sunny { --fushimi-light-blur: 10px; }
 #fushimiAdaptiveLight.weather-cloudy { --fushimi-light-blur: 22px; }
-#fushimiAdaptiveLight.weather-cloudy::before { opacity: calc(var(--fushimi-light-strength) * .79 + .10); }
+#fushimiAdaptiveLight.weather-cloudy::before { opacity: calc(var(--fushimi-light-strength) * .70 + .10); }
+#fushimiAdaptiveLight.weather-cloudy .fushimi-light-edge-core { opacity: calc(var(--fushimi-light-strength) * .72 + .12); }
 #fushimiAdaptiveLight.weather-rainy { --fushimi-light-blur: 17px; }
-#fushimiAdaptiveLight.weather-rainy::before { opacity: calc(var(--fushimi-light-strength) * .92 + .08); }
+#fushimiAdaptiveLight.weather-rainy::before { opacity: calc(var(--fushimi-light-strength) * .76 + .10); }
+#fushimiAdaptiveLight.weather-rainy .fushimi-light-edge-core { opacity: calc(var(--fushimi-light-strength) * .76 + .12); }
 #fushimiAdaptiveLight.weather-snowy { --fushimi-light-blur: 20px; }
-#fushimiAdaptiveLight.weather-snowy::before { opacity: calc(var(--fushimi-light-strength) * .81 + .10); }
+#fushimiAdaptiveLight.weather-snowy::before { opacity: calc(var(--fushimi-light-strength) * .68 + .10); }
+#fushimiAdaptiveLight.weather-snowy .fushimi-light-edge-core { opacity: calc(var(--fushimi-light-strength) * .70 + .12); }
 @media (max-width: 700px) {
     #fushimiAdaptiveLight::before { inset: -24px -28px -70px; }
     #fushimiAdaptiveLight .fushimi-adaptive-light-source { width: 180vw; height: 285px; }
+    #fushimiAdaptiveLight .fushimi-light-edge-core { background-size: auto, auto; }
 }
 @media (prefers-reduced-motion: reduce) {
     #map .leaflet-tile-pane,
     #fushimiAdaptiveLight::before,
-    #fushimiAdaptiveLight::after { transition-duration: 1ms !important; }
+    #fushimiAdaptiveLight::after,
+    #fushimiAdaptiveLight .fushimi-light-edge-core { transition-duration: 1ms !important; }
 }
 </style>
 </head>
@@ -592,7 +622,7 @@
         lightLayer = document.createElement("div");
         lightLayer.id = "fushimiAdaptiveLight";
         lightLayer.setAttribute("aria-hidden", "true");
-        lightLayer.innerHTML = '<div class="fushimi-adaptive-light-source"></div>';
+        lightLayer.innerHTML = '<div class="fushimi-light-edge-core"></div><div class="fushimi-adaptive-light-source"></div>';
         mapElement.appendChild(lightLayer);
 
         const syncWeather = () => renderLight();
