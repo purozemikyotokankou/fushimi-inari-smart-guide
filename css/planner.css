@@ -6201,3 +6201,36 @@ body.planner-page .liquid-cursor {
   will-change: transform;
   pointer-events: none !important;
 }
+
+
+/* =========================================================
+   V92 — clearer map action colors + recolorable Eat / Shop SVG masks
+   ========================================================= */
+/* Current-location target: clear map-style blue. */
+.planner-location-dock .map-action-icon {
+  color: #007AFF !important;
+  background: rgba(0, 122, 255, .09) !important;
+  border-color: rgba(0, 122, 255, .20) !important;
+}
+.map-location-action {
+  border-color: rgba(0, 122, 255, .38) !important;
+  background: rgba(0, 122, 255, .08) !important;
+  color: #007AFF !important;
+}
+.map-location-action .map-action-icon svg {
+  stroke: #007AFF !important;
+}
+
+/* Search stays neutral so current location is easier to distinguish. */
+.map-search-action .map-action-icon {
+  color: #455A64 !important;
+  background: rgba(69, 90, 100, .08) !important;
+  border-color: rgba(69, 90, 100, .17) !important;
+}
+.map-search-action .map-action-icon svg {
+  stroke: #455A64 !important;
+}
+
+/* V93: keep the pre-existing Eat/Shop category-bar colors.
+   category-food-shop.svg is a monochrome composition of the existing Eat and Shop SVGs;
+   the current category color is still supplied by the existing CSS category palette. */
