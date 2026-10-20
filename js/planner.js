@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V110-CARTO-RASTERTILES-PATH-FIX";
-    console.log("[Fushimi Inari Smart Guide] planner.js V110-CARTO-RASTERTILES-PATH-FIX loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V112-CARTO-ONLY";
+    console.log("[Fushimi Inari Smart Guide] planner.js V112-CARTO-ONLY loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -541,111 +541,83 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(refreshPlannerMapSize, 120);
 
     // ============================================================
-    // V109: CARTO Positron with automatic non-GSI fallback (official rastertiles URL).
-    // CARTO requires the rastertiles/light_all path. A 403 response means the service
-    // is rejecting requests (commonly API key / Referer restriction). A zoom
-    // limit alone cannot fix that. Try keyless Positron as a fail-soft option;
-    // if it also fails, use OSM so the map never becomes an empty background.
-    // All tile layers stay in Leaflet's own pane so pins/routes remain aligned.
+    // V112: CARTO Positron only. Do not switch to another map provider.
+    // CARTO 403 is an API-key / allowed-Referer issue; changing map providers
+    // would hide the cause and violate the requested map design.
     // ============================================================
     const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
-    const CARTO_POSITRON_TILE_TEMPLATE =
-        "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png";
-    const CARTO_POSITRON_TILE_URL = CARTO_POSITRON_TILE_TEMPLATE +
+    const CARTO_POSITRON_TILE_URL =
+        "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png" +
         (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
         '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
-    const OSM_ATTRIBUTION =
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
 
-    function createCartoTileLayer(url) {
-        return L.tileLayer(url, {
-            subdomains: "abcd",
-            minZoom: 0,
-            maxZoom: 20,
-            maxNativeZoom: 20,
-            keepBuffer: 3,
-            updateWhenIdle: false,
-            updateWhenZooming: true,
-            attribution: CARTO_ATTRIBUTION
-        });
-    }
+    const cartoPositronLayer = L.tileLayer(CARTO_POSITRON_TILE_URL, {
+        subdomains: "abcd",
+        minZoom: 0,
+        maxZoom: 20,
+        maxNativeZoom: 20,
+        keepBuffer: 3,
+        updateWhenIdle: false,
+        updateWhenZooming: true,
+        attribution: CARTO_ATTRIBUTION
+    });
 
-    let activeBasemapFallback = "carto-keyed";
     let cartoTileErrorCount = 0;
     let cartoTileLoadCount = 0;
-    let cartoRecentErrors = [];
-    let keylessRecentErrors = [];
-    let keylessPositronLayer = null;
-    let osmFallbackLayer = null;
+    let usingKeylessCartoFallback = false;
+    let keylessCartoErrorCount = 0;
 
-    function hasBurstOfErrors(history, now, windowMs, threshold) {
-        history.push(now);
-        while (history.length && now - history[0] > windowMs) history.shift();
-        return history.length >= threshold;
-    }
-
-    function activateOSMFallback() {
-        if (activeBasemapFallback === "osm") return;
-        activeBasemapFallback = "osm";
-        if (keylessPositronLayer && map.hasLayer(keylessPositronLayer)) {
-            map.removeLayer(keylessPositronLayer);
-        }
-        if (cartoPositronLayer && map.hasLayer(cartoPositronLayer)) {
-            map.removeLayer(cartoPositronLayer);
-        }
-        osmFallbackLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            subdomains: "abc",
-            minZoom: 0,
-            maxZoom: 20,
-            maxNativeZoom: 19,
-            keepBuffer: 3,
-            updateWhenIdle: false,
-            updateWhenZooming: true,
-            attribution: OSM_ATTRIBUTION
-        }).addTo(map);
-        console.warn("[Fushimi] CARTO tiles were rejected; switched to OpenStreetMap so the map stays visible. Check the CARTO key and allowed Referer hosts.");
-    }
-
-    function activateKeylessCartoFallback() {
-        if (activeBasemapFallback !== "carto-keyed") return;
-        activeBasemapFallback = "carto-keyless";
-        if (map.hasLayer(cartoPositronLayer)) map.removeLayer(cartoPositronLayer);
-        keylessPositronLayer = createCartoTileLayer(CARTO_POSITRON_TILE_TEMPLATE).addTo(map);
-        keylessPositronLayer.on("tileerror", function () {
-            const now = Date.now();
-            if (hasBurstOfErrors(keylessRecentErrors, now, 2500, 4)) {
-                activateOSMFallback();
+    function useSameCartoWithoutKey() {
+        if (usingKeylessCartoFallback) return;
+        usingKeylessCartoFallback = true;
+        // Keep the same CARTO Positron basemap; never switch to another provider.
+        // CARTO may display its required API-key watermark when the key is rejected.
+        const sameCartoLayer = L.tileLayer(
+            "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png",
+            {
+                subdomains: "abcd",
+                minZoom: 0,
+                maxZoom: 20,
+                maxNativeZoom: 20,
+                keepBuffer: 3,
+                updateWhenIdle: false,
+                updateWhenZooming: true,
+                attribution: CARTO_ATTRIBUTION
+            }
+        );
+        sameCartoLayer.on("tileerror", function () {
+            keylessCartoErrorCount += 1;
+            if (keylessCartoErrorCount === 1 || keylessCartoErrorCount % 8 === 0) {
+                console.error("[Fushimi] CARTO Positron without a key also failed. Check network access; no other map provider will be used.");
             }
         });
-        keylessPositronLayer.once("tileload", function () {
-            console.warn("[Fushimi] Using CARTO Positron without a key as a temporary fallback; the service may display its API-key watermark.");
-        });
-        console.warn("[Fushimi] CARTO keyed tiles are failing. Retrying Positron without a key to prevent a blank map.");
+        sameCartoLayer.addTo(map);
+        map.removeLayer(cartoPositronLayer);
+        console.warn("[Fushimi] CARTO rejected the configured key. Retrying the same CARTO Positron style without a key; CARTO may show an API-key watermark.");
     }
 
-    const cartoPositronLayer = createCartoTileLayer(CARTO_POSITRON_TILE_URL);
     cartoPositronLayer.on("tileload", function () {
         cartoTileLoadCount += 1;
         if (cartoTileLoadCount === 1) {
             console.info("[Fushimi] CARTO Positron tiles are loading.");
         }
     });
-    cartoPositronLayer.on("tileerror", function () {
+    cartoPositronLayer.on("tileerror", function (event) {
         cartoTileErrorCount += 1;
-        const now = Date.now();
         if (cartoTileErrorCount === 1 || cartoTileErrorCount % 8 === 0) {
-            console.warn("[Fushimi] CARTO tile request failed; zoom=" + map.getZoom() +
+            console.error("[Fushimi] CARTO Positron tile failed; zoom=" + map.getZoom() +
                 ", failedTiles=" + cartoTileErrorCount +
                 ", loadedTiles=" + cartoTileLoadCount +
-                ", keyConfigured=" + Boolean(CARTO_BASEMAP_API_KEY));
+                ", keyConfigured=" + Boolean(CARTO_BASEMAP_API_KEY) +
+                ". Keep CARTO as the only basemap; check the API key and allowed Referer hosts.",
+                event && event.tile ? event.tile.src : "");
         }
-        // A short burst indicates the service is rejecting a group of tiles
-        // (for example HTTP 403 due to the key or Referer restriction).
-        if (activeBasemapFallback === "carto-keyed" &&
-            hasBurstOfErrors(cartoRecentErrors, now, 2500, 5)) {
-            activateKeylessCartoFallback();
+        // If CARTO returns a burst of 403s, retry the same CARTO style without a key.
+        // This preserves the requested map provider/design; it does not switch basemaps.
+        if (!usingKeylessCartoFallback && cartoTileErrorCount >= 4) {
+            useSameCartoWithoutKey();
         }
     });
     cartoPositronLayer.addTo(map);
