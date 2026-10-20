@@ -6236,88 +6236,23 @@ body.planner-page .liquid-cursor {
    the current category color is still supplied by the existing CSS category palette. */
 
 
-/* =========================================================
-   V94 — Fushimi Inari vermilion route + category-matched marker icons
-   ========================================================= */
-.leaflet-overlay-pane .planner-route-base-line,
-.leaflet-plannerRoutePane .planner-route-base-line,
-.planner-route-base-line {
-  stroke: #C40018 !important;
-  stroke-width: 6px !important;
-  stroke-opacity: 1 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-  filter: drop-shadow(0 0 2px rgba(196,0,24,.82)) drop-shadow(0 0 5px rgba(196,0,24,.24)) !important;
+/* V96: accessible contrast and consistent category/map-pin icon colors. */
+.custom-map-marker .marker-pin {
+  /* A neutral, warm surface prevents purple-on-purple and yellow-on-yellow. */
+  background: #FFFCF6 !important;
+  border: 2px solid var(--marker-accent-color, #A83432) !important;
+  box-shadow: 0 3px 10px rgba(35, 27, 20, .22), 0 0 0 1px rgba(255,255,255,.95) !important;
 }
-.leaflet-overlay-pane .planner-route-outline-line,
-.leaflet-plannerRoutePane .planner-route-outline-line,
-.planner-route-outline-line {
-  stroke: #FFFFFF !important;
-  stroke-width: 12px !important;
-  stroke-opacity: .97 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
+.custom-map-marker .icon-gray { opacity: 0 !important; }
+.custom-map-marker .icon-color { opacity: 1 !important; }
+.custom-map-marker:hover .icon-color,
+.custom-map-marker.is-selected .icon-color,
+.custom-map-marker:focus-within .icon-color {
+  opacity: 1 !important;
 }
-.leaflet-overlay-pane .planner-route-runner-trail,
-.leaflet-plannerRoutePane .planner-route-runner-trail,
-.planner-route-runner-trail {
-  stroke: #FFE5E8 !important;
-  stroke-width: 5.7px !important;
-  stroke-opacity: .42 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-}
-.leaflet-overlay-pane .planner-route-runner-core,
-.leaflet-plannerRoutePane .planner-route-runner-core,
-.planner-route-runner-core {
-  stroke: #FFFFFF !important;
-  stroke-width: 5.7px !important;
-  stroke-opacity: .98 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-}
-
-
-/* =========================================================
-   V95 — map marker colors: warm ivory background + Fushimi vermilion SVGs
-   Keep the SVG files themselves reusable; recolor only their rendered marker
-   appearance so legacy multi-colored SVGs cannot clash with the pin background.
-   ========================================================= */
-.custom-map-marker .marker-pin,
-.custom-map-marker.is-railway .marker-pin {
-  background: #FFF8F0 !important;
-  background-color: #FFF8F0 !important;
-  border: 2px solid #C40018 !important;
-  box-shadow: 0 4px 12px rgba(92, 21, 22, .20),
-              0 0 0 1px rgba(255, 255, 255, .88),
-              inset 0 1px 0 rgba(255, 255, 255, .98) !important;
-}
-
-/* Idle icons are a consistent deep vermilion, irrespective of embedded SVG fill. */
-.custom-map-marker .icon-image.icon-gray {
-  filter: brightness(0) saturate(100%) invert(12%) sepia(97%) saturate(5837%)
-          hue-rotate(344deg) brightness(78%) contrast(115%) !important;
-}
-
-/* Hover / selected icons become white for contrast on the vermilion pin. */
-.custom-map-marker .icon-image.icon-color {
-  filter: brightness(0) invert(1) !important;
-}
-.custom-map-marker:hover .marker-pin,
-.custom-map-marker.is-selected .marker-pin,
-.custom-map-marker.is-viewing .marker-pin,
-.custom-map-marker.is-railway:hover .marker-pin,
-.custom-map-marker.is-railway.is-selected .marker-pin,
-.custom-map-marker.is-railway.is-viewing .marker-pin {
-  background: #C40018 !important;
-  background-color: #C40018 !important;
-  border-color: #FFFFFF !important;
-  box-shadow: 0 7px 17px rgba(114, 12, 28, .28),
-              0 0 0 3px rgba(255, 255, 255, .92),
-              0 0 0 5px rgba(196, 0, 24, .18) !important;
-}
-.custom-map-marker .marker-fallback {
-  background: rgba(255, 248, 240, .97) !important;
-  color: #8D0014 !important;
-  border: 1px solid rgba(196, 0, 24, .18) !important;
+/* Keep map pin glyphs crisp on the light pin surface; do not recolor SVGs via filters. */
+.custom-map-marker .icon-image {
+  filter: none !important;
+  width: 24px !important;
+  height: 24px !important;
 }
