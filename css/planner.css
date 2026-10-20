@@ -6276,3 +6276,48 @@ body.planner-page .liquid-cursor {
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
 }
+
+
+/* =========================================================
+   V95 — map marker colors: warm ivory background + Fushimi vermilion SVGs
+   Keep the SVG files themselves reusable; recolor only their rendered marker
+   appearance so legacy multi-colored SVGs cannot clash with the pin background.
+   ========================================================= */
+.custom-map-marker .marker-pin,
+.custom-map-marker.is-railway .marker-pin {
+  background: #FFF8F0 !important;
+  background-color: #FFF8F0 !important;
+  border: 2px solid #C40018 !important;
+  box-shadow: 0 4px 12px rgba(92, 21, 22, .20),
+              0 0 0 1px rgba(255, 255, 255, .88),
+              inset 0 1px 0 rgba(255, 255, 255, .98) !important;
+}
+
+/* Idle icons are a consistent deep vermilion, irrespective of embedded SVG fill. */
+.custom-map-marker .icon-image.icon-gray {
+  filter: brightness(0) saturate(100%) invert(12%) sepia(97%) saturate(5837%)
+          hue-rotate(344deg) brightness(78%) contrast(115%) !important;
+}
+
+/* Hover / selected icons become white for contrast on the vermilion pin. */
+.custom-map-marker .icon-image.icon-color {
+  filter: brightness(0) invert(1) !important;
+}
+.custom-map-marker:hover .marker-pin,
+.custom-map-marker.is-selected .marker-pin,
+.custom-map-marker.is-viewing .marker-pin,
+.custom-map-marker.is-railway:hover .marker-pin,
+.custom-map-marker.is-railway.is-selected .marker-pin,
+.custom-map-marker.is-railway.is-viewing .marker-pin {
+  background: #C40018 !important;
+  background-color: #C40018 !important;
+  border-color: #FFFFFF !important;
+  box-shadow: 0 7px 17px rgba(114, 12, 28, .28),
+              0 0 0 3px rgba(255, 255, 255, .92),
+              0 0 0 5px rgba(196, 0, 24, .18) !important;
+}
+.custom-map-marker .marker-fallback {
+  background: rgba(255, 248, 240, .97) !important;
+  color: #8D0014 !important;
+  border: 1px solid rgba(196, 0, 24, .18) !important;
+}
