@@ -134,13 +134,16 @@ document.addEventListener("DOMContentLoaded", function () {
         "rest-area": "facilities"
     };
 
+    // Match the same palette used by the category bar in css/planner.css.
+    // Concrete colors are used here because CSS variables on category buttons
+    // are scoped to those buttons and are not inherited by Leaflet markers.
     const CATEGORY_COLOR_CSS_VAR = {
-        all: "var(--planner-color-all)",
-        sightseeing: "var(--planner-color-sightseeing)",
-        foodShop: "var(--planner-color-food-shop)",
-        transit: "var(--planner-color-transit)",
-        facilities: "var(--planner-color-facilities)",
-        neutral: "var(--planner-color-neutral)"
+        all: "#FF2800",
+        sightseeing: "#9A0079",
+        foodShop: "#FF9900",
+        transit: "#0041FF",
+        facilities: "#35A16B",
+        neutral: "#7F878F"
     };
 
     // Keep the original pictogram artwork visible. The previous CSS-mask treatment
@@ -2947,28 +2950,19 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function getMarkerAccentColor(spot) {
-        const iconType = getIconType(spot);
-        const category = normalizeCategory(spot?.category);
-        let role = ICON_COLOR_ROLE_MAP[iconType];
-
-        if (!role) {
-            if (["scenery", "shrine", "hiking", "viewpoint"].includes(category)) {
-                role = "sightseeing";
-            } else if (["restaurant", "グルメ"].includes(category)) {
-                role = "foodShop";
-            } else if (["transport", "交通"].includes(category)) {
-                role = "transit";
-            } else if (["toilet", "施設"].includes(category)) {
-                role = "facilities";
-            } else if (["guide", "案内", "all"].includes(category)) {
-                role = "all";
-            } else {
-                role = "neutral";
-            }
-        }
-
-        // Use the same CSS tokens as the category-bar pictograms. This avoids
-        // duplicated hex values drifting between JavaScript, CSS, and SVG assets.
+        // Derive the pin color from the same category-bar SVG selection used for
+        // its glyph. That way the pictogram and its selected-state color cannot drift.
+        const iconFile = getCategoryBarIconFile(spot);
+        const roleByCategoryAsset = {
+            "category-all.svg": "all",
+            "category-sightseeing.svg": "sightseeing",
+            "category-food-shop.svg": "foodShop",
+            "category-food.svg": "foodShop",
+            "category-buy.svg": "foodShop",
+            "category-transport.svg": "transit",
+            "category-facilities.svg": "facilities"
+        };
+        const role = roleByCategoryAsset[iconFile] || "neutral";
         return CATEGORY_COLOR_CSS_VAR[role] || CATEGORY_COLOR_CSS_VAR.neutral;
     }
 
@@ -3077,90 +3071,49 @@ document.addEventListener("DOMContentLoaded", function () {
         selected,
         viewed = false
     ) {
+        const iconType = getIconType(spot);
+        const accentColor = getMarkerAccentColor(spot);
+        const isHighlighted = Boolean(selected || viewed);
+        const markerColor = isHighlighted ? accentColor : GRAY_COLOR;
 
-        const iconType =
-            getIconType(spot);
+        // The map pin uses the exact same SVG asset as the category bar.
+        // Unselected pins are neutral gray; route-selected / currently viewed
+        // pins use the matching category accent, so state is immediately clear.
+        const iconMarkup = getCategoryMaskMarkup(spot, {
+            color: markerColor,
+            size: 25
+        });
 
-        const grayFile =
-            getIconFileName(
-                iconType,
-                false
-            );
-
-        const colorFile =
-            getIconFileName(
-                iconType,
-                true
-            );
-        const hasOriginalIconFiles = AVAILABLE_MAP_ICON_TYPES.has(iconType);
-        const iconMarkup = hasOriginalIconFiles ? `
-            <img class="icon-image icon-gray" src="${ICON_DIR}${grayFile}" alt="" aria-hidden="true" draggable="false" onload="window.handlePlannerMarkerIconLoad(this)" onerror="window.handlePlannerMarkerIconError(this)">
-            <img class="icon-image icon-color" src="${ICON_DIR}${colorFile}" alt="" aria-hidden="true" draggable="false" onload="window.handlePlannerMarkerIconLoad(this)" onerror="window.handlePlannerMarkerIconError(this)">
-        ` : getCategoryMaskMarkup(spot, { color: "#ffffff", size: 23 });
-
-        const accentColor =
-            getMarkerAccentColor(
-                spot
-            );
-
-        const classes = [
-            "custom-map-marker"
-        ];
+        const classes = ["custom-map-marker"];
         const isRailway = ["station-jr", "station-keihan"].includes(iconType);
         if (isRailway) classes.push("is-railway");
-
-        if (selected) {
-            classes.push("is-selected");
-        }
-        if (viewed) {
-            classes.push("is-viewing");
-        }
+        if (selected) classes.push("is-selected");
+        if (viewed) classes.push("is-viewing");
+        if (isHighlighted) classes.push("is-highlighted");
 
         return L.divIcon({
-
-            className:
-                "planner-custom-div-icon",
-
+            className: "planner-custom-div-icon",
             html: `
                 <div
                     class="${classes.join(" ")}"
                     style="
-                        --marker-pin-color:${PIN_COLOR};
-                        --marker-accent-color:${accentColor};
+                        --marker-pin-color:${markerColor};
+                        --marker-accent-color:${markerColor};
+                        --marker-category-color:${accentColor};
                     "
                 >
-
                     <div class="marker-pin">
-
-                        <span
-                            class="marker-accent"
-                            aria-hidden="true"
-                        ></span>
-
+                        <span class="marker-accent" aria-hidden="true"></span>
                         ${iconMarkup}
-
                     </div>
                     <span class="marker-name-glass">${escapeHTML(getLocalizedValue(spot.name))}</span>
                 </div>
             `,
-
-            // Keep the hit target close to the actual circular pin. The long name
-            // pill is an overlay with pointer-events:none, so nearby markers can
-            // no longer steal station taps because their labels overlap.
-            iconSize: [
-                46,
-                46
-            ],
-
-            iconAnchor: [
-                23,
-                21
-            ],
-
-            popupAnchor: [
-                0,
-                -27
-            ]
+            // Keep the hit target close to the circular pin. The long name pill
+            // is decorative and must not steal taps from nearby markers.
+            iconSize: [46, 46],
+            iconAnchor: [23, 21],
+            popupAnchor: [0, -27]
         });
     }
 
@@ -3259,7 +3212,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 border:
                     2px solid
-                    ${PIN_COLOR};
+                    var(--marker-pin-color, ${GRAY_COLOR});
 
                 background:
                     linear-gradient(
@@ -3326,11 +3279,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 border-right:
                     2px solid
-                    ${PIN_COLOR};
+                    var(--marker-pin-color, ${GRAY_COLOR});
 
                 border-bottom:
                     2px solid
-                    ${PIN_COLOR};
+                    var(--marker-pin-color, ${GRAY_COLOR});
 
                 background:
                     rgba(255,247,243,.88);
@@ -3569,6 +3522,38 @@ document.addEventListener("DOMContentLoaded", function () {
                     inset
                     0 1px 0
                     rgba(255,255,255,1);
+            }
+
+            /* V105: neutral by default; use the category-bar palette only for a selected/viewed spot. */
+            .custom-map-marker .icon-category-fallback {
+                z-index: 2;
+                pointer-events: none;
+                transition: background-color .18s ease, transform .18s ease;
+            }
+            .custom-map-marker .marker-pin {
+                border-color: var(--marker-pin-color, #7F878F) !important;
+                transition: transform .22s cubic-bezier(.16,1,.3,1), box-shadow .22s ease, border-color .18s ease;
+            }
+            .custom-map-marker .marker-pin::after {
+                border-right-color: var(--marker-pin-color, #7F878F) !important;
+                border-bottom-color: var(--marker-pin-color, #7F878F) !important;
+            }
+            .custom-map-marker:not(.is-highlighted) .marker-accent {
+                opacity: .04 !important;
+            }
+            .custom-map-marker.is-highlighted .marker-accent {
+                opacity: .20 !important;
+                transform: translateX(-50%) scale(1.08);
+            }
+            .custom-map-marker.is-highlighted .marker-pin {
+                transform: translateY(-2px) scale(1.08);
+                box-shadow:
+                    0 12px 25px rgba(0,0,0,.17),
+                    0 0 0 3px color-mix(in srgb, var(--marker-category-color, #FF2800) 20%, transparent),
+                    inset 0 1px 0 rgba(255,255,255,1);
+            }
+            .custom-map-marker.is-highlighted .icon-category-fallback {
+                transform: translate(-50%, -50%) scale(1.04);
             }
 
             @keyframes
