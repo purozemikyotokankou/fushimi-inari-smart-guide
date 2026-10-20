@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V109-CARTO-403-FALLBACK";
-    console.log("[Fushimi Inari Smart Guide] planner.js V109-CARTO-403-FALLBACK loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V110-CARTO-RASTERTILES-PATH-FIX";
+    console.log("[Fushimi Inari Smart Guide] planner.js V110-CARTO-RASTERTILES-PATH-FIX loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -541,8 +541,8 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(refreshPlannerMapSize, 120);
 
     // ============================================================
-    // V109: CARTO Positron with automatic non-GSI fallback.
-    // CARTO's tile URL format is valid, but a 403 response means the service
+    // V109: CARTO Positron with automatic non-GSI fallback (official rastertiles URL).
+    // CARTO requires the rastertiles/light_all path. A 403 response means the service
     // is rejecting requests (commonly API key / Referer restriction). A zoom
     // limit alone cannot fix that. Try keyless Positron as a fail-soft option;
     // if it also fails, use OSM so the map never becomes an empty background.
@@ -550,7 +550,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ============================================================
     const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
     const CARTO_POSITRON_TILE_TEMPLATE =
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+        "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png";
     const CARTO_POSITRON_TILE_URL = CARTO_POSITRON_TILE_TEMPLATE +
         (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
