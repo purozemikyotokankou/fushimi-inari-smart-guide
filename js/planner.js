@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V103-CARTO-POSITRON-KEY-CONFIG";
-    console.log("[Fushimi Inari Smart Guide] planner.js V103-CARTO-POSITRON-KEY-CONFIG loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V104-CARTO-RASTER-LEAFLET-SYNC";
+    console.log("[Fushimi Inari Smart Guide] planner.js V104-CARTO-RASTER-LEAFLET-SYNC loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // V11 additions
     // ① 現在地を出発地点として利用
     // ② Liquid Glass UIをJSから追加
-    // ③ GSI地図をモノクロ表示
+    // ③ CARTO Positronの淡色地図を使用
     // ④ ルート線をユニバーサルデザインパレットのオレンジ #FF9900
     // ⑤ routes.json をグラフとして扱う
     // ⑥ routes.json の複数区間を自動接続
@@ -38,8 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshPlannerCategoryLanguage();
     document.getElementById("languageSelect")?.addEventListener("change", function () {
         setTimeout(refreshPlannerCategoryLanguage, 0);
-        // Switch the basemap label language with the app language as well.
-        switchPlannerBasemapForLanguage(this.value);
+        // The basemap and markers share Leaflet's renderer, so zoom/pan stay in sync.
         if (activeRoutePlannerState) setTimeout(function () {
             renderRoutePlanner(activeRoutePlannerState);
         }, 0);
@@ -388,7 +387,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const map =
         L.map("map", {
             zoomControl: false,
-            preferCanvas: true
+            preferCanvas: true,
+            fadeAnimation: false,
+            zoomAnimation: true,
+            markerZoomAnimation: true
         }).setView(
             [34.96705, 135.7743],
             16
@@ -524,289 +526,30 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(refreshPlannerMapSize, 120);
 
     // ============================================================
-    // GSIモノクロ地図
-    // ============================================================
-
-    map.createPane("plannerGsiPane");
-
-    map.getPane(
-        "plannerGsiPane"
-    ).style.zIndex = "200";
-
-    map.getPane(
-        "plannerGsiPane"
-    ).style.filter =
-        "grayscale(14%) saturate(.94) contrast(1.025) brightness(1.025)";
-
-    map.getPane(
-        "plannerGsiPane"
-    ).style.webkitFilter =
-        "grayscale(14%) saturate(.94) contrast(1.025) brightness(1.025)";
-
-    const gsiLayer =
-        L.tileLayer(
-            "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-            {
-                maxZoom: 18,
-                pane: "plannerGsiPane",
-                attribution:
-                    '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院</a>'
-            }
-        );
-
-    gsiLayer.addTo(map);
-
-    // ============================================================
-    // V103: CARTO Positron basemap with app-language-aware labels and configured key.
-    // The key is configured in js/carto-config.js so it can be replaced without
-    // editing this large planner script. Client-side keys are visible in source;
-    // restrict the key to the GitHub Pages hostname in the CARTO dashboard.
+    // V104: CARTO Positron raster basemap on the same Leaflet map.
+    // No GSI fallback and no second MapLibre canvas: this avoids a GSI flash
+    // at startup and keeps basemap tiles, pins, and routes synchronized during zoom.
     // ============================================================
     const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
-    const CARTO_POSITRON_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-    const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+    const CARTO_POSITRON_TILE_TEMPLATE =
+        "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png";
+    const CARTO_POSITRON_TILE_URL = CARTO_POSITRON_TILE_TEMPLATE +
+        (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
         '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
-    const OPENFREEMAP_ATTRIBUTION =
-        '&copy; <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · ' +
-        '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
 
-    function getPlannerBasemapConfig() {
-        const key = String(CARTO_BASEMAP_API_KEY || "").trim();
-        if (key) {
-            return { provider: "carto", style: CARTO_POSITRON_STYLE_URL, attribution: CARTO_ATTRIBUTION };
-        }
-        return { provider: "openfreemap", style: OPENFREEMAP_STYLE_URL, attribution: OPENFREEMAP_ATTRIBUTION };
-    }
-
-    function addCartoKeyToRequest(url) {
-        const key = String(CARTO_BASEMAP_API_KEY || "").trim();
-        if (!key || !/^https:\/\/basemaps\.cartocdn\.com\//i.test(String(url))) return String(url);
-        try {
-            const parsed = new URL(url);
-            parsed.searchParams.set("key", key);
-            return parsed.toString();
-        } catch (_) {
-            return String(url);
-        }
-    }
-
-    let fushimiVectorMap = null;
-    let fushimiVectorContainer = null;
-    let fushimiVectorSyncFrame = 0;
-    let fushimiVectorMoveHandler = null;
-    let fushimiVectorResizeHandler = null;
-    let fushimiVectorGeneration = 0;
-    let fushimiVectorAttribution = null;
-    let fushimiVectorLanguage = "";
-    let mapLibreAssetsPromise = null;
-
-    function ensureMapLibreAssets() {
-        if (window.maplibregl && typeof window.maplibregl.Map === "function") {
-            return Promise.resolve(window.maplibregl);
-        }
-        if (mapLibreAssetsPromise) return mapLibreAssetsPromise;
-
-        mapLibreAssetsPromise = new Promise(function (resolve, reject) {
-            if (!document.querySelector('link[data-fushimi-maplibre-css="true"]')) {
-                const css = document.createElement("link");
-                css.rel = "stylesheet";
-                css.href = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
-                css.dataset.fushimiMaplibreCss = "true";
-                document.head.appendChild(css);
-            }
-
-            const script = document.createElement("script");
-            script.src = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
-            script.async = true;
-            script.dataset.fushimiMaplibreScript = "true";
-            script.onload = function () {
-                if (window.maplibregl && typeof window.maplibregl.Map === "function") {
-                    resolve(window.maplibregl);
-                } else {
-                    reject(new Error("MapLibre GL JS was loaded without its global API."));
-                }
-            };
-            script.onerror = function () {
-                reject(new Error("MapLibre GL JS could not be loaded."));
-            };
-            document.head.appendChild(script);
-        });
-        return mapLibreAssetsPromise;
-    }
-
-    function mapLabelExpression(language) {
-        const lang = String(language || "ja").toLowerCase().slice(0, 2);
-        const localizedName = "name:" + lang;
-        if (lang === "ja") {
-            return ["coalesce", ["get", "name:ja"], ["get", "name"], ["get", "name:latin"]];
-        }
-        // Prefer the selected UI language, then romanized text, then the source name.
-        return ["coalesce", ["get", localizedName], ["get", "name:latin"], ["get", "name"]];
-    }
-
-    function applyVectorMapLabelLanguage(vectorMap, language) {
-        if (!vectorMap || !vectorMap.isStyleLoaded()) return;
-        const field = mapLabelExpression(language);
-        const style = vectorMap.getStyle();
-        (style.layers || []).forEach(function (layer) {
-            if (layer.type !== "symbol" || !layer.layout || !layer.layout["text-field"]) return;
-            const currentTextField = JSON.stringify(layer.layout["text-field"]);
-            if (!/name/i.test(currentTextField)) return;
-            try {
-                vectorMap.setLayoutProperty(layer.id, "text-field", field);
-            } catch (error) {
-                console.debug("地図ラベルの言語を変更できないレイヤーをスキップしました:", layer.id, error);
-            }
-        });
-    }
-
-    function removeForeignLanguageBasemap() {
-        fushimiVectorGeneration += 1;
-        if (fushimiVectorSyncFrame) {
-            cancelAnimationFrame(fushimiVectorSyncFrame);
-            fushimiVectorSyncFrame = 0;
-        }
-        if (fushimiVectorMoveHandler) map.off("move", fushimiVectorMoveHandler);
-        if (fushimiVectorResizeHandler) map.off("resize", fushimiVectorResizeHandler);
-        fushimiVectorMoveHandler = null;
-        fushimiVectorResizeHandler = null;
-        if (fushimiVectorMap) {
-            try { fushimiVectorMap.remove(); } catch (_) { /* already removed */ }
-            fushimiVectorMap = null;
-        }
-        if (fushimiVectorContainer) {
-            fushimiVectorContainer.remove();
-            fushimiVectorContainer = null;
-        }
-        if (fushimiVectorAttribution) {
-            map.attributionControl?.removeAttribution(fushimiVectorAttribution);
-            fushimiVectorAttribution = null;
-        }
-        fushimiVectorLanguage = "";
-        if (!map.hasLayer(gsiLayer)) gsiLayer.addTo(map);
-    }
-
-    function switchPlannerBasemapForLanguage(language) {
-        const lang = ["ja", "en", "zh", "ko"].includes(String(language || "ja").toLowerCase().slice(0, 2))
-            ? String(language || "ja").toLowerCase().slice(0, 2)
-            : "ja";
-
-        // A loaded vector basemap only needs its label expressions updated when
-        // the user changes language; no need to download the whole map again.
-        if (fushimiVectorMap && fushimiVectorMap.isStyleLoaded()) {
-            applyVectorMapLabelLanguage(fushimiVectorMap, lang);
-            fushimiVectorLanguage = lang;
-            return;
-        }
-
-        const generation = ++fushimiVectorGeneration;
-        const basemapConfig = getPlannerBasemapConfig();
-        ensureMapLibreAssets().then(function (maplibregl) {
-            if (generation !== fushimiVectorGeneration) return;
-
-            if (fushimiVectorMap) {
-                try { fushimiVectorMap.remove(); } catch (_) { /* no-op */ }
-                fushimiVectorMap = null;
-            }
-            if (fushimiVectorContainer) {
-                fushimiVectorContainer.remove();
-                fushimiVectorContainer = null;
-            }
-            if (fushimiVectorMoveHandler) map.off("move", fushimiVectorMoveHandler);
-            if (fushimiVectorResizeHandler) map.off("resize", fushimiVectorResizeHandler);
-            fushimiVectorMoveHandler = null;
-            fushimiVectorResizeHandler = null;
-            if (fushimiVectorAttribution) {
-                map.attributionControl?.removeAttribution(fushimiVectorAttribution);
-                fushimiVectorAttribution = null;
-            }
-            if (!map.hasLayer(gsiLayer)) gsiLayer.addTo(map);
-
-            // Direct child of #map keeps the vector tiles synchronized with Leaflet,
-            // while Leaflet's marker and route panes stay above this background.
-            const container = document.createElement("div");
-            container.className = "fushimi-vector-basemap";
-            container.setAttribute("aria-hidden", "true");
-            Object.assign(container.style, {
-                position: "absolute", inset: "0", width: "100%", height: "100%",
-                overflow: "hidden", pointerEvents: "none", zIndex: "100"
-            });
-            map.getContainer().appendChild(container);
-            fushimiVectorContainer = container;
-
-            const center = map.getCenter();
-            const vectorMap = new maplibregl.Map({
-                container: container,
-                style: basemapConfig.style,
-                center: [center.lng, center.lat],
-                zoom: Math.max(0, map.getZoom() - 1),
-                interactive: false,
-                attributionControl: false,
-                fadeDuration: 0,
-                pitch: 0,
-                bearing: 0,
-                renderWorldCopies: false,
-                transformRequest: function (url) {
-                    return { url: basemapConfig.provider === "carto" ? addCartoKeyToRequest(url) : url };
-                }
-            });
-            fushimiVectorMap = vectorMap;
-            fushimiVectorLanguage = lang;
-
-            function syncVectorMapToLeaflet() {
-                if (fushimiVectorSyncFrame) return;
-                fushimiVectorSyncFrame = requestAnimationFrame(function () {
-                    fushimiVectorSyncFrame = 0;
-                    if (fushimiVectorMap !== vectorMap || !vectorMap.loaded()) return;
-                    const nextCenter = map.getCenter();
-                    const nextZoom = Math.max(0, map.getZoom() - 1);
-                    vectorMap.jumpTo({ center: [nextCenter.lng, nextCenter.lat], zoom: nextZoom });
-                });
-            }
-
-            fushimiVectorMoveHandler = syncVectorMapToLeaflet;
-            fushimiVectorResizeHandler = function () {
-                if (fushimiVectorMap === vectorMap) {
-                    window.requestAnimationFrame(function () {
-                        try { vectorMap.resize(); } catch (_) { /* map may be closing */ }
-                        syncVectorMapToLeaflet();
-                    });
-                }
-            };
-            map.on("move", fushimiVectorMoveHandler);
-            map.on("resize", fushimiVectorResizeHandler);
-
-            vectorMap.once("load", function () {
-                if (generation !== fushimiVectorGeneration || fushimiVectorMap !== vectorMap) {
-                    try { vectorMap.remove(); } catch (_) { /* stale load */ }
-                    return;
-                }
-                applyVectorMapLabelLanguage(vectorMap, lang);
-                if (map.hasLayer(gsiLayer)) map.removeLayer(gsiLayer);
-                fushimiVectorAttribution = basemapConfig.attribution;
-                map.attributionControl?.addAttribution(basemapConfig.attribution);
-                syncVectorMapToLeaflet();
-            });
-
-            vectorMap.on("error", function (event) {
-                console.warn("Positronベースマップの読み込み中にエラーが発生しました:", event && event.error ? event.error : event);
-            });
-        }).catch(function (error) {
-            if (generation !== fushimiVectorGeneration) return;
-            console.warn("Positronベースマップを利用できません。標準地図に戻します:", error);
-            removeForeignLanguageBasemap();
-        });
-    }
-
-    // Keep Positron styling for every language; only the labels change.
-    const initialMapLanguage =
-        localStorage.getItem("language") ||
-        document.getElementById("languageSelect")?.value ||
-        document.documentElement.lang ||
-        "ja";
-    switchPlannerBasemapForLanguage(initialMapLanguage);
+    const cartoPositronLayer = L.tileLayer(CARTO_POSITRON_TILE_URL, {
+        subdomains: "abcd",
+        minZoom: 0,
+        maxZoom: 20,
+        maxNativeZoom: 20,
+        keepBuffer: 3,
+        updateWhenIdle: false,
+        updateWhenZooming: true,
+        attribution: CARTO_ATTRIBUTION
+    });
+    cartoPositronLayer.addTo(map);
 
     // ============================================================
     // ルート用Pane
@@ -3229,31 +2972,64 @@ document.addEventListener("DOMContentLoaded", function () {
         return CATEGORY_COLOR_CSS_VAR[role] || CATEGORY_COLOR_CSS_VAR.neutral;
     }
 
-    // Clear pictogram fallback for spot types that do not have a dedicated SVG in
-    // the current project. Existing toilet/station/service SVGs remain untouched.
-    function getSpotSymbol(spot) {
-        const iconType = getIconType(spot);
+    // Use existing category-bar SVGs for spot types without their own project icon.
+    // Do not generate emoji or invent new pictograms for map markers.
+    function getCategoryBarIconFile(spot) {
         const category = normalizeCategory(spot?.category);
+        const iconType = getIconType(spot);
         const rawName = spot?.name;
         const names = (rawName && typeof rawName === "object")
             ? Object.values(rawName).join(" ").toLowerCase()
             : String(rawName ?? "").toLowerCase();
-        const id = String(spot?.id ?? "");
 
-        if (id === "1" || /torii|鳥居/.test(names)) return "⛩️";
-        if (iconType.includes("toilet") || category === "toilet") return "🚻";
-        if (["station-jr", "station-keihan"].includes(iconType) || category === "transport") return "🚉";
-        if (["wheelchair", "ostomate"].includes(iconType)) return "♿";
-        if (["diaper-changing", "baby-chair", "changing-table"].includes(iconType)) return "🍼";
-        if (iconType === "restaurant" || ["restaurant", "グルメ", "飲食店"].includes(category)) return "🍜";
-        if (iconType === "hiking" || category === "hiking" || /summit|mountain|山頂|登山/.test(names)) return "🥾";
-        if (["torii", "shrine"].includes(iconType) || category === "shrine" || /shrine|神社|本殿|奉拝所/.test(names)) return "⛩️";
-        if (iconType === "viewpoint" || category === "scenery" || /viewpoint|scenic|展望|景色|四ツ辻/.test(names)) return "🌄";
-        if (["rest-area", "smoking"].includes(iconType)) return "☕";
-        if (["coin-locker", "baggage-storage"].includes(iconType)) return "🧳";
-        if (iconType === "guide" || category === "guide" || /入口|entrance|guide|案内/.test(names)) return "ℹ️";
-        if (/駅|station|keihan|railway|\bjr\b/.test(names)) return "🚉";
-        return "📍";
+        if (["station-jr", "station-keihan"].includes(iconType) || category === "transport") {
+            return "category-transport.svg";
+        }
+        if (category === "toilet" || /toilet|restroom|washroom|トイレ/.test(names)) {
+            return "category-facilities.svg";
+        }
+        if (category === "restaurant" || /restaurant|cafe|coffee|food|飲食|食堂|カフェ|喫茶/.test(names)) {
+            if (category === "buy" || /souvenir|gift shop|shopping|shop|お土産|土産|売店|ショップ/.test(names)) {
+                return "category-buy.svg";
+            }
+            return "category-food.svg";
+        }
+        if (category === "buy" || /souvenir|gift shop|shopping|shop|お土産|土産|売店|ショップ/.test(names)) {
+            return "category-buy.svg";
+        }
+        if (["scenery", "shrine", "hiking"].includes(category) || /torii|shrine|viewpoint|scenic|summit|mountain|鳥居|神社|展望|景色|四ツ辻|山頂|登山|本殿|奉拝所/.test(names)) {
+            return "category-sightseeing.svg";
+        }
+        if (["all", "guide"].includes(category) || /entrance|guide|案内|入口/.test(names)) {
+            return "category-all.svg";
+        }
+        return "category-all.svg";
+    }
+
+    function getCategoryMaskMarkup(spot, options = {}) {
+        const iconFile = getCategoryBarIconFile(spot);
+        const color = options.color || "#ffffff";
+        const size = Number(options.size) || 23;
+        const style = [
+            "display:block",
+            "position:absolute",
+            "left:50%",
+            "top:50%",
+            `width:${size}px`,
+            `height:${size}px`,
+            "transform:translate(-50%,-50%)",
+            `background:${color}`,
+            `-webkit-mask-image:url('${ICON_DIR}${iconFile}')`,
+            `mask-image:url('${ICON_DIR}${iconFile}')`,
+            "-webkit-mask-repeat:no-repeat",
+            "mask-repeat:no-repeat",
+            "-webkit-mask-position:center",
+            "mask-position:center",
+            "-webkit-mask-size:contain",
+            "mask-size:contain",
+            "pointer-events:none"
+        ].join(";");
+        return `<span class="icon-category-fallback" aria-hidden="true" style="${style}"></span>`;
     }
 
     function getMarkerZIndexOffset(
@@ -3317,14 +3093,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 true
             );
         const hasOriginalIconFiles = AVAILABLE_MAP_ICON_TYPES.has(iconType);
-        const fallbackSymbol = escapeHTML(getSpotSymbol(spot));
         const iconMarkup = hasOriginalIconFiles ? `
-            <span class="icon-symbol-fallback" aria-hidden="true">${fallbackSymbol}</span>
             <img class="icon-image icon-gray" src="${ICON_DIR}${grayFile}" alt="" aria-hidden="true" draggable="false" onload="window.handlePlannerMarkerIconLoad(this)" onerror="window.handlePlannerMarkerIconError(this)">
             <img class="icon-image icon-color" src="${ICON_DIR}${colorFile}" alt="" aria-hidden="true" draggable="false" onload="window.handlePlannerMarkerIconLoad(this)" onerror="window.handlePlannerMarkerIconError(this)">
-        ` : `
-            <span class="icon-symbol-fallback is-visible" aria-hidden="true">${fallbackSymbol}</span>
-        `;
+        ` : getCategoryMaskMarkup(spot, { color: "#ffffff", size: 23 });
 
         const accentColor =
             getMarkerAccentColor(
@@ -3673,31 +3445,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     0;
             }
 
-            /* Visible, compact pictograms for spot types with no dedicated SVG asset. */
-            .custom-map-marker .icon-symbol-fallback {
-                display: none !important;
-                position: absolute !important;
-                left: 50% !important;
-                top: 50% !important;
-                width: 28px !important;
-                height: 28px !important;
-                align-items: center !important;
-                justify-content: center !important;
-                transform: translate(-50%, -50%) !important;
-                transform-origin: center center !important;
-                font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important;
-                font-size: 23px !important;
-                line-height: 1 !important;
-                pointer-events: none !important;
-                z-index: 5 !important;
-            }
-            .custom-map-marker .icon-symbol-fallback.is-visible,
-            .custom-map-marker.show-symbol-fallback .icon-symbol-fallback {
-                display: flex !important;
-            }
-            .custom-map-marker.show-symbol-fallback .icon-image {
-                display: none !important;
-            }
             .custom-map-marker.use-color-fallback .icon-gray {
                 opacity: 0 !important;
             }
@@ -3712,11 +3459,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 display: block !important;
                 opacity: 1 !important;
             }
-            .custom-map-marker:hover .icon-symbol-fallback,
-            .custom-map-marker.is-selected .icon-symbol-fallback {
-                transform: translate(-50%, -50%) scale(1.1) !important;
-            }
-
             .custom-map-marker:hover
             .icon-gray {
                 opacity:
@@ -4159,7 +3901,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const name = getLocalizedValue(spot.name);
         const description = getLocalizedValue(spot.description);
         const category = getCategoryLabel(spot.category);
-        const symbol = getSpotSymbol(spot);
+        const categoryIconFile = getCategoryBarIconFile(spot);
+        const categoryIconColor = getMarkerAccentColor(spot);
         const time = spot.time || "-";
         const url = getSafeURL(spot.url);
         const selected = isSpotSelected(spot);
@@ -4181,7 +3924,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 ${photoHTML}
 
                 <div class="planner-popup-heading">
-                    <span class="planner-popup-symbol" aria-hidden="true">${symbol}</span>
+                    <span class="planner-popup-symbol" aria-hidden="true" style="display:inline-block;position:relative;width:38px;height:38px;flex:0 0 38px;">
+                        <span style="display:block;position:absolute;inset:5px;background:${categoryIconColor};-webkit-mask-image:url('${ICON_DIR}${categoryIconFile}');mask-image:url('${ICON_DIR}${categoryIconFile}');-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;"></span>
+                    </span>
                     <div class="planner-popup-title-group">
                         <h3>${escapeHTML(name)}</h3>
                         <div class="popup-category">${escapeHTML(category)}</div>
