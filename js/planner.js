@@ -83,61 +83,82 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Universal-design palette roles. Gendered toilet variants deliberately share
     // one color so meaning is carried by the icon / label, not pink-versus-blue.
-    // Fushimi Inari's existing vermilion shrine/torii colors are intentionally kept.
+    // Shrine, torii, and viewpoint glyphs share the sightseeing palette role.
     // Shared category palette: the map glyph + pin outline use the same exact
     // color as the matching category-bar icon.
     // All / guide = vermilion, sightseeing = purple, food & shop = orange,
     // transit = blue, facilities = green.
-    const ICON_COLOR_MAP = {
-        toilet: "#35A16B",
-        "toilet-male": "#35A16B",
-        "toilet-female": "#35A16B",
-        "toilet-western": "#35A16B",
-        "toilet-japanese": "#35A16B",
-        washlet: "#35A16B",
+    // Store only palette roles here; the actual color values live in the CSS
+    // custom properties shared with the category bar.
+    const ICON_COLOR_ROLE_MAP = {
+        toilet: "facilities",
+        "toilet-male": "facilities",
+        "toilet-female": "facilities",
+        "toilet-western": "facilities",
+        "toilet-japanese": "facilities",
+        washlet: "facilities",
+        wheelchair: "facilities",
+        "diaper-changing": "facilities",
+        "baby-chair": "facilities",
+        "changing-table": "facilities",
+        ostomate: "facilities",
 
-        wheelchair: "#35A16B",
-        "diaper-changing": "#35A16B",
-        "baby-chair": "#35A16B",
-        "changing-table": "#35A16B",
-        ostomate: "#35A16B",
+        scenery: "sightseeing",
+        viewpoint: "sightseeing",
+        shrine: "sightseeing",
+        hiking: "sightseeing",
+        torii: "sightseeing",
 
-        scenery: "#9A0079",
-        viewpoint: "#9A0079",
-        shrine: "#9A0079",
-        hiking: "#9A0079",
-        restaurant: "#FF9900",
-        guide: "#FF2800",
-        "station-jr": "#0041FF",
-        "station-keihan": "#0041FF",
-        smoking: "#35A16B",
-        exchange: "#35A16B",
-        "public-phone": "#35A16B",
-        "trash-box": "#35A16B",
-        "evacuation-shelter": "#35A16B",
-        "baggage-storage": "#35A16B",
-        "coin-locker": "#35A16B",
-        "rest-area": "#35A16B",
+        restaurant: "foodShop",
+        guide: "all",
+        "station-jr": "transit",
+        "station-keihan": "transit",
 
-        torii: "#9A0079"
+        smoking: "facilities",
+        exchange: "facilities",
+        "public-phone": "facilities",
+        "trash-box": "facilities",
+        "evacuation-shelter": "facilities",
+        "baggage-storage": "facilities",
+        "coin-locker": "facilities",
+        "rest-area": "facilities"
     };
 
-    // When the colored source SVG loads, reuse its silhouette as a CSS mask so
-    // every map glyph is tinted with the exact color used by the category bar.
+    const CATEGORY_COLOR_CSS_VAR = {
+        all: "var(--planner-color-all)",
+        sightseeing: "var(--planner-color-sightseeing)",
+        foodShop: "var(--planner-color-food-shop)",
+        transit: "var(--planner-color-transit)",
+        facilities: "var(--planner-color-facilities)",
+        neutral: "var(--planner-color-neutral)"
+    };
+
+    // Tint the available SVG silhouette with the shared category palette token.
+    // If the colored asset is absent but the gray variant exists, use the gray
+    // SVG only as the mask source; it must not leave the map marker gray.
+    function usePlannerIconMaskSource(marker, image) {
+        if (!marker || !image || !image.naturalWidth) return false;
+        const tinted = marker.querySelector(".icon-tinted");
+        if (!tinted) return false;
+        const src = image.getAttribute("src");
+        if (src) tinted.style.setProperty("--marker-icon-mask", `url("${src}")`);
+        marker.classList.add("has-tinted-icon");
+        marker.classList.remove("use-gray-fallback");
+        return true;
+    }
+
     window.handlePlannerMarkerIconLoad = function (img) {
         if (!img || !img.naturalWidth) return;
         const marker = img.closest(".custom-map-marker");
         if (!marker) return;
 
         if (img.classList.contains("icon-color")) {
-            if (marker.querySelector(".icon-tinted")) {
-                marker.classList.add("has-tinted-icon");
-            }
+            usePlannerIconMaskSource(marker, img);
         } else if (
             img.classList.contains("icon-gray") &&
             marker.querySelector(".icon-color.is-load-error")
         ) {
-            marker.classList.add("use-gray-fallback");
+            usePlannerIconMaskSource(marker, img);
         }
     };
 
@@ -152,7 +173,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (img.classList.contains("icon-color")) {
             const gray = marker.querySelector("img.icon-gray");
             if (gray && gray.complete && gray.naturalWidth > 0) {
-                marker.classList.add("use-gray-fallback");
+                usePlannerIconMaskSource(marker, gray);
             }
         }
 
@@ -2855,6 +2876,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (explicit) return explicit;
 
+        // 千本鳥居 belongs to the sightseeing color family, but its map glyph
+        // should be a torii rather than a generic viewpoint symbol.
+        if (nameText.includes("鳥居") || nameText.includes("torii")) return "torii";
+
         if (category === "toilet") return "toilet";
         if (category === "scenery") return "viewpoint";
         if (category === "shrine") return "shrine";
@@ -2939,34 +2964,30 @@ document.addEventListener("DOMContentLoaded", function () {
             : `${type}-gray.svg`;
     }
 
-    function getMarkerAccentColor(
-        spot
-    ) {
+    function getMarkerAccentColor(spot) {
+        const iconType = getIconType(spot);
+        const category = normalizeCategory(spot?.category);
+        let role = ICON_COLOR_ROLE_MAP[iconType];
 
-        const iconType =
-            getIconType(spot);
-
-        if (
-            ICON_COLOR_MAP[
-                iconType
-            ]
-        ) {
-            return ICON_COLOR_MAP[
-                iconType
-            ];
+        if (!role) {
+            if (["scenery", "shrine", "hiking", "viewpoint"].includes(category)) {
+                role = "sightseeing";
+            } else if (["restaurant", "グルメ"].includes(category)) {
+                role = "foodShop";
+            } else if (["transport", "交通"].includes(category)) {
+                role = "transit";
+            } else if (["toilet", "施設"].includes(category)) {
+                role = "facilities";
+            } else if (["guide", "案内", "all"].includes(category)) {
+                role = "all";
+            } else {
+                role = "neutral";
+            }
         }
 
-        const category =
-            normalizeCategory(
-                spot.category
-            );
-
-        return (
-            ICON_COLOR_MAP[
-                category
-            ] ||
-            GRAY_COLOR
-        );
+        // Use the same CSS tokens as the category-bar pictograms. This avoids
+        // duplicated hex values drifting between JavaScript, CSS, and SVG assets.
+        return CATEGORY_COLOR_CSS_VAR[role] || CATEGORY_COLOR_CSS_VAR.neutral;
     }
 
     // Platinumaps/park-map inspired category pictograms.
@@ -3059,7 +3080,8 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
         const classes = [
-            "custom-map-marker"
+            "custom-map-marker",
+            "has-tinted-icon"
         ];
         const isRailway = ["station-jr", "station-keihan"].includes(iconType);
         if (isRailway) classes.push("is-railway");

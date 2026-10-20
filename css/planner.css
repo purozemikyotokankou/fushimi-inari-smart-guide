@@ -5489,39 +5489,39 @@ body.spot-share-open { overflow: hidden; }
    category-transport.svg, category-facilities.svg, category-food.svg,
    category-buy.svg, category-back.svg.
    SVG shape is used as a CSS mask, so CSS controls the exact accessible color.
-   This only affects the category bar; map pins and route lines are unchanged.
+   V97 reuses the same CSS palette tokens for map markers; route lines are unchanged.
    ============================================================ */
 
 /* CUD palette accent colors supplied for this project. */
 #plannerCategoryTray #plannerCategoryFront [data-category="all"] {
-  --category-accent: #FF2800;
+  --category-accent: var(--planner-color-all);
   --category-active-icon: #FFFFFF;
   --category-active-text: #000000;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="sightseeing"] {
-  --category-accent: #9A0079;
+  --category-accent: var(--planner-color-sightseeing);
   --category-active-icon: #FFFFFF;
   --category-active-text: #FFFFFF;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="交通"] {
-  --category-accent: #0041FF;
+  --category-accent: var(--planner-color-transit);
   --category-active-icon: #FFFFFF;
   --category-active-text: #FFFFFF;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="施設"] {
-  --category-accent: #35A16B;
+  --category-accent: var(--planner-color-facilities);
   --category-active-icon: #FFFFFF;
   --category-active-text: #000000;
 }
 #plannerCategoryTray #plannerCategoryFront .food-category-trigger,
 #plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
 #plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
-  --category-accent: #FF9900;
+  --category-accent: var(--planner-color-food-shop);
   --category-active-icon: #000000;
   --category-active-text: #000000;
 }
 #plannerCategoryTray #foodCategoryOptions .food-close-button {
-  --category-accent: #7F878F;
+  --category-accent: var(--planner-color-neutral);
   --category-active-icon: #000000;
   --category-active-text: #000000;
 }
@@ -5607,7 +5607,7 @@ body.spot-share-open { overflow: hidden; }
 /* The back/close control is not a spot category; keep it neutral. */
 #plannerCategoryTray #foodCategoryOptions .food-close-button,
 #plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-close-button {
-  --category-accent: #7F878F;
+  --category-accent: var(--planner-color-neutral);
   --category-active-icon: #000000;
   --category-active-text: #000000;
   color: #7F878F !important;
@@ -5637,34 +5637,34 @@ body.spot-share-open { overflow: hidden; }
 
 /* Category colors from the supplied CUD accent palette. */
 #plannerCategoryTray #plannerCategoryFront [data-category="all"] {
-  --category-accent: #FF2800 !important;
+  --category-accent: var(--planner-color-all) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #000000 !important;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="sightseeing"] {
-  --category-accent: #9A0079 !important;
+  --category-accent: var(--planner-color-sightseeing) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="交通"] {
-  --category-accent: #0041FF !important;
+  --category-accent: var(--planner-color-transit) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="施設"] {
-  --category-accent: #35A16B !important;
+  --category-accent: var(--planner-color-facilities) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #000000 !important;
 }
 #plannerCategoryTray #plannerCategoryFront .food-category-trigger,
 #plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
 #plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
-  --category-accent: #FF9900 !important;
+  --category-accent: var(--planner-color-food-shop) !important;
   --category-active-icon: #000000 !important;
   --category-active-text: #000000 !important;
 }
 #plannerCategoryTray #foodCategoryOptions .food-close-button {
-  --category-accent: #7F878F !important;
+  --category-accent: var(--planner-color-neutral) !important;
   --category-active-icon: #000000 !important;
   --category-active-text: #000000 !important;
 }
@@ -6259,29 +6259,29 @@ body.planner-page .liquid-cursor {
 
 /* V97: exact shared palette between category-bar glyphs and map marker glyphs. */
 #plannerCategoryTray #plannerCategoryFront [data-category="all"] {
-  --category-accent: #FF2800 !important;
+  --category-accent: var(--planner-color-all) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="sightseeing"] {
-  --category-accent: #9A0079 !important;
+  --category-accent: var(--planner-color-sightseeing) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
 #plannerCategoryTray #plannerCategoryFront .food-category-trigger,
 #plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
 #plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
-  --category-accent: #FF9900 !important;
+  --category-accent: var(--planner-color-food-shop) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="交通"] {
-  --category-accent: #0041FF !important;
+  --category-accent: var(--planner-color-transit) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
 #plannerCategoryTray #plannerCategoryFront [data-category="施設"] {
-  --category-accent: #35A16B !important;
+  --category-accent: var(--planner-color-facilities) !important;
   --category-active-icon: #FFFFFF !important;
   --category-active-text: #FFFFFF !important;
 }
@@ -6348,6 +6348,77 @@ body.planner-page .liquid-cursor {
   background: var(--category-accent, #FF2800) !important;
   background-color: var(--category-accent, #FF2800) !important;
 }
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
+  color: #202124 !important;
+}
+
+
+/* V97: single source of truth for category-bar and map-marker colors. */
+:root {
+  --planner-color-all: #FF2800;
+  --planner-color-sightseeing: #9A0079;
+  --planner-color-food-shop: #FF9900;
+  --planner-color-transit: #0041FF;
+  --planner-color-facilities: #35A16B;
+  --planner-color-neutral: #7F878F;
+}
+
+/* The pin tip and interaction rings follow the same category color as the glyph. */
+.custom-map-marker .marker-pin::after {
+  border-right-color: var(--marker-accent-color, var(--planner-color-all)) !important;
+  border-bottom-color: var(--marker-accent-color, var(--planner-color-all)) !important;
+}
+.custom-map-marker:hover .marker-pin {
+  box-shadow: 0 8px 19px rgba(24, 43, 29, .19),
+              0 0 0 3px color-mix(in srgb, var(--marker-accent-color, var(--planner-color-all)) 22%, transparent),
+              inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+.custom-map-marker.is-selected .marker-pin {
+  box-shadow: 0 10px 22px rgba(24, 43, 29, .22),
+              0 0 0 3px color-mix(in srgb, var(--marker-accent-color, var(--planner-color-all)) 28%, transparent),
+              0 0 0 6px color-mix(in srgb, var(--marker-accent-color, var(--planner-color-all)) 11%, transparent),
+              inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+
+.custom-map-marker.is-selected .marker-pin {
+  box-shadow: 0 10px 22px rgba(24, 43, 29, .22),
+              0 0 0 3px color-mix(in srgb, var(--marker-accent-color, var(--planner-color-all)) 28%, transparent),
+              0 0 0 6px color-mix(in srgb, var(--marker-accent-color, var(--planner-color-all)) 11%, transparent),
+              inset 0 1px 0 rgba(255,255,255,1) !important;
+}
+.custom-map-marker.is-railway .marker-pin {
+  background: #FFFCF6 !important;
+  border-color: var(--marker-accent-color, var(--planner-color-transit)) !important;
+}
+
+/* High-specificity final state wins over legacy selected-state rules above. */
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .category-button.active,
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-choice-button.active,
+#plannerCategoryTray #plannerCategoryFront .category-button.active,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active {
+  background: color-mix(in srgb, var(--category-accent, var(--planner-color-all)) 13%, #FFFFFF) !important;
+  background-color: color-mix(in srgb, var(--category-accent, var(--planner-color-all)) 13%, #FFFFFF) !important;
+  border: 1.5px solid var(--category-accent, var(--planner-color-all)) !important;
+  color: #202124 !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--category-accent, var(--planner-color-all)) 12%, transparent),
+              0 3px 9px rgba(28, 39, 32, .10) !important;
+}
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .category-button.active .category-glyph-image,
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-glyph-image,
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-glyph-image,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-glyph-image {
+  background: var(--category-accent, var(--planner-color-all)) !important;
+  background-color: var(--category-accent, var(--planner-color-all)) !important;
+}
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
+#plannerBottomSheet #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerBottomSheet #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label,
 #plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
 #plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
 #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
