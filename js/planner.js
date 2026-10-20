@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V106-CARTO-RASTER-LEAFLET-SYNC";
-    console.log("[Fushimi Inari Smart Guide] planner.js V106-CARTO-RASTER-LEAFLET-SYNC loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V107-CARTO-ZOOM-LIMIT";
+    console.log("[Fushimi Inari Smart Guide] planner.js V107-CARTO-ZOOM-LIMIT loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -391,7 +391,14 @@ document.addEventListener("DOMContentLoaded", function () {
             preferCanvas: true,
             fadeAnimation: false,
             zoomAnimation: true,
-            markerZoomAnimation: true
+            markerZoomAnimation: true,
+            // Keep the map zoom inside CARTO raster tiles' supported range.
+            // Without this cap, the map itself could reach z21+ while the tile
+            // layer stops at z20, making the entire basemap appear to disappear.
+            minZoom: 0,
+            maxZoom: 20,
+            zoomSnap: 1,
+            zoomDelta: 1
         }).setView(
             [34.96705, 135.7743],
             16
