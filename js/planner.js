@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V104-CARTO-RASTER-LEAFLET-SYNC";
-    console.log("[Fushimi Inari Smart Guide] planner.js V104-CARTO-RASTER-LEAFLET-SYNC loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V106-CARTO-RASTER-LEAFLET-SYNC";
+    console.log("[Fushimi Inari Smart Guide] planner.js V106-CARTO-RASTER-LEAFLET-SYNC loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -59,13 +59,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const ICON_DIR = "./images/icons/";
 
-    // These are the individual marker pictograms that actually exist in the
-    // project. Several sightseeing/food/guide SVGs do not exist in the current
-    // repository, so do not request missing files or leave empty pins for them.
-    const AVAILABLE_MAP_ICON_TYPES = new Set([
-        "diaper-changing", "ostomate", "station-jr", "station-keihan",
-        "toilet", "toilet-female", "toilet-japanese", "toilet-male",
-        "toilet-western", "washlet", "wheelchair"
+    // Actual toilet pictograms exist in images/icons/ and should be kept intact.
+    // Other ordinary map pins intentionally reuse the category-bar SVGs instead
+    // of inventing or requesting extra pictograms.
+    const TOILET_SVG_ICON_TYPES = new Set([
+        "toilet", "toilet-female", "toilet-japanese", "toilet-male", "toilet-western"
     ]);
 
     const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
@@ -1380,6 +1378,37 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         return value;
+    }
+
+    // One shared rule set keeps the map pin, spot card label and Eat/Shop filter
+    // in agreement. A shop name (notably ちいかわ本舗 / Chiikawa Honpo) takes
+    // priority over a generic source-data category such as 飲食店.
+    const BUY_SPOT_PATTERN = /お土産|土産|土みやげ|売店|物販|商店|雑貨|本舗|honpo|専門店|ショップ|買い物|購入|販売|グッズ|みやげ|souvenir|shopping|gift\s*shop|retail|store|shop|merchandise|购物|纪念品|礼品|商店|판매|기념품|쇼핑|매장/i;
+    const EAT_SPOT_PATTERN = /食事|飲食|料理|食堂|カフェ|喫茶|レストラン|ラーメン|そば|うどん|寿司|甘味|スイーツ|food|eat|restaurant|cafe|dining|ramen|noodle|sushi|dessert|餐|吃|咖啡|饮食|식당|음식|카페|식사/i;
+
+    function getSpotClassificationText(spot) {
+        const fields = [
+            spot?.name, spot?.category, spot?.description, spot?.tags,
+            spot?.keywords, spot?.keyword, spot?.type, spot?.icon, spot?.englishName
+        ];
+        return fields.map(function (value) {
+            if (Array.isArray(value)) return value.map(getLocalizedValue).join(" ");
+            return getLocalizedValue(value);
+        }).join(" ").toLocaleLowerCase();
+    }
+
+    function isBuySpot(spot) {
+        const normalized = normalizeCategory(spot?.category);
+        const shopCategoryAliases = ["buy", "shop", "shopping", "store", "souvenir", "gift", "retail", "物販", "土産", "買う", "ショッピング"];
+        return shopCategoryAliases.includes(normalized) || BUY_SPOT_PATTERN.test(getSpotClassificationText(spot));
+    }
+
+    function getSpotDisplayCategoryLabel(spot) {
+        if (isBuySpot(spot)) {
+            const language = String(getCurrentLanguage() || "ja").toLowerCase().slice(0, 2);
+            return ({ ja: "買う", en: "Shop", zh: "购物", ko: "쇼핑" })[language] || "買う";
+        }
+        return getCategoryLabel(spot?.category);
     }
 
     function getCategoryLabel(
@@ -2980,16 +3009,18 @@ document.addEventListener("DOMContentLoaded", function () {
             return "category-transport.svg";
         }
         if (category === "toilet" || /toilet|restroom|washroom|トイレ/.test(names)) {
+            // Actual toilet SVGs are used directly by the map-marker renderer.
+            // Keep facilities as the accent-color role for the pin itself.
             return "category-facilities.svg";
         }
-        if (category === "restaurant" || /restaurant|cafe|coffee|food|飲食|食堂|カフェ|喫茶/.test(names)) {
-            if (category === "buy" || /souvenir|gift shop|shopping|shop|お土産|土産|売店|ショップ/.test(names)) {
-                return "category-buy.svg";
-            }
-            return "category-food.svg";
-        }
-        if (category === "buy" || /souvenir|gift shop|shopping|shop|お土産|土産|売店|ショップ/.test(names)) {
+        // The Shop choice wins even when spots.json still labels the place as
+        // 飲食店. Include 本舗 / Honpo explicitly (Chiikawa Honpo).
+        if (isBuySpot(spot) || category === "buy" ||
+            /souvenir|gift\s*shop|shopping|shop|store|retail|お土産|土産|売店|ショップ|本舗|honpo|物販|グッズ/.test(names)) {
             return "category-buy.svg";
+        }
+        if (category === "restaurant" || /restaurant|cafe|coffee|food|飲食|食堂|カフェ|喫茶/.test(names)) {
+            return "category-food.svg";
         }
         if (["scenery", "shrine", "hiking"].includes(category) || /torii|shrine|viewpoint|scenic|summit|mountain|鳥居|神社|展望|景色|四ツ辻|山頂|登山|本殿|奉拝所/.test(names)) {
             return "category-sightseeing.svg";
@@ -3024,6 +3055,34 @@ document.addEventListener("DOMContentLoaded", function () {
             "pointer-events:none"
         ].join(";");
         return `<span class="icon-category-fallback" aria-hidden="true" style="${style}"></span>`;
+    }
+
+    function getMarkerGlyphMarkup(spot, highlighted) {
+        const iconType = getIconType(spot);
+        const size = 25;
+
+        // Toilets have their own project SVG artwork. Use those exact assets
+        // instead of flattening the pictogram into the category-facilities mask.
+        if (TOILET_SVG_ICON_TYPES.has(iconType)) {
+            const grayFile = getIconFileName(iconType, false);
+            const colorFile = getIconFileName(iconType, true);
+            return `
+                <img class="icon-image icon-gray" src="${ICON_DIR}${grayFile}" alt="" aria-hidden="true"
+                    style="width:${size}px;height:${size}px;"
+                    onload="window.handlePlannerMarkerIconLoad(this)"
+                    onerror="window.handlePlannerMarkerIconError(this)">
+                <img class="icon-image icon-color" src="${ICON_DIR}${colorFile}" alt="" aria-hidden="true"
+                    style="width:${size}px;height:${size}px;"
+                    onload="window.handlePlannerMarkerIconLoad(this)"
+                    onerror="window.handlePlannerMarkerIconError(this)">
+            `;
+        }
+
+        // All other map marker pictograms reuse the existing category-bar SVG.
+        return getCategoryMaskMarkup(spot, {
+            color: highlighted ? getMarkerAccentColor(spot) : GRAY_COLOR,
+            size
+        });
     }
 
     function getMarkerZIndexOffset(
@@ -3076,13 +3135,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const isHighlighted = Boolean(selected || viewed);
         const markerColor = isHighlighted ? accentColor : GRAY_COLOR;
 
-        // The map pin uses the exact same SVG asset as the category bar.
-        // Unselected pins are neutral gray; route-selected / currently viewed
-        // pins use the matching category accent, so state is immediately clear.
-        const iconMarkup = getCategoryMaskMarkup(spot, {
-            color: markerColor,
-            size: 25
-        });
+        // Ordinary pins reuse the category-bar SVG; restroom pins use the existing
+        // toilet pictogram files. Unselected pins stay neutral, while selected or
+        // viewed pins use their category accent / original active restroom icon.
+        const iconMarkup = getMarkerGlyphMarkup(spot, isHighlighted);
 
         const classes = ["custom-map-marker"];
         const isRailway = ["station-jr", "station-keihan"].includes(iconType);
@@ -3466,6 +3522,16 @@ document.addEventListener("DOMContentLoaded", function () {
                     plannerMarkerFrontBack
                     1s
                     cubic-bezier(.22,.72,.32,1);
+            }
+
+            .custom-map-marker.is-highlighted
+            .icon-gray {
+                opacity: 0;
+            }
+
+            .custom-map-marker.is-highlighted
+            .icon-color {
+                opacity: 1;
             }
 
             .custom-map-marker.is-selected
@@ -3885,7 +3951,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const name = getLocalizedValue(spot.name);
         const description = getLocalizedValue(spot.description);
-        const category = getCategoryLabel(spot.category);
+        const category = getSpotDisplayCategoryLabel(spot);
         const categoryIconFile = getCategoryBarIconFile(spot);
         const categoryIconColor = getMarkerAccentColor(spot);
         const time = spot.time || "-";
@@ -4029,7 +4095,7 @@ document.addEventListener("DOMContentLoaded", function () {
         list.forEach(function (spot) {
             const name = getLocalizedValue(spot.name);
             const description = getLocalizedValue(spot.description);
-            const category = getCategoryLabel(spot.category);
+            const category = getSpotDisplayCategoryLabel(spot);
             const time = spot.time || "-";
             const image = spot.image || "";
             const url = getSafeURL(spot.url);
@@ -4478,7 +4544,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         const name = getLocalizedValue(spot.name);
         const description = getLocalizedValue(spot.description) || "説明はまだ登録されていません。";
-        const category = getCategoryLabel(spot.category);
+        const category = getSpotDisplayCategoryLabel(spot);
         const time = spot.time || "";
         const url = getSafeURL(spot.url);
         const image = typeof spot.image === "string" ? spot.image.trim() : "";
@@ -5281,8 +5347,6 @@ document.addEventListener("DOMContentLoaded", function () {
             : (isFoodMode ? "__food_shop__" : normalizeCategory(selectedCategory));
         const foodFilter = activeFoodFilter || "all";
 
-        const eatPattern = /食事|飲食|料理|食堂|カフェ|喫茶|レストラン|ラーメン|そば|うどん|寿司|甘味|スイーツ|food|eat|restaurant|cafe|dining|ramen|noodle|sushi|dessert|餐|吃|咖啡|饮食|식당|음식|카페|식사/i;
-        const buyPattern = /お土産|土産|土みやげ|売店|物販|商店|雑貨|本舗|専門店|ショップ|買い物|購入|販売|グッズ|みやげ|souvenir|shopping|gift shop|retail|store|shop|merchandise|购物|纪念品|礼品|商店|판매|기념품|쇼핑|매장/i;
 
         return spots.filter(function (spot) {
             const searchFields = [
@@ -5297,23 +5361,17 @@ document.addEventListener("DOMContentLoaded", function () {
             const matchesSearch = !keyword || searchableText.includes(keyword);
 
             const normalizedSpotCategory = normalizeCategory(spot.category);
-            const foodFields = [spot.name, spot.category, spot.description, spot.tags,
-                spot.keywords, spot.keyword, spot.type, spot.icon, spot.englishName];
-            const foodText = foodFields.map(function (value) {
-                if (Array.isArray(value)) return value.map(getLocalizedValue).join(" ");
-                return getLocalizedValue(value);
-            }).join(" ").toLocaleLowerCase();
+            const foodText = getSpotClassificationText(spot);
 
             let matchesCategory;
             if (isFoodMode) {
-                const isBuySpot = buyPattern.test(foodText) ||
-                    ["shop", "shopping", "store", "souvenir", "gift", "retail", "物販", "土産"].includes(normalizedSpotCategory);
-                // When a spot has conflicting text (for example a store name and a
-                // copied café description), treat explicit shop signals as Buy first.
-                const isEatSpot = !isBuySpot &&
-                    (normalizedSpotCategory === "restaurant" || eatPattern.test(foodText));
+                const classifiedAsBuy = isBuySpot(spot);
+                // Explicit shop signals (including 本舗 / Honpo) win over an
+                // otherwise generic restaurant category copied into spots.json.
+                const isEatSpot = !classifiedAsBuy &&
+                    (normalizedSpotCategory === "restaurant" || EAT_SPOT_PATTERN.test(foodText));
                 matchesCategory = foodFilter === "eat" ? isEatSpot :
-                    foodFilter === "buy" ? isBuySpot : (isEatSpot || isBuySpot);
+                    foodFilter === "buy" ? classifiedAsBuy : (isEatSpot || classifiedAsBuy);
             } else {
                 matchesCategory = targetCategory === "all" ||
                     (targetCategory === "sightseeing" && ["scenery", "shrine", "hiking"].includes(normalizedSpotCategory)) ||
