@@ -6256,3 +6256,100 @@ body.planner-page .liquid-cursor {
   width: 24px !important;
   height: 24px !important;
 }
+
+/* V97: exact shared palette between category-bar glyphs and map marker glyphs. */
+#plannerCategoryTray #plannerCategoryFront [data-category="all"] {
+  --category-accent: #FF2800 !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="sightseeing"] {
+  --category-accent: #9A0079 !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger,
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="eat"],
+#plannerCategoryTray #foodCategoryOptions [data-food-filter="buy"] {
+  --category-accent: #FF9900 !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="交通"] {
+  --category-accent: #0041FF !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+#plannerCategoryTray #plannerCategoryFront [data-category="施設"] {
+  --category-accent: #35A16B !important;
+  --category-active-icon: #FFFFFF !important;
+  --category-active-text: #FFFFFF !important;
+}
+
+/* Use each marker SVG as an alpha mask, then paint it with its category color.
+   This changes only the icon's color, not its shape. */
+.custom-map-marker .icon-tinted {
+  display: none !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  z-index: 4 !important;
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background-color: var(--marker-accent-color, #FF2800) !important;
+  background-image: none !important;
+  -webkit-mask-image: var(--marker-icon-mask) !important;
+  mask-image: var(--marker-icon-mask) !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
+}
+.custom-map-marker.has-tinted-icon .icon-gray,
+.custom-map-marker.has-tinted-icon .icon-color {
+  opacity: 0 !important;
+}
+.custom-map-marker.has-tinted-icon .icon-tinted {
+  display: block !important;
+  opacity: 1 !important;
+}
+.custom-map-marker.use-gray-fallback .icon-gray {
+  opacity: 1 !important;
+}
+.custom-map-marker.use-gray-fallback .icon-color,
+.custom-map-marker.use-gray-fallback .icon-tinted {
+  opacity: 0 !important;
+}
+
+
+/* V97: keep the category glyph in its matching map color even while selected.
+   A light color wash + colored outline indicates selection without turning the
+   category icon white and breaking the color correspondence. */
+#plannerCategoryTray #plannerCategoryFront .category-button.active,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active {
+  background: color-mix(in srgb, var(--category-accent, #FF2800) 13%, #FFFFFF) !important;
+  background-color: color-mix(in srgb, var(--category-accent, #FF2800) 13%, #FFFFFF) !important;
+  border: 1.5px solid var(--category-accent, #FF2800) !important;
+  color: #202124 !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--category-accent, #FF2800) 12%, transparent),
+              0 3px 9px rgba(28, 39, 32, .10) !important;
+}
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-glyph-image,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-glyph-image,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-glyph-image {
+  background: var(--category-accent, #FF2800) !important;
+  background-color: var(--category-accent, #FF2800) !important;
+}
+#plannerCategoryTray #plannerCategoryFront .category-button.active .category-label,
+#plannerCategoryTray #plannerCategoryFront .food-category-trigger.active .category-label,
+#plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
+  color: #202124 !important;
+}

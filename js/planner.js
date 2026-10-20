@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V94-VERMILION-ROUTE-CATEGORY-ICONS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V94-VERMILION-ROUTE-CATEGORY-ICONS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V82-EDGE-LIGHT-PANE-FIX-HIDDEN-WEATHER";
+    console.log("[Fushimi Inari Smart Guide] planner.js V82-EDGE-LIGHT-PANE-FIX-HIDDEN-WEATHER loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const GRAY_COLOR = "#7F878F"; // palette neutral gray
     const PIN_COLOR = "#ff4b00"; // keep the existing Fushimi Inari vermilion pin color
-    const ROUTE_COLOR = "#C40018"; // Fushimi Inari brand vermilion: route line
+    const ROUTE_COLOR = "#FF9900"; // palette accent orange: route / motion line
 
     // ============================================================
     // アイコンカラー
@@ -84,13 +84,17 @@ document.addEventListener("DOMContentLoaded", function () {
     // Universal-design palette roles. Gendered toilet variants deliberately share
     // one color so meaning is carried by the icon / label, not pink-versus-blue.
     // Fushimi Inari's existing vermilion shrine/torii colors are intentionally kept.
+    // Shared category palette: the map glyph + pin outline use the same exact
+    // color as the matching category-bar icon.
+    // All / guide = vermilion, sightseeing = purple, food & shop = orange,
+    // transit = blue, facilities = green.
     const ICON_COLOR_MAP = {
-        toilet: "#FF9900",
-        "toilet-male": "#FF9900",
-        "toilet-female": "#FF9900",
-        "toilet-western": "#FF9900",
-        "toilet-japanese": "#FF9900",
-        washlet: "#FF9900",
+        toilet: "#35A16B",
+        "toilet-male": "#35A16B",
+        "toilet-female": "#35A16B",
+        "toilet-western": "#35A16B",
+        "toilet-japanese": "#35A16B",
+        washlet: "#35A16B",
 
         wheelchair: "#35A16B",
         "diaper-changing": "#35A16B",
@@ -98,25 +102,43 @@ document.addEventListener("DOMContentLoaded", function () {
         "changing-table": "#35A16B",
         ostomate: "#35A16B",
 
-        scenery: "#0041FF",
-        viewpoint: "#0041FF",
-        shrine: "#A83432", // existing Fushimi Inari vermilion / shrine color
-        hiking: "#35A16B",
+        scenery: "#9A0079",
+        viewpoint: "#9A0079",
+        shrine: "#9A0079",
+        hiking: "#9A0079",
         restaurant: "#FF9900",
-        shop: "#A83432",
-        guide: "#663300",
+        guide: "#FF2800",
         "station-jr": "#0041FF",
-        "station-keihan": "#9A0079",
-        smoking: "#7F878F",
+        "station-keihan": "#0041FF",
+        smoking: "#35A16B",
         exchange: "#35A16B",
-        "public-phone": "#0041FF",
-        "trash-box": "#663300",
+        "public-phone": "#35A16B",
+        "trash-box": "#35A16B",
         "evacuation-shelter": "#35A16B",
-        "baggage-storage": "#9A0079",
-        "coin-locker": "#9A0079",
-        "rest-area": "#66CCFF",
+        "baggage-storage": "#35A16B",
+        "coin-locker": "#35A16B",
+        "rest-area": "#35A16B",
 
-        torii: "#A83432" // existing Fushimi Inari vermilion / torii color
+        torii: "#9A0079"
+    };
+
+    // When the colored source SVG loads, reuse its silhouette as a CSS mask so
+    // every map glyph is tinted with the exact color used by the category bar.
+    window.handlePlannerMarkerIconLoad = function (img) {
+        if (!img || !img.naturalWidth) return;
+        const marker = img.closest(".custom-map-marker");
+        if (!marker) return;
+
+        if (img.classList.contains("icon-color")) {
+            if (marker.querySelector(".icon-tinted")) {
+                marker.classList.add("has-tinted-icon");
+            }
+        } else if (
+            img.classList.contains("icon-gray") &&
+            marker.querySelector(".icon-color.is-load-error")
+        ) {
+            marker.classList.add("use-gray-fallback");
+        }
     };
 
     // Use the icon assets supplied in ./images/icons/ for every marker, including rail stations.
@@ -126,6 +148,13 @@ document.addEventListener("DOMContentLoaded", function () {
         img.classList.add("is-load-error");
         const marker = img.closest(".custom-map-marker");
         if (!marker) return;
+
+        if (img.classList.contains("icon-color")) {
+            const gray = marker.querySelector("img.icon-gray");
+            if (gray && gray.complete && gray.naturalWidth > 0) {
+                marker.classList.add("use-gray-fallback");
+            }
+        }
 
         const images = Array.from(marker.querySelectorAll("img.icon-image"));
         const allFailed = images.length > 0 && images.every(function (image) {
@@ -2824,11 +2853,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return "station-jr";
         }
 
-        // Store / souvenir venues use the same Buy SVG as the category tray.
-        if (/本舗|土産|おみやげ|ショップ|物販|souvenir|gift.?shop|\bshop\b|\bstore\b/i.test(nameText)) {
-            return "shop";
-        }
-
         if (explicit) return explicit;
 
         if (category === "toilet") return "toilet";
@@ -2903,25 +2927,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 iconType
             );
 
-        const categoryIconFiles = {
-            viewpoint: "category-sightseeing.svg",
-            shrine: "category-sightseeing.svg",
-            hiking: "category-sightseeing.svg",
-            torii: "category-sightseeing.svg",
-            guide: "category-sightseeing.svg",
-            restaurant: "category-food.svg",
-            shop: "category-buy.svg"
-        };
-
-        if (categoryIconFiles[type]) {
-            return categoryIconFiles[type];
-        }
-
         if (!type) {
-            return "category-sightseeing.svg";
+
+            return selected
+                ? "guide.svg"
+                : "guide-gray.svg";
         }
 
-        return selected ? `${type}.svg` : `${type}-gray.svg`;
+        return selected
+            ? `${type}.svg`
+            : `${type}-gray.svg`;
     }
 
     function getMarkerAccentColor(
@@ -2965,7 +2980,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (["station-jr", "station-keihan"].includes(iconType) || category === "transport") return "🚉";
         if (["wheelchair", "ostomate"].includes(iconType)) return "♿";
         if (["diaper-changing", "baby-chair", "changing-table"].includes(iconType)) return "🍼";
-        if (iconType === "shop" || iconType === "buy") return "🛍️";
         if (iconType === "restaurant" || category === "restaurant") return "🍜";
         if (iconType === "hiking" || category === "hiking") return "🥾";
         if (["torii", "shrine"].includes(iconType) || category === "shrine" || name.includes("鳥居") || name.includes("神社")) return "⛩️";
@@ -3086,6 +3100,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             alt=""
                             aria-hidden="true"
                             draggable="false"
+                            onload="window.handlePlannerMarkerIconLoad(this)"
                             onerror="window.handlePlannerMarkerIconError(this)"
                         >
 
@@ -3095,8 +3110,15 @@ document.addEventListener("DOMContentLoaded", function () {
                             alt=""
                             aria-hidden="true"
                             draggable="false"
+                            onload="window.handlePlannerMarkerIconLoad(this)"
                             onerror="window.handlePlannerMarkerIconError(this)"
                         >
+
+                        <span
+                            class="icon-image icon-tinted"
+                            style="--marker-icon-mask: url('${ICON_DIR}${colorFile}')"
+                            aria-hidden="true"
+                        ></span>
 
                     </div>
                     <span class="marker-name-glass">${escapeHTML(getLocalizedValue(spot.name))}</span>
@@ -4012,7 +4034,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? `<span class="viewing-label">${escapeHTML(getSpotViewingLabel())}</span>`
                 : "";
             const iconType = getIconType(spot);
-            const customIconFile = iconType ? `${ICON_DIR}${getIconFileName(iconType, true)}` : "";
+            const customIconFile = iconType ? `${ICON_DIR}${iconType}.svg` : "";
             const symbol = customIconFile
                 ? `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true" onerror="this.classList.add('is-load-error'); this.nextElementSibling.hidden=false;"> <span class="spot-card-icon-fallback" hidden>no icon</span>`
                 : `<span class="spot-card-icon-fallback">no icon</span>`;
