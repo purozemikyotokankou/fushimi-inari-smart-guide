@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V82-EDGE-LIGHT-PANE-FIX-HIDDEN-WEATHER";
-    console.log("[Fushimi Inari Smart Guide] planner.js V82-EDGE-LIGHT-PANE-FIX-HIDDEN-WEATHER loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V100-MULTILINGUAL-VECTOR-BASEMAP";
+    console.log("[Fushimi Inari Smart Guide] planner.js V100-MULTILINGUAL-VECTOR-BASEMAP loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -554,6 +554,218 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
     gsiLayer.addTo(map);
+
+    // ============================================================
+    // V100 多言語向けベースマップ
+    // 日本語UIでは従来の国土地理院地図を使用。
+    // English / 中文 / 한국어では、OpenFreeMapのベクター地図へ切り替え、
+    // name:en / name:zh / name:ko を優先して漢字だけの地図になりにくくする。
+    // APIキー不要。地図操作・マーカー・ルートは既存のLeafletを維持する。
+    // ============================================================
+    const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+    const OPENFREEMAP_ATTRIBUTION =
+        '&copy; <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
+
+    let fushimiVectorMap = null;
+    let fushimiVectorContainer = null;
+    let fushimiVectorSyncFrame = 0;
+    let fushimiVectorMoveHandler = null;
+    let fushimiVectorResizeHandler = null;
+    let fushimiVectorGeneration = 0;
+    let mapLibreAssetsPromise = null;
+
+    function ensureMapLibreAssets() {
+        if (window.maplibregl && typeof window.maplibregl.Map === "function") {
+            return Promise.resolve(window.maplibregl);
+        }
+        if (mapLibreAssetsPromise) return mapLibreAssetsPromise;
+
+        mapLibreAssetsPromise = new Promise(function (resolve, reject) {
+            if (!document.querySelector('link[data-fushimi-maplibre-css="true"]')) {
+                const css = document.createElement("link");
+                css.rel = "stylesheet";
+                css.href = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
+                css.dataset.fushimiMaplibreCss = "true";
+                document.head.appendChild(css);
+            }
+
+            const script = document.createElement("script");
+            script.src = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
+            script.async = true;
+            script.dataset.fushimiMaplibreScript = "true";
+            script.onload = function () {
+                if (window.maplibregl && typeof window.maplibregl.Map === "function") {
+                    resolve(window.maplibregl);
+                } else {
+                    reject(new Error("MapLibre GL JS was loaded without its global API."));
+                }
+            };
+            script.onerror = function () {
+                reject(new Error("MapLibre GL JS could not be loaded."));
+            };
+            document.head.appendChild(script);
+        });
+        return mapLibreAssetsPromise;
+    }
+
+    function mapLabelExpression(language) {
+        const localizedName = "name:" + language;
+        // Prefer a real translation, then the Latin transliteration. If neither exists,
+        // keep the source name instead of making a label disappear entirely.
+        return [
+            "coalesce",
+            ["get", localizedName],
+            ["get", "name:latin"],
+            ["get", "name"]
+        ];
+    }
+
+    function applyVectorMapLabelLanguage(vectorMap, language) {
+        if (!vectorMap || !vectorMap.isStyleLoaded()) return;
+        const field = mapLabelExpression(language);
+        const style = vectorMap.getStyle();
+        (style.layers || []).forEach(function (layer) {
+            if (layer.type !== "symbol" || !layer.layout || !layer.layout["text-field"]) return;
+            // Do not replace road shields, route numbers, or other non-name text.
+            const currentTextField = JSON.stringify(layer.layout["text-field"]);
+            if (!/name/i.test(currentTextField)) return;
+            try {
+                vectorMap.setLayoutProperty(layer.id, "text-field", field);
+            } catch (error) {
+                console.debug("地図ラベルの言語を変更できないレイヤーをスキップしました:", layer.id, error);
+            }
+        });
+    }
+
+    function removeForeignLanguageBasemap() {
+        fushimiVectorGeneration += 1;
+        if (fushimiVectorSyncFrame) {
+            cancelAnimationFrame(fushimiVectorSyncFrame);
+            fushimiVectorSyncFrame = 0;
+        }
+        if (fushimiVectorMoveHandler) map.off("move", fushimiVectorMoveHandler);
+        if (fushimiVectorResizeHandler) map.off("resize", fushimiVectorResizeHandler);
+        fushimiVectorMoveHandler = null;
+        fushimiVectorResizeHandler = null;
+
+        if (fushimiVectorMap) {
+            try { fushimiVectorMap.remove(); } catch (_) { /* already removed */ }
+            fushimiVectorMap = null;
+        }
+        if (fushimiVectorContainer) {
+            fushimiVectorContainer.remove();
+            fushimiVectorContainer = null;
+        }
+        map.attributionControl?.removeAttribution(OPENFREEMAP_ATTRIBUTION);
+        if (!map.hasLayer(gsiLayer)) gsiLayer.addTo(map);
+    }
+
+    function switchPlannerBasemapForLanguage(language) {
+        const lang = String(language || "ja").toLowerCase().slice(0, 2);
+        if (lang === "ja") {
+            removeForeignLanguageBasemap();
+            return;
+        }
+
+        if (!["en", "zh", "ko"].includes(lang)) {
+            // Unknown UI language: avoid changing the map unexpectedly.
+            return;
+        }
+
+        const generation = ++fushimiVectorGeneration;
+        ensureMapLibreAssets().then(function (maplibregl) {
+            if (generation !== fushimiVectorGeneration) return;
+
+            // A direct child of #map stays fixed to the viewport while Leaflet pans its
+            // own panes. That prevents the vector canvas and Leaflet markers from drifting.
+            if (fushimiVectorMap) {
+                try { fushimiVectorMap.remove(); } catch (_) { /* no-op */ }
+                fushimiVectorMap = null;
+            }
+            if (fushimiVectorContainer) fushimiVectorContainer.remove();
+
+            const container = document.createElement("div");
+            container.className = "fushimi-vector-basemap";
+            container.setAttribute("aria-hidden", "true");
+            container.style.position = "absolute";
+            container.style.inset = "0";
+            container.style.width = "100%";
+            container.style.height = "100%";
+            container.style.overflow = "hidden";
+            container.style.pointerEvents = "none";
+            container.style.zIndex = "100";
+            map.getContainer().appendChild(container);
+            fushimiVectorContainer = container;
+
+            const center = map.getCenter();
+            const vectorMap = new maplibregl.Map({
+                container: container,
+                style: OPENFREEMAP_STYLE_URL,
+                center: [center.lng, center.lat],
+                // MapLibre uses 512 px vector tiles; subtract one zoom level to match
+                // Leaflet's 256 px tile zoom scale.
+                zoom: Math.max(0, map.getZoom() - 1),
+                interactive: false,
+                attributionControl: false,
+                fadeDuration: 0,
+                pitch: 0,
+                bearing: 0,
+                renderWorldCopies: false
+            });
+            fushimiVectorMap = vectorMap;
+
+            function syncVectorMapToLeaflet() {
+                if (fushimiVectorSyncFrame) return;
+                fushimiVectorSyncFrame = requestAnimationFrame(function () {
+                    fushimiVectorSyncFrame = 0;
+                    if (fushimiVectorMap !== vectorMap || !vectorMap.loaded()) return;
+                    const nextCenter = map.getCenter();
+                    const nextZoom = Math.max(0, map.getZoom() - 1);
+                    vectorMap.jumpTo({ center: [nextCenter.lng, nextCenter.lat], zoom: nextZoom });
+                });
+            }
+
+            fushimiVectorMoveHandler = syncVectorMapToLeaflet;
+            fushimiVectorResizeHandler = function () {
+                if (fushimiVectorMap === vectorMap) {
+                    window.requestAnimationFrame(function () {
+                        try { vectorMap.resize(); } catch (_) { /* map may be closing */ }
+                        syncVectorMapToLeaflet();
+                    });
+                }
+            };
+            map.on("move", fushimiVectorMoveHandler);
+            map.on("resize", fushimiVectorResizeHandler);
+
+            vectorMap.once("load", function () {
+                if (generation !== fushimiVectorGeneration || fushimiVectorMap !== vectorMap) {
+                    try { vectorMap.remove(); } catch (_) { /* stale load */ }
+                    return;
+                }
+                applyVectorMapLabelLanguage(vectorMap, lang);
+                if (map.hasLayer(gsiLayer)) map.removeLayer(gsiLayer);
+                map.attributionControl?.addAttribution(OPENFREEMAP_ATTRIBUTION);
+                syncVectorMapToLeaflet();
+            });
+
+            vectorMap.on("error", function (event) {
+                console.warn("外国語向けベースマップの読み込み中にエラーが発生しました:", event && event.error ? event.error : event);
+            });
+        }).catch(function (error) {
+            if (generation !== fushimiVectorGeneration) return;
+            console.warn("外国語向けベースマップを利用できません。標準地図に戻します:", error);
+            removeForeignLanguageBasemap();
+        });
+    }
+
+    // Language selection is persisted by language.js. Keep Japanese visitors on the
+    // familiar GSI map; use localized vector labels for English/Chinese/Korean visitors.
+    const initialMapLanguage =
+        document.getElementById("languageSelect")?.value ||
+        document.documentElement.lang ||
+        localStorage.getItem("language") ||
+        "ja";
+    switchPlannerBasemapForLanguage(initialMapLanguage);
 
     // ============================================================
     // ルート用Pane
