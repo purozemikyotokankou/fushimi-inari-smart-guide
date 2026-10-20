@@ -506,10 +506,21 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .language-box,
-            body.language-page::before,
-            body.language-page::after {
+            /* The panel itself stays still, but keep the gentle ambient light alive. */
+            .language-box {
                 animation: none;
+            }
+
+            body.language-page::before {
+                animation: floatLeft 11s ease-in-out infinite alternate !important;
+                animation-duration: 11s !important;
+                animation-iteration-count: infinite !important;
+            }
+
+            body.language-page::after {
+                animation: floatRight 13s ease-in-out infinite alternate !important;
+                animation-duration: 13s !important;
+                animation-iteration-count: infinite !important;
             }
 
             .language-box button {
@@ -558,7 +569,7 @@
     </div>
 
 
-    <script src="js/liquid-cursor.js?v=90" defer></script>
+    <script src="js/liquid-cursor.js?v=94" defer></script>
 
     <script src="js/language.js"></script>
 

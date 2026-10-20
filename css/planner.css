@@ -6234,3 +6234,45 @@ body.planner-page .liquid-cursor {
 /* V93: keep the pre-existing Eat/Shop category-bar colors.
    category-food-shop.svg is a monochrome composition of the existing Eat and Shop SVGs;
    the current category color is still supplied by the existing CSS category palette. */
+
+
+/* =========================================================
+   V94 — Fushimi Inari vermilion route + category-matched marker icons
+   ========================================================= */
+.leaflet-overlay-pane .planner-route-base-line,
+.leaflet-plannerRoutePane .planner-route-base-line,
+.planner-route-base-line {
+  stroke: #C40018 !important;
+  stroke-width: 6px !important;
+  stroke-opacity: 1 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 2px rgba(196,0,24,.82)) drop-shadow(0 0 5px rgba(196,0,24,.24)) !important;
+}
+.leaflet-overlay-pane .planner-route-outline-line,
+.leaflet-plannerRoutePane .planner-route-outline-line,
+.planner-route-outline-line {
+  stroke: #FFFFFF !important;
+  stroke-width: 12px !important;
+  stroke-opacity: .97 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+.leaflet-overlay-pane .planner-route-runner-trail,
+.leaflet-plannerRoutePane .planner-route-runner-trail,
+.planner-route-runner-trail {
+  stroke: #FFE5E8 !important;
+  stroke-width: 5.7px !important;
+  stroke-opacity: .42 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+.leaflet-overlay-pane .planner-route-runner-core,
+.leaflet-plannerRoutePane .planner-route-runner-core,
+.planner-route-runner-core {
+  stroke: #FFFFFF !important;
+  stroke-width: 5.7px !important;
+  stroke-opacity: .98 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}

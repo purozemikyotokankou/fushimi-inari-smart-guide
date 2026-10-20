@@ -269,57 +269,6 @@
             background: #000;
         }
 
-        /* 旧index画面の赤い光球をホームの動画背景へ移植。UI操作を妨げず、ゆっくり漂う。 */
-        .home-red-orb {
-            position: absolute;
-            z-index: 1;
-            left: 58%;
-            top: 48%;
-            width: clamp(280px, 43vw, 680px);
-            aspect-ratio: 1;
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: .82;
-            background: radial-gradient(
-                circle,
-                rgba(196, 0, 24, .52) 0%,
-                rgba(196, 0, 24, .30) 27%,
-                rgba(196, 0, 24, .12) 48%,
-                rgba(196, 0, 24, 0) 72%
-            );
-            filter: blur(18px);
-            mix-blend-mode: screen;
-            transform: translate3d(-50%, -50%, 0) scale(.86);
-            transform-origin: center;
-            animation: homeRedOrbDrift 8.5s ease-in-out infinite alternate;
-            will-change: transform, opacity;
-        }
-
-        @keyframes homeRedOrbDrift {
-            0% {
-                transform: translate3d(-43%, -44%, 0) scale(.82);
-                opacity: .62;
-            }
-            45% {
-                transform: translate3d(-58%, -55%, 0) scale(1.02);
-                opacity: .9;
-            }
-            100% {
-                transform: translate3d(-72%, -45%, 0) scale(1.13);
-                opacity: .72;
-            }
-        }
-
-        @media (max-width: 700px) {
-            .home-red-orb {
-                left: 62%;
-                top: 48%;
-                width: clamp(260px, 78vw, 460px);
-                opacity: .76;
-                filter: blur(15px);
-            }
-        }
-
         /*
             動画を見やすくするための最低限のオーバーレイ。
             動画そのものを主役にしつつ、文字だけ読みやすくする。
@@ -1152,7 +1101,6 @@
                 <source src="videos/fushimi.mp4" type="video/mp4">
             </video>
 
-            <div class="home-red-orb" aria-hidden="true"></div>
             <div class="home-hero-overlay" aria-hidden="true"></div>
 
             <div class="home-hero-copy">
