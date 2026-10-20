@@ -2938,33 +2938,15 @@ document.addEventListener("DOMContentLoaded", function () {
         ];
     }
 
-    function getIconFileName(
-        iconType,
-        selected
-    ) {
+    function getIconFileName(iconType, selected) {
         const type = normalizeIconType(iconType);
 
         if (!type) {
-            return "category-all.svg";
+            return selected ? "guide.svg" : "guide-gray.svg";
         }
 
-        // Keep the app's original, familiar icon artwork from images/icons/.
-        // V97 introduced new custom glyph files for these types; instead, reuse
-        // the existing category pictograms so the icon design stays consistent
-        // with the project while the shared palette still controls its color.
-        const legacyCategoryIcons = {
-            torii: "category-sightseeing.svg",
-            viewpoint: "category-sightseeing.svg",
-            shrine: "category-sightseeing.svg",
-            hiking: "category-sightseeing.svg",
-            restaurant: "category-food-shop.svg",
-            guide: "category-all.svg"
-        };
-
-        if (legacyCategoryIcons[type]) {
-            return legacyCategoryIcons[type];
-        }
-
+        // Restore the original individual pictograms from images/icons/.
+        // The shared category color still controls the marker accent/pin.
         return selected ? `${type}.svg` : `${type}-gray.svg`;
     }
 
@@ -3084,8 +3066,7 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
         const classes = [
-            "custom-map-marker",
-            "has-tinted-icon"
+            "custom-map-marker"
         ];
         const isRailway = ["station-jr", "station-keihan"].includes(iconType);
         if (isRailway) classes.push("is-railway");
