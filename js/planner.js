@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V100-MULTILINGUAL-VECTOR-BASEMAP";
-    console.log("[Fushimi Inari Smart Guide] planner.js V100-MULTILINGUAL-VECTOR-BASEMAP loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V103-CARTO-POSITRON-KEY-CONFIG";
+    console.log("[Fushimi Inari Smart Guide] planner.js V103-CARTO-POSITRON-KEY-CONFIG loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -38,6 +38,8 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshPlannerCategoryLanguage();
     document.getElementById("languageSelect")?.addEventListener("change", function () {
         setTimeout(refreshPlannerCategoryLanguage, 0);
+        // Switch the basemap label language with the app language as well.
+        switchPlannerBasemapForLanguage(this.value);
         if (activeRoutePlannerState) setTimeout(function () {
             renderRoutePlanner(activeRoutePlannerState);
         }, 0);
@@ -57,6 +59,15 @@ document.addEventListener("DOMContentLoaded", function () {
     ];
 
     const ICON_DIR = "./images/icons/";
+
+    // These are the individual marker pictograms that actually exist in the
+    // project. Several sightseeing/food/guide SVGs do not exist in the current
+    // repository, so do not request missing files or leave empty pins for them.
+    const AVAILABLE_MAP_ICON_TYPES = new Set([
+        "diaper-changing", "ostomate", "station-jr", "station-keihan",
+        "toilet", "toilet-female", "toilet-japanese", "toilet-male",
+        "toilet-western", "washlet", "wheelchair"
+    ]);
 
     const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
     const SAVED_ROUTE_KEY = "selectedRoute";
@@ -133,48 +144,42 @@ document.addEventListener("DOMContentLoaded", function () {
         neutral: "var(--planner-color-neutral)"
     };
 
-    // Tint the available SVG silhouette with the shared category palette token.
-    // If the colored asset is absent but the gray variant exists, use the gray
-    // SVG only as the mask source; it must not leave the map marker gray.
-    function usePlannerIconMaskSource(marker, image) {
-        if (!marker || !image || !image.naturalWidth) return false;
-        const tinted = marker.querySelector(".icon-tinted");
-        if (!tinted) return false;
-        const src = image.getAttribute("src");
-        if (src) tinted.style.setProperty("--marker-icon-mask", `url("${src}")`);
-        marker.classList.add("has-tinted-icon");
-        marker.classList.remove("use-gray-fallback");
-        return true;
-    }
-
+    // Keep the original pictogram artwork visible. The previous CSS-mask treatment
+    // flattened the multi-part SVGs and caused some inner pictogram details to vanish.
+    // If only one state variant loads, keep whichever valid image is available.
     window.handlePlannerMarkerIconLoad = function (img) {
         if (!img || !img.naturalWidth) return;
         const marker = img.closest(".custom-map-marker");
         if (!marker) return;
-
-        if (img.classList.contains("icon-color")) {
-            usePlannerIconMaskSource(marker, img);
-        } else if (
-            img.classList.contains("icon-gray") &&
-            marker.querySelector(".icon-color.is-load-error")
-        ) {
-            usePlannerIconMaskSource(marker, img);
+        const gray = marker.querySelector("img.icon-gray");
+        const color = marker.querySelector("img.icon-color");
+        const grayReady = !!(gray && gray.complete && gray.naturalWidth > 0);
+        const colorReady = !!(color && color.complete && color.naturalWidth > 0);
+        if (grayReady && (!color || color.classList.contains("is-load-error"))) {
+            marker.classList.add("use-gray-fallback");
+            marker.classList.remove("use-color-fallback");
+        } else if (colorReady && gray && gray.classList.contains("is-load-error")) {
+            marker.classList.add("use-color-fallback");
+            marker.classList.remove("use-gray-fallback");
         }
     };
 
-    // Use the icon assets supplied in ./images/icons/ for every marker, including rail stations.
-    // If both gray and color variants are missing, show the intentional "no icon" fallback.
     window.handlePlannerMarkerIconError = function (img) {
         if (!img) return;
         img.classList.add("is-load-error");
         const marker = img.closest(".custom-map-marker");
         if (!marker) return;
 
-        if (img.classList.contains("icon-color")) {
-            const gray = marker.querySelector("img.icon-gray");
-            if (gray && gray.complete && gray.naturalWidth > 0) {
-                usePlannerIconMaskSource(marker, gray);
-            }
+        const gray = marker.querySelector("img.icon-gray");
+        const color = marker.querySelector("img.icon-color");
+        const grayReady = !!(gray && gray.complete && gray.naturalWidth > 0);
+        const colorReady = !!(color && color.complete && color.naturalWidth > 0);
+        if (img.classList.contains("icon-color") && grayReady) {
+            marker.classList.add("use-gray-fallback");
+            marker.classList.remove("use-color-fallback");
+        } else if (img.classList.contains("icon-gray") && colorReady) {
+            marker.classList.add("use-color-fallback");
+            marker.classList.remove("use-gray-fallback");
         }
 
         const images = Array.from(marker.querySelectorAll("img.icon-image"));
@@ -182,11 +187,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return image.classList.contains("is-load-error") ||
                 (image.complete && image.naturalWidth === 0);
         });
-
-        if (allFailed) {
-            const fallback = marker.querySelector(".marker-fallback");
-            if (fallback) fallback.classList.add("is-visible");
-        }
+        if (allFailed) marker.classList.add("show-symbol-fallback");
     };
 
     // ============================================================
@@ -556,15 +557,40 @@ document.addEventListener("DOMContentLoaded", function () {
     gsiLayer.addTo(map);
 
     // ============================================================
-    // V100 多言語向けベースマップ
-    // 日本語UIでは従来の国土地理院地図を使用。
-    // English / 中文 / 한국어では、OpenFreeMapのベクター地図へ切り替え、
-    // name:en / name:zh / name:ko を優先して漢字だけの地図になりにくくする。
-    // APIキー不要。地図操作・マーカー・ルートは既存のLeafletを維持する。
+    // V103: CARTO Positron basemap with app-language-aware labels and configured key.
+    // The key is configured in js/carto-config.js so it can be replaced without
+    // editing this large planner script. Client-side keys are visible in source;
+    // restrict the key to the GitHub Pages hostname in the CARTO dashboard.
     // ============================================================
+    const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
+    const CARTO_POSITRON_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
     const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+    const CARTO_ATTRIBUTION =
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
+        '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
     const OPENFREEMAP_ATTRIBUTION =
-        '&copy; <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
+        '&copy; <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · ' +
+        '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
+
+    function getPlannerBasemapConfig() {
+        const key = String(CARTO_BASEMAP_API_KEY || "").trim();
+        if (key) {
+            return { provider: "carto", style: CARTO_POSITRON_STYLE_URL, attribution: CARTO_ATTRIBUTION };
+        }
+        return { provider: "openfreemap", style: OPENFREEMAP_STYLE_URL, attribution: OPENFREEMAP_ATTRIBUTION };
+    }
+
+    function addCartoKeyToRequest(url) {
+        const key = String(CARTO_BASEMAP_API_KEY || "").trim();
+        if (!key || !/^https:\/\/basemaps\.cartocdn\.com\//i.test(String(url))) return String(url);
+        try {
+            const parsed = new URL(url);
+            parsed.searchParams.set("key", key);
+            return parsed.toString();
+        } catch (_) {
+            return String(url);
+        }
+    }
 
     let fushimiVectorMap = null;
     let fushimiVectorContainer = null;
@@ -572,6 +598,8 @@ document.addEventListener("DOMContentLoaded", function () {
     let fushimiVectorMoveHandler = null;
     let fushimiVectorResizeHandler = null;
     let fushimiVectorGeneration = 0;
+    let fushimiVectorAttribution = null;
+    let fushimiVectorLanguage = "";
     let mapLibreAssetsPromise = null;
 
     function ensureMapLibreAssets() {
@@ -609,15 +637,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function mapLabelExpression(language) {
-        const localizedName = "name:" + language;
-        // Prefer a real translation, then the Latin transliteration. If neither exists,
-        // keep the source name instead of making a label disappear entirely.
-        return [
-            "coalesce",
-            ["get", localizedName],
-            ["get", "name:latin"],
-            ["get", "name"]
-        ];
+        const lang = String(language || "ja").toLowerCase().slice(0, 2);
+        const localizedName = "name:" + lang;
+        if (lang === "ja") {
+            return ["coalesce", ["get", "name:ja"], ["get", "name"], ["get", "name:latin"]];
+        }
+        // Prefer the selected UI language, then romanized text, then the source name.
+        return ["coalesce", ["get", localizedName], ["get", "name:latin"], ["get", "name"]];
     }
 
     function applyVectorMapLabelLanguage(vectorMap, language) {
@@ -626,7 +652,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const style = vectorMap.getStyle();
         (style.layers || []).forEach(function (layer) {
             if (layer.type !== "symbol" || !layer.layout || !layer.layout["text-field"]) return;
-            // Do not replace road shields, route numbers, or other non-name text.
             const currentTextField = JSON.stringify(layer.layout["text-field"]);
             if (!/name/i.test(currentTextField)) return;
             try {
@@ -647,7 +672,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (fushimiVectorResizeHandler) map.off("resize", fushimiVectorResizeHandler);
         fushimiVectorMoveHandler = null;
         fushimiVectorResizeHandler = null;
-
         if (fushimiVectorMap) {
             try { fushimiVectorMap.remove(); } catch (_) { /* already removed */ }
             fushimiVectorMap = null;
@@ -656,63 +680,80 @@ document.addEventListener("DOMContentLoaded", function () {
             fushimiVectorContainer.remove();
             fushimiVectorContainer = null;
         }
-        map.attributionControl?.removeAttribution(OPENFREEMAP_ATTRIBUTION);
+        if (fushimiVectorAttribution) {
+            map.attributionControl?.removeAttribution(fushimiVectorAttribution);
+            fushimiVectorAttribution = null;
+        }
+        fushimiVectorLanguage = "";
         if (!map.hasLayer(gsiLayer)) gsiLayer.addTo(map);
     }
 
     function switchPlannerBasemapForLanguage(language) {
-        const lang = String(language || "ja").toLowerCase().slice(0, 2);
-        if (lang === "ja") {
-            removeForeignLanguageBasemap();
-            return;
-        }
+        const lang = ["ja", "en", "zh", "ko"].includes(String(language || "ja").toLowerCase().slice(0, 2))
+            ? String(language || "ja").toLowerCase().slice(0, 2)
+            : "ja";
 
-        if (!["en", "zh", "ko"].includes(lang)) {
-            // Unknown UI language: avoid changing the map unexpectedly.
+        // A loaded vector basemap only needs its label expressions updated when
+        // the user changes language; no need to download the whole map again.
+        if (fushimiVectorMap && fushimiVectorMap.isStyleLoaded()) {
+            applyVectorMapLabelLanguage(fushimiVectorMap, lang);
+            fushimiVectorLanguage = lang;
             return;
         }
 
         const generation = ++fushimiVectorGeneration;
+        const basemapConfig = getPlannerBasemapConfig();
         ensureMapLibreAssets().then(function (maplibregl) {
             if (generation !== fushimiVectorGeneration) return;
 
-            // A direct child of #map stays fixed to the viewport while Leaflet pans its
-            // own panes. That prevents the vector canvas and Leaflet markers from drifting.
             if (fushimiVectorMap) {
                 try { fushimiVectorMap.remove(); } catch (_) { /* no-op */ }
                 fushimiVectorMap = null;
             }
-            if (fushimiVectorContainer) fushimiVectorContainer.remove();
+            if (fushimiVectorContainer) {
+                fushimiVectorContainer.remove();
+                fushimiVectorContainer = null;
+            }
+            if (fushimiVectorMoveHandler) map.off("move", fushimiVectorMoveHandler);
+            if (fushimiVectorResizeHandler) map.off("resize", fushimiVectorResizeHandler);
+            fushimiVectorMoveHandler = null;
+            fushimiVectorResizeHandler = null;
+            if (fushimiVectorAttribution) {
+                map.attributionControl?.removeAttribution(fushimiVectorAttribution);
+                fushimiVectorAttribution = null;
+            }
+            if (!map.hasLayer(gsiLayer)) gsiLayer.addTo(map);
 
+            // Direct child of #map keeps the vector tiles synchronized with Leaflet,
+            // while Leaflet's marker and route panes stay above this background.
             const container = document.createElement("div");
             container.className = "fushimi-vector-basemap";
             container.setAttribute("aria-hidden", "true");
-            container.style.position = "absolute";
-            container.style.inset = "0";
-            container.style.width = "100%";
-            container.style.height = "100%";
-            container.style.overflow = "hidden";
-            container.style.pointerEvents = "none";
-            container.style.zIndex = "100";
+            Object.assign(container.style, {
+                position: "absolute", inset: "0", width: "100%", height: "100%",
+                overflow: "hidden", pointerEvents: "none", zIndex: "100"
+            });
             map.getContainer().appendChild(container);
             fushimiVectorContainer = container;
 
             const center = map.getCenter();
             const vectorMap = new maplibregl.Map({
                 container: container,
-                style: OPENFREEMAP_STYLE_URL,
+                style: basemapConfig.style,
                 center: [center.lng, center.lat],
-                // MapLibre uses 512 px vector tiles; subtract one zoom level to match
-                // Leaflet's 256 px tile zoom scale.
                 zoom: Math.max(0, map.getZoom() - 1),
                 interactive: false,
                 attributionControl: false,
                 fadeDuration: 0,
                 pitch: 0,
                 bearing: 0,
-                renderWorldCopies: false
+                renderWorldCopies: false,
+                transformRequest: function (url) {
+                    return { url: basemapConfig.provider === "carto" ? addCartoKeyToRequest(url) : url };
+                }
             });
             fushimiVectorMap = vectorMap;
+            fushimiVectorLanguage = lang;
 
             function syncVectorMapToLeaflet() {
                 if (fushimiVectorSyncFrame) return;
@@ -744,26 +785,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 applyVectorMapLabelLanguage(vectorMap, lang);
                 if (map.hasLayer(gsiLayer)) map.removeLayer(gsiLayer);
-                map.attributionControl?.addAttribution(OPENFREEMAP_ATTRIBUTION);
+                fushimiVectorAttribution = basemapConfig.attribution;
+                map.attributionControl?.addAttribution(basemapConfig.attribution);
                 syncVectorMapToLeaflet();
             });
 
             vectorMap.on("error", function (event) {
-                console.warn("外国語向けベースマップの読み込み中にエラーが発生しました:", event && event.error ? event.error : event);
+                console.warn("Positronベースマップの読み込み中にエラーが発生しました:", event && event.error ? event.error : event);
             });
         }).catch(function (error) {
             if (generation !== fushimiVectorGeneration) return;
-            console.warn("外国語向けベースマップを利用できません。標準地図に戻します:", error);
+            console.warn("Positronベースマップを利用できません。標準地図に戻します:", error);
             removeForeignLanguageBasemap();
         });
     }
 
-    // Language selection is persisted by language.js. Keep Japanese visitors on the
-    // familiar GSI map; use localized vector labels for English/Chinese/Korean visitors.
+    // Keep Positron styling for every language; only the labels change.
     const initialMapLanguage =
+        localStorage.getItem("language") ||
         document.getElementById("languageSelect")?.value ||
         document.documentElement.lang ||
-        localStorage.getItem("language") ||
         "ja";
     switchPlannerBasemapForLanguage(initialMapLanguage);
 
@@ -3188,26 +3229,30 @@ document.addEventListener("DOMContentLoaded", function () {
         return CATEGORY_COLOR_CSS_VAR[role] || CATEGORY_COLOR_CSS_VAR.neutral;
     }
 
-    // Platinumaps/park-map inspired category pictograms.
-    // These are decorative fallbacks only; spot coordinates remain unchanged.
+    // Clear pictogram fallback for spot types that do not have a dedicated SVG in
+    // the current project. Existing toilet/station/service SVGs remain untouched.
     function getSpotSymbol(spot) {
         const iconType = getIconType(spot);
-        const name = getLocalizedValue(spot?.name).toLowerCase();
         const category = normalizeCategory(spot?.category);
+        const rawName = spot?.name;
+        const names = (rawName && typeof rawName === "object")
+            ? Object.values(rawName).join(" ").toLowerCase()
+            : String(rawName ?? "").toLowerCase();
+        const id = String(spot?.id ?? "");
 
+        if (id === "1" || /torii|鳥居/.test(names)) return "⛩️";
         if (iconType.includes("toilet") || category === "toilet") return "🚻";
         if (["station-jr", "station-keihan"].includes(iconType) || category === "transport") return "🚉";
         if (["wheelchair", "ostomate"].includes(iconType)) return "♿";
         if (["diaper-changing", "baby-chair", "changing-table"].includes(iconType)) return "🍼";
-        if (iconType === "restaurant" || category === "restaurant") return "🍜";
-        if (iconType === "hiking" || category === "hiking") return "🥾";
-        if (["torii", "shrine"].includes(iconType) || category === "shrine" || name.includes("鳥居") || name.includes("神社")) return "⛩️";
-        if (iconType === "viewpoint" || category === "scenery") return "🌄";
+        if (iconType === "restaurant" || ["restaurant", "グルメ", "飲食店"].includes(category)) return "🍜";
+        if (iconType === "hiking" || category === "hiking" || /summit|mountain|山頂|登山/.test(names)) return "🥾";
+        if (["torii", "shrine"].includes(iconType) || category === "shrine" || /shrine|神社|本殿|奉拝所/.test(names)) return "⛩️";
+        if (iconType === "viewpoint" || category === "scenery" || /viewpoint|scenic|展望|景色|四ツ辻/.test(names)) return "🌄";
         if (["rest-area", "smoking"].includes(iconType)) return "☕";
-        if (iconType === "coin-locker" || iconType === "baggage-storage") return "🧳";
-        if (iconType === "guide" || category === "guide") return "ℹ️";
-        if (name.includes("駅")) return "🚉";
-        if (name.includes("山") || name.includes("展望")) return "🌄";
+        if (["coin-locker", "baggage-storage"].includes(iconType)) return "🧳";
+        if (iconType === "guide" || category === "guide" || /入口|entrance|guide|案内/.test(names)) return "ℹ️";
+        if (/駅|station|keihan|railway|\bjr\b/.test(names)) return "🚉";
         return "📍";
     }
 
@@ -3271,6 +3316,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 iconType,
                 true
             );
+        const hasOriginalIconFiles = AVAILABLE_MAP_ICON_TYPES.has(iconType);
+        const fallbackSymbol = escapeHTML(getSpotSymbol(spot));
+        const iconMarkup = hasOriginalIconFiles ? `
+            <span class="icon-symbol-fallback" aria-hidden="true">${fallbackSymbol}</span>
+            <img class="icon-image icon-gray" src="${ICON_DIR}${grayFile}" alt="" aria-hidden="true" draggable="false" onload="window.handlePlannerMarkerIconLoad(this)" onerror="window.handlePlannerMarkerIconError(this)">
+            <img class="icon-image icon-color" src="${ICON_DIR}${colorFile}" alt="" aria-hidden="true" draggable="false" onload="window.handlePlannerMarkerIconLoad(this)" onerror="window.handlePlannerMarkerIconError(this)">
+        ` : `
+            <span class="icon-symbol-fallback is-visible" aria-hidden="true">${fallbackSymbol}</span>
+        `;
 
         const accentColor =
             getMarkerAccentColor(
@@ -3311,33 +3365,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             aria-hidden="true"
                         ></span>
 
-                        <span class="marker-fallback" aria-hidden="true">no icon</span>
-
-                        <img
-                            class="icon-image icon-gray"
-                            src="${ICON_DIR}${grayFile}"
-                            alt=""
-                            aria-hidden="true"
-                            draggable="false"
-                            onload="window.handlePlannerMarkerIconLoad(this)"
-                            onerror="window.handlePlannerMarkerIconError(this)"
-                        >
-
-                        <img
-                            class="icon-image icon-color"
-                            src="${ICON_DIR}${colorFile}"
-                            alt=""
-                            aria-hidden="true"
-                            draggable="false"
-                            onload="window.handlePlannerMarkerIconLoad(this)"
-                            onerror="window.handlePlannerMarkerIconError(this)"
-                        >
-
-                        <span
-                            class="icon-image icon-tinted"
-                            style="--marker-icon-mask: url('${ICON_DIR}${colorFile}')"
-                            aria-hidden="true"
-                        ></span>
+                        ${iconMarkup}
 
                     </div>
                     <span class="marker-name-glass">${escapeHTML(getLocalizedValue(spot.name))}</span>
@@ -3643,6 +3671,50 @@ document.addEventListener("DOMContentLoaded", function () {
             .icon-color {
                 opacity:
                     0;
+            }
+
+            /* Visible, compact pictograms for spot types with no dedicated SVG asset. */
+            .custom-map-marker .icon-symbol-fallback {
+                display: none !important;
+                position: absolute !important;
+                left: 50% !important;
+                top: 50% !important;
+                width: 28px !important;
+                height: 28px !important;
+                align-items: center !important;
+                justify-content: center !important;
+                transform: translate(-50%, -50%) !important;
+                transform-origin: center center !important;
+                font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important;
+                font-size: 23px !important;
+                line-height: 1 !important;
+                pointer-events: none !important;
+                z-index: 5 !important;
+            }
+            .custom-map-marker .icon-symbol-fallback.is-visible,
+            .custom-map-marker.show-symbol-fallback .icon-symbol-fallback {
+                display: flex !important;
+            }
+            .custom-map-marker.show-symbol-fallback .icon-image {
+                display: none !important;
+            }
+            .custom-map-marker.use-color-fallback .icon-gray {
+                opacity: 0 !important;
+            }
+            .custom-map-marker.use-color-fallback .icon-color {
+                display: block !important;
+                opacity: 1 !important;
+            }
+            .custom-map-marker.use-gray-fallback .icon-color {
+                opacity: 0 !important;
+            }
+            .custom-map-marker.use-gray-fallback .icon-gray {
+                display: block !important;
+                opacity: 1 !important;
+            }
+            .custom-map-marker:hover .icon-symbol-fallback,
+            .custom-map-marker.is-selected .icon-symbol-fallback {
+                transform: translate(-50%, -50%) scale(1.1) !important;
             }
 
             .custom-map-marker:hover
