@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V107-CARTO-ZOOM-LIMIT";
-    console.log("[Fushimi Inari Smart Guide] planner.js V107-CARTO-ZOOM-LIMIT loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V108-CARTO-TILE-URL-FIX";
+    console.log("[Fushimi Inari Smart Guide] planner.js V108-CARTO-TILE-URL-FIX loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -534,13 +534,15 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(refreshPlannerMapSize, 120);
 
     // ============================================================
-    // V104: CARTO Positron raster basemap on the same Leaflet map.
-    // No GSI fallback and no second MapLibre canvas: this avoids a GSI flash
-    // at startup and keeps basemap tiles, pins, and routes synchronized during zoom.
+    // V108: CARTO Positron raster basemap on the same Leaflet map.
+    // IMPORTANT: `light_all` is the raster style path; `rastertiles/` is used
+    // for the Voyager raster family, not the Positron `light_all` style.
+    // No GSI fallback and no second MapLibre canvas: map, pins, and routes
+    // remain synchronized during zoom.
     // ============================================================
     const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
     const CARTO_POSITRON_TILE_TEMPLATE =
-        "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png";
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
     const CARTO_POSITRON_TILE_URL = CARTO_POSITRON_TILE_TEMPLATE +
         (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
@@ -556,6 +558,25 @@ document.addEventListener("DOMContentLoaded", function () {
         updateWhenIdle: false,
         updateWhenZooming: true,
         attribution: CARTO_ATTRIBUTION
+    });
+    // Log tile failures without printing the request URL (which contains the API key).
+    // This makes future diagnosis possible without leaking the key in console logs.
+    let cartoTileErrorCount = 0;
+    let cartoTileLoadCount = 0;
+    cartoPositronLayer.on("tileload", function () {
+        cartoTileLoadCount += 1;
+        if (cartoTileLoadCount === 1) {
+            console.info("[Fushimi] CARTO Positron tiles are loading.");
+        }
+    });
+    cartoPositronLayer.on("tileerror", function () {
+        cartoTileErrorCount += 1;
+        if (cartoTileErrorCount === 1 || cartoTileErrorCount % 8 === 0) {
+            console.warn("[Fushimi] CARTO tile request failed; zoom=" + map.getZoom() +
+                ", failedTiles=" + cartoTileErrorCount +
+                ", loadedTiles=" + cartoTileLoadCount +
+                ", keyConfigured=" + Boolean(CARTO_BASEMAP_API_KEY));
+        }
     });
     cartoPositronLayer.addTo(map);
 
