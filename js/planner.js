@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V108-CARTO-TILE-URL-FIX";
-    console.log("[Fushimi Inari Smart Guide] planner.js V108-CARTO-TILE-URL-FIX loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V109-CARTO-403-FALLBACK";
+    console.log("[Fushimi Inari Smart Guide] planner.js V109-CARTO-403-FALLBACK loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -64,6 +64,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // of inventing or requesting extra pictograms.
     const TOILET_SVG_ICON_TYPES = new Set([
         "toilet", "toilet-female", "toilet-japanese", "toilet-male", "toilet-western"
+    ]);
+    // Only these individual SVGs actually exist in images/icons/. Other spot
+    // types must reuse category-bar SVGs instead of requesting missing files.
+    const PROJECT_DETAIL_SVG_ICON_TYPES = new Set([
+        ...TOILET_SVG_ICON_TYPES,
+        "diaper-changing", "ostomate", "station-jr", "station-keihan",
+        "washlet", "wheelchair"
     ]);
 
     const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
@@ -534,11 +541,12 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(refreshPlannerMapSize, 120);
 
     // ============================================================
-    // V108: CARTO Positron raster basemap on the same Leaflet map.
-    // IMPORTANT: `light_all` is the raster style path; `rastertiles/` is used
-    // for the Voyager raster family, not the Positron `light_all` style.
-    // No GSI fallback and no second MapLibre canvas: map, pins, and routes
-    // remain synchronized during zoom.
+    // V109: CARTO Positron with automatic non-GSI fallback.
+    // CARTO's tile URL format is valid, but a 403 response means the service
+    // is rejecting requests (commonly API key / Referer restriction). A zoom
+    // limit alone cannot fix that. Try keyless Positron as a fail-soft option;
+    // if it also fails, use OSM so the map never becomes an empty background.
+    // All tile layers stay in Leaflet's own pane so pins/routes remain aligned.
     // ============================================================
     const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
     const CARTO_POSITRON_TILE_TEMPLATE =
@@ -548,21 +556,76 @@ document.addEventListener("DOMContentLoaded", function () {
     const CARTO_ATTRIBUTION =
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
         '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
+    const OSM_ATTRIBUTION =
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
 
-    const cartoPositronLayer = L.tileLayer(CARTO_POSITRON_TILE_URL, {
-        subdomains: "abcd",
-        minZoom: 0,
-        maxZoom: 20,
-        maxNativeZoom: 20,
-        keepBuffer: 3,
-        updateWhenIdle: false,
-        updateWhenZooming: true,
-        attribution: CARTO_ATTRIBUTION
-    });
-    // Log tile failures without printing the request URL (which contains the API key).
-    // This makes future diagnosis possible without leaking the key in console logs.
+    function createCartoTileLayer(url) {
+        return L.tileLayer(url, {
+            subdomains: "abcd",
+            minZoom: 0,
+            maxZoom: 20,
+            maxNativeZoom: 20,
+            keepBuffer: 3,
+            updateWhenIdle: false,
+            updateWhenZooming: true,
+            attribution: CARTO_ATTRIBUTION
+        });
+    }
+
+    let activeBasemapFallback = "carto-keyed";
     let cartoTileErrorCount = 0;
     let cartoTileLoadCount = 0;
+    let cartoRecentErrors = [];
+    let keylessRecentErrors = [];
+    let keylessPositronLayer = null;
+    let osmFallbackLayer = null;
+
+    function hasBurstOfErrors(history, now, windowMs, threshold) {
+        history.push(now);
+        while (history.length && now - history[0] > windowMs) history.shift();
+        return history.length >= threshold;
+    }
+
+    function activateOSMFallback() {
+        if (activeBasemapFallback === "osm") return;
+        activeBasemapFallback = "osm";
+        if (keylessPositronLayer && map.hasLayer(keylessPositronLayer)) {
+            map.removeLayer(keylessPositronLayer);
+        }
+        if (cartoPositronLayer && map.hasLayer(cartoPositronLayer)) {
+            map.removeLayer(cartoPositronLayer);
+        }
+        osmFallbackLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            subdomains: "abc",
+            minZoom: 0,
+            maxZoom: 20,
+            maxNativeZoom: 19,
+            keepBuffer: 3,
+            updateWhenIdle: false,
+            updateWhenZooming: true,
+            attribution: OSM_ATTRIBUTION
+        }).addTo(map);
+        console.warn("[Fushimi] CARTO tiles were rejected; switched to OpenStreetMap so the map stays visible. Check the CARTO key and allowed Referer hosts.");
+    }
+
+    function activateKeylessCartoFallback() {
+        if (activeBasemapFallback !== "carto-keyed") return;
+        activeBasemapFallback = "carto-keyless";
+        if (map.hasLayer(cartoPositronLayer)) map.removeLayer(cartoPositronLayer);
+        keylessPositronLayer = createCartoTileLayer(CARTO_POSITRON_TILE_TEMPLATE).addTo(map);
+        keylessPositronLayer.on("tileerror", function () {
+            const now = Date.now();
+            if (hasBurstOfErrors(keylessRecentErrors, now, 2500, 4)) {
+                activateOSMFallback();
+            }
+        });
+        keylessPositronLayer.once("tileload", function () {
+            console.warn("[Fushimi] Using CARTO Positron without a key as a temporary fallback; the service may display its API-key watermark.");
+        });
+        console.warn("[Fushimi] CARTO keyed tiles are failing. Retrying Positron without a key to prevent a blank map.");
+    }
+
+    const cartoPositronLayer = createCartoTileLayer(CARTO_POSITRON_TILE_URL);
     cartoPositronLayer.on("tileload", function () {
         cartoTileLoadCount += 1;
         if (cartoTileLoadCount === 1) {
@@ -571,11 +634,18 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     cartoPositronLayer.on("tileerror", function () {
         cartoTileErrorCount += 1;
+        const now = Date.now();
         if (cartoTileErrorCount === 1 || cartoTileErrorCount % 8 === 0) {
             console.warn("[Fushimi] CARTO tile request failed; zoom=" + map.getZoom() +
                 ", failedTiles=" + cartoTileErrorCount +
                 ", loadedTiles=" + cartoTileLoadCount +
                 ", keyConfigured=" + Boolean(CARTO_BASEMAP_API_KEY));
+        }
+        // A short burst indicates the service is rejecting a group of tiles
+        // (for example HTTP 403 due to the key or Referer restriction).
+        if (activeBasemapFallback === "carto-keyed" &&
+            hasBurstOfErrors(cartoRecentErrors, now, 2500, 5)) {
+            activateKeylessCartoFallback();
         }
     });
     cartoPositronLayer.addTo(map);
@@ -4149,10 +4219,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? `<span class="viewing-label">${escapeHTML(getSpotViewingLabel())}</span>`
                 : "";
             const iconType = getIconType(spot);
-            const customIconFile = iconType ? `${ICON_DIR}${getIconFileName(iconType, true)}` : "";
-            const symbol = customIconFile
-                ? `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true" onerror="this.classList.add('is-load-error'); this.nextElementSibling.hidden=false;"> <span class="spot-card-icon-fallback" hidden>no icon</span>`
-                : `<span class="spot-card-icon-fallback">no icon</span>`;
+            let symbol;
+            if (PROJECT_DETAIL_SVG_ICON_TYPES.has(iconType)) {
+                const customIconFile = `${ICON_DIR}${getIconFileName(iconType, true)}`;
+                symbol = `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true" onerror="this.classList.add('is-load-error'); this.nextElementSibling.hidden=false;"> <span class="spot-card-icon-fallback" hidden>no icon</span>`;
+            } else {
+                // Use the same existing SVG asset as the category bar, avoiding
+                // 404 requests for non-existent guide/viewpoint/shrine/etc. files.
+                const categoryIconFile = getCategoryBarIconFile(spot);
+                const categoryIconColor = isSpotSelected(spot) ? getMarkerAccentColor(spot) : GRAY_COLOR;
+                const categoryIconStyle = [
+                    "display:block", "width:32px", "height:32px",
+                    `background:${categoryIconColor}`,
+                    `-webkit-mask-image:url('${ICON_DIR}${categoryIconFile}')`,
+                    `mask-image:url('${ICON_DIR}${categoryIconFile}')`,
+                    "-webkit-mask-repeat:no-repeat", "mask-repeat:no-repeat",
+                    "-webkit-mask-position:center", "mask-position:center",
+                    "-webkit-mask-size:contain", "mask-size:contain"
+                ].join(";");
+                symbol = `<span class="spot-card-category-glyph" aria-hidden="true" style="${categoryIconStyle}"></span>`;
+            }
 
             card.innerHTML = `
                 ${imageHTML}
