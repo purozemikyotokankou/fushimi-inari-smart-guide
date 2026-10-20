@@ -2876,10 +2876,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (explicit) return explicit;
 
-        // 千本鳥居 belongs to the sightseeing color family, but its map glyph
-        // should be a torii rather than a generic viewpoint symbol.
-        if (nameText.includes("鳥居") || nameText.includes("torii")) return "torii";
-
         if (category === "toilet") return "toilet";
         if (category === "scenery") return "viewpoint";
         if (category === "shrine") return "shrine";
@@ -2946,22 +2942,30 @@ document.addEventListener("DOMContentLoaded", function () {
         iconType,
         selected
     ) {
-
-        const type =
-            normalizeIconType(
-                iconType
-            );
+        const type = normalizeIconType(iconType);
 
         if (!type) {
-
-            return selected
-                ? "guide.svg"
-                : "guide-gray.svg";
+            return "category-all.svg";
         }
 
-        return selected
-            ? `${type}.svg`
-            : `${type}-gray.svg`;
+        // Keep the app's original, familiar icon artwork from images/icons/.
+        // V97 introduced new custom glyph files for these types; instead, reuse
+        // the existing category pictograms so the icon design stays consistent
+        // with the project while the shared palette still controls its color.
+        const legacyCategoryIcons = {
+            torii: "category-sightseeing.svg",
+            viewpoint: "category-sightseeing.svg",
+            shrine: "category-sightseeing.svg",
+            hiking: "category-sightseeing.svg",
+            restaurant: "category-food-shop.svg",
+            guide: "category-all.svg"
+        };
+
+        if (legacyCategoryIcons[type]) {
+            return legacyCategoryIcons[type];
+        }
+
+        return selected ? `${type}.svg` : `${type}-gray.svg`;
     }
 
     function getMarkerAccentColor(spot) {
@@ -4056,7 +4060,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? `<span class="viewing-label">${escapeHTML(getSpotViewingLabel())}</span>`
                 : "";
             const iconType = getIconType(spot);
-            const customIconFile = iconType ? `${ICON_DIR}${iconType}.svg` : "";
+            const customIconFile = iconType ? `${ICON_DIR}${getIconFileName(iconType, true)}` : "";
             const symbol = customIconFile
                 ? `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true" onerror="this.classList.add('is-load-error'); this.nextElementSibling.hidden=false;"> <span class="spot-card-icon-fallback" hidden>no icon</span>`
                 : `<span class="spot-card-icon-fallback">no icon</span>`;
