@@ -8,4 +8,4 @@
  * This file is delivered to browsers, so the key is public. Keep usage monitored
  * and keep the OpenStreetMap/CARTO attribution visible on the map.
  */
-window.FUSHIMI_CARTO_BASEMAP_API_KEY = "cb1_4pog_1_b77e97d32bd809935789aceb";
+window.FUSHIMI_CARTO_BASEMAP_API_KEY = "cb1_4pog_2_5750ba26708293e68379f928";
