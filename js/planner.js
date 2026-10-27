@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V112-CARTO-ONLY";
-    console.log("[Fushimi Inari Smart Guide] planner.js V112-CARTO-ONLY loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V113-CARTO-OFFICIAL-ENDPOINT";
+    console.log("[Fushimi Inari Smart Guide] planner.js V113-CARTO-OFFICIAL-ENDPOINT loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -399,11 +399,11 @@ document.addEventListener("DOMContentLoaded", function () {
             fadeAnimation: false,
             zoomAnimation: true,
             markerZoomAnimation: true,
-            // Keep the map zoom inside CARTO raster tiles' supported range.
-            // Without this cap, the map itself could reach z21+ while the tile
-            // layer stops at z20, making the entire basemap appear to disappear.
+            // CARTO tiles were failing at higher zoom levels in this project.
+            // Stop at z18 so zooming cannot request the failing z19/z20 tiles.
             minZoom: 0,
-            maxZoom: 20,
+            maxZoom: 18,
+            bounceAtZoomLimits: false,
             zoomSnap: 1,
             zoomDelta: 1
         }).setView(
@@ -541,23 +541,24 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(refreshPlannerMapSize, 120);
 
     // ============================================================
-    // V112: CARTO Positron only. Do not switch to another map provider.
-    // CARTO 403 is an API-key / allowed-Referer issue; changing map providers
-    // would hide the cause and violate the requested map design.
+    // V113: CARTO Positron only. Use CARTO's documented keyed raster endpoint; do not switch providers.
+    // CARTO requires its documented host/path pattern for keyed tile requests.
+    // Keep the selected Positron style and do not switch map providers.
     // ============================================================
     const CARTO_BASEMAP_API_KEY = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || "").trim();
+    // Use CARTO's documented API-key endpoint. The keyed Basemaps URL is on
+    // basemaps.cartocdn.com without the legacy {s} subdomain prefix.
     const CARTO_POSITRON_TILE_URL =
-        "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png" +
+        "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png" +
         (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
         '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
 
     const cartoPositronLayer = L.tileLayer(CARTO_POSITRON_TILE_URL, {
-        subdomains: "abcd",
         minZoom: 0,
-        maxZoom: 20,
-        maxNativeZoom: 20,
+        maxZoom: 18,
+        maxNativeZoom: 18,
         keepBuffer: 3,
         updateWhenIdle: false,
         updateWhenZooming: true,
@@ -575,12 +576,11 @@ document.addEventListener("DOMContentLoaded", function () {
         // Keep the same CARTO Positron basemap; never switch to another provider.
         // CARTO may display its required API-key watermark when the key is rejected.
         const sameCartoLayer = L.tileLayer(
-            "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png",
+            "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png",
             {
-                subdomains: "abcd",
                 minZoom: 0,
-                maxZoom: 20,
-                maxNativeZoom: 20,
+                maxZoom: 18,
+                maxNativeZoom: 18,
                 keepBuffer: 3,
                 updateWhenIdle: false,
                 updateWhenZooming: true,
@@ -614,7 +614,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 ". Keep CARTO as the only basemap; check the API key and allowed Referer hosts.",
                 event && event.tile ? event.tile.src : "");
         }
-        // If CARTO returns a burst of 403s, retry the same CARTO style without a key.
+        // If CARTO returns a burst of errors, retry the same official CARTO style without a key.
         // This preserves the requested map provider/design; it does not switch basemaps.
         if (!usingKeylessCartoFallback && cartoTileErrorCount >= 4) {
             useSameCartoWithoutKey();
