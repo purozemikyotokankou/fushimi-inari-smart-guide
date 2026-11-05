@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V116-CARTO-2KM-STABLE-BOUNDS-STATIC-ROUTE-FOOT";
-    console.log("[Fushimi Inari Smart Guide] planner.js V116-CARTO-2KM-STABLE-BOUNDS-STATIC-ROUTE-FOOT loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V117-CARTO-RESTORE-KNOWN-GOOD-STATIC-ROUTE";
+    console.log("[Fushimi Inari Smart Guide] planner.js V117-CARTO-RESTORE-KNOWN-GOOD-STATIC-ROUTE loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ⑤ routes.json をグラフとして扱う
     // ⑥ routes.json の複数区間を自動接続
     // ⑦ 直線フォールバックは使用しない
-    // ⑧ 新規スポットなどグラフ未登録地点は歩行者専用OSRMで接続
+    // ⑧ 一般道路はOSRM徒歩ルート
     // ⑨ 現在地→最寄りの既知地点→routes.json→目的地のハイブリッド
     // ⑩ 選択順番号を地図に表示
     // ⑪ 次の目的地 / 残距離 / 徒歩時間をLiquid Glass表示
@@ -224,8 +224,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let routeRunnerPathLength = 0;
     let routeSegments = [];
 
-    // The moving highlight on the orange route is disabled; only the static
-    // orange route line (and its static white outline) is drawn.
+    // V117: keep the orange route static; disable all flowing light animation.
     const ROUTE_RUNNER_CONFIG = {
         enabled: false,
         lightCount: 5,
@@ -391,16 +390,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Leaflet地図
     // ============================================================
 
-    // 地図タイルの対象範囲：指定中心から半径2,000m。
-    // 画面移動は円の外へ出ないようにし、CARTOタイルは円と交差する
-    // タイルだけを取得する（円の境界にかかるタイルは画像単位のため取得される）。
-    const FUSHIMI_COVERAGE_CENTER = L.latLng(34.968186, 135.784020);
-    const FUSHIMI_COVERAGE_RADIUS_METERS = 2000;
-    const FUSHIMI_COVERAGE_CIRCLE = L.circle(FUSHIMI_COVERAGE_CENTER, {
-        radius: FUSHIMI_COVERAGE_RADIUS_METERS
-    });
-    const FUSHIMI_COVERAGE_BOUNDS = FUSHIMI_COVERAGE_CIRCLE.getBounds();
-
     const map =
         L.map("map", {
             zoomControl: false,
@@ -408,32 +397,17 @@ document.addEventListener("DOMContentLoaded", function () {
             fadeAnimation: false,
             zoomAnimation: true,
             markerZoomAnimation: true,
+            // CARTO tiles were failing at higher zoom levels in this project.
+            // Stop at z18 so zooming cannot request the failing z19/z20 tiles.
             minZoom: 0,
             maxZoom: 18,
             bounceAtZoomLimits: false,
             zoomSnap: 1,
-            zoomDelta: 1,
-            maxBounds: FUSHIMI_COVERAGE_BOUNDS,
-            maxBoundsViscosity: 1.0
+            zoomDelta: 1
         }).setView(
             [34.96705, 135.7743],
             16
         );
-
-    // maxBoundsは四角形なので、ドラッグ終了時に中心点も半径2kmの円へ戻す。
-    function keepMapCenterInsideCoverage() {
-        const currentCenter = map.getCenter();
-        const distance = FUSHIMI_COVERAGE_CENTER.distanceTo(currentCenter);
-        const safeRadius = FUSHIMI_COVERAGE_RADIUS_METERS - 2;
-        if (distance <= safeRadius) return;
-        const ratio = safeRadius / distance;
-        const limitedCenter = L.latLng(
-            FUSHIMI_COVERAGE_CENTER.lat + (currentCenter.lat - FUSHIMI_COVERAGE_CENTER.lat) * ratio,
-            FUSHIMI_COVERAGE_CENTER.lng + (currentCenter.lng - FUSHIMI_COVERAGE_CENTER.lng) * ratio
-        );
-        map.setView(limitedCenter, map.getZoom(), { animate: false });
-    }
-    map.on("moveend", keepMapCenterInsideCoverage);
 
 
     // ============================================================
@@ -577,29 +551,17 @@ document.addEventListener("DOMContentLoaded", function () {
         (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
-        '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>, ' +
-        '<a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener noreferrer">Pedestrian routing: FOSSGIS / OSRM</a>, ' +
-        '<a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">Fix the map</a>';
+        '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
 
-    // Leaflet標準のTileLayerを使用する。
-    // 独自の_isValidTile上書きはタイル読込そのものを止める可能性があるため使用しない。
-    // boundsで半径2km円の外接矩形内にタイル取得を制限する。
-    // 地図データは四角いタイル単位なので、円の四隅にかかるタイルは取得対象に含まれる。
-    function createCartoPositronLayer(url) {
-        return L.tileLayer(url, {
-            minZoom: 0,
-            maxZoom: 18,
-            maxNativeZoom: 18,
-            bounds: FUSHIMI_COVERAGE_BOUNDS,
-            noWrap: true,
-            keepBuffer: 2,
-            updateWhenIdle: true,
-            updateWhenZooming: false,
-            attribution: CARTO_ATTRIBUTION
-        });
-    }
-
-    const cartoPositronLayer = createCartoPositronLayer(CARTO_POSITRON_TILE_URL);
+    const cartoPositronLayer = L.tileLayer(CARTO_POSITRON_TILE_URL, {
+        minZoom: 0,
+        maxZoom: 18,
+        maxNativeZoom: 18,
+        keepBuffer: 3,
+        updateWhenIdle: false,
+        updateWhenZooming: true,
+        attribution: CARTO_ATTRIBUTION
+    });
 
     let cartoTileErrorCount = 0;
     let cartoTileLoadCount = 0;
@@ -611,8 +573,17 @@ document.addEventListener("DOMContentLoaded", function () {
         usingKeylessCartoFallback = true;
         // Keep the same CARTO Positron basemap; never switch to another provider.
         // CARTO may display its required API-key watermark when the key is rejected.
-        const sameCartoLayer = createCartoPositronLayer(
-            "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png"
+        const sameCartoLayer = L.tileLayer(
+            "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png",
+            {
+                minZoom: 0,
+                maxZoom: 18,
+                maxNativeZoom: 18,
+                keepBuffer: 3,
+                updateWhenIdle: false,
+                updateWhenZooming: true,
+                attribution: CARTO_ATTRIBUTION
+            }
         );
         sameCartoLayer.on("tileerror", function () {
             keylessCartoErrorCount += 1;
@@ -6259,49 +6230,31 @@ document.addEventListener("DOMContentLoaded", function () {
     // OSRM
     // ============================================================
 
-    let lastFootRouterRequestAt = 0;
-    let footRouterRequestQueue = Promise.resolve();
-
-    function getSpotRoutingPoint(spot) {
-        // Marker coordinates and pedestrian access coordinates can be separated.
-        // For a shop/building, set routeLat/routeLng to its actual entrance on the path.
-        const lat = Number(spot?.routeLat ?? spot?.lat);
-        const lng = Number(spot?.routeLng ?? spot?.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            throw new Error("スポットの徒歩ルート用座標が正しくありません。");
-        }
-        return { lat, lng };
-    }
-
-    async function fetchFootRouteAtAllowedRate(url) {
-        const request = footRouterRequestQueue.then(async function () {
-            const wait = Math.max(0, 1100 - (Date.now() - lastFootRouterRequestAt));
-            if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
-            lastFootRouterRequestAt = Date.now();
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`徒歩ルートAPI error: ${response.status}`);
-            return response.json();
-        });
-        footRouterRequestQueue = request.then(() => undefined, () => undefined);
-        return request;
-    }
-
     async function getOSRMRoute(
         fromPoint,
         toPoint
     ) {
 
-        // FOSSGIS operates a dedicated pedestrian graph. The /routed-foot/ host
-        // selects walking data; the OSRM URL segment remains /driving/ on this server.
-        // 60m snapping radius prevents the service from silently attaching a POI
-        // to a distant, unrelated road/path. For exact entrances use routeLat/routeLng.
         const url =
-            "https://routing.openstreetmap.de/routed-foot/route/v1/driving/" +
+            "https://router.project-osrm.org/route/v1/foot/" +
             `${fromPoint.lng},${fromPoint.lat};` +
             `${toPoint.lng},${toPoint.lat}` +
-            "?overview=full&geometries=geojson&radiuses=60;60&steps=false";
+            "?overview=full&geometries=geojson";
 
-        const data = await fetchFootRouteAtAllowedRate(url);
+        const response =
+            await fetch(url);
+
+        if (
+            !response.ok
+        ) {
+
+            throw new Error(
+                `OSRM API error: ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
 
         if (
             data.code !== "Ok" ||
@@ -6378,8 +6331,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const osrmCoordinates =
             await getOSRMRoute(
-                getSpotRoutingPoint(from),
-                getSpotRoutingPoint(to)
+                {
+                    lat:
+                        Number(
+                            from.lat
+                        ),
+
+                    lng:
+                        Number(
+                            from.lng
+                        )
+                },
+                {
+                    lat:
+                        Number(
+                            to.lat
+                        ),
+
+                    lng:
+                        Number(
+                            to.lng
+                        )
+                }
             );
 
         return {
@@ -6441,7 +6414,13 @@ document.addEventListener("DOMContentLoaded", function () {
                                 lng:
                                     location.lng
                             },
-                            getSpotRoutingPoint(nearest.spot)
+                            {
+                                lat:
+                                    nearest.spot.lat,
+
+                                lng:
+                                    nearest.spot.lng
+                            }
                         );
 
                 } catch (error) {
@@ -6519,7 +6498,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     lng:
                         location.lng
                 },
-                getSpotRoutingPoint(target)
+                {
+                    lat:
+                        target.lat,
+
+                    lng:
+                        target.lng
+                }
             );
 
         return {
@@ -7179,7 +7164,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             alert(
                 "徒歩ルートを取得できませんでした。\n" +
-                "参道ルートの登録状況、または歩行者ルートサービスへの接続を確認してください。"
+                "routes.json / OSRM の接続を確認してください。"
             );
 
             return;
@@ -7197,7 +7182,8 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Keep the base route static; no light or animation runs along it.
+        // Keep the orange route and its white outline static. Flowing-light layers
+        // are invisible and the animation is disabled in V117.
         routeOutlineLine = L.polyline(allCoordinates, {
             pane: "plannerRoutePane",
             renderer: routeSvgRenderer,
@@ -7222,10 +7208,33 @@ document.addEventListener("DOMContentLoaded", function () {
             interactive: false
         }).addTo(map);
 
-        // Moving highlight layers are intentionally disabled. The orange route
-        // remains visible as a static line without a flowing light.
-        routeRunnerTrailLine = null;
-        routeRunnerCoreLine = null;
+        // These two layers are used only as a local light tail and bright center.
+        // Their SVG path data is replaced every frame with a short sampled section
+        // from the real route path, so the light remains on bends and corners.
+        routeRunnerTrailLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
+            className: "planner-route-runner-trail",
+            color: "#FFF8E8",
+            weight: ROUTE_RUNNER_CONFIG.trailWidth,
+            opacity: ROUTE_RUNNER_CONFIG.enabled ? 0.8 : 0,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false
+        }).addTo(map);
+
+        routeRunnerCoreLine = L.polyline(allCoordinates, {
+            pane: "plannerRoutePane",
+            renderer: routeSvgRenderer,
+            className: "planner-route-runner-core",
+            color: "#FFFFFF",
+            weight: ROUTE_RUNNER_CONFIG.coreWidth,
+            opacity: ROUTE_RUNNER_CONFIG.enabled ? 1 : 0,
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false
+        }).addTo(map);
+
         startRouteRunnerAnimation();
 
         map.fitBounds(
