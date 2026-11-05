@@ -139,5 +139,15 @@
         "description": "伏見稲荷のお山側にあるトイレです。",
         "time": "5分",
         "image": "toire3.jpg"
+    },
+    {
+        "id": 15,
+        "name": "龍谷大前深草",
+        "category": "交通",
+        "lat": 34.96455907,
+        "lng": 135.77032775,
+        "description": "京阪電車の駅です。",
+        "time": "-",
+        "image": ""
     }
 ]
