@@ -149,16 +149,5 @@
         "description": "京阪電車の駅です。",
         "time": "-",
         "image": ""
-    },
-    {
-        "id": 16,
-        "name": "sample店舗",
-        "category": "飲食店",
-        "lat": 34.96145558,
-        "lng": 135.77798814,
-        "description": "＜ここにお店の説明が入ります＞",
-        "time": "-",
-        "image": "sample.jpg",
-        "url": "＜ここにお店の説明が入ります＞"
     }
 ]
