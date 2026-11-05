@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V118-STATIC-ORANGE-ROUTE-ONLY";
-    console.log("[Fushimi Inari Smart Guide] planner.js V118-STATIC-ORANGE-ROUTE-ONLY loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V119-AUTO-SPOT-ROUTE-CONNECTIONS";
+    console.log("[Fushimi Inari Smart Guide] planner.js V119-AUTO-SPOT-ROUTE-CONNECTIONS loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -5675,18 +5675,287 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    function prepareRouteGraph() {
+    // ============================================================
+    // 近くのスポットを既存参道へ自動接続
+    // ============================================================
 
-        routes =
-            routes
-                .map(
-                    normalizeRouteObject
-                )
-                .filter(Boolean);
+    // 実際の参道から35m以内にあるスポットだけを自動接続する。
+    // 35mを超える場所は、道を横切る危険があるため自動では結ばない。
+    const AUTO_SPOT_ROUTE_CONNECT_LIMIT_METERS = 35;
+
+    function distanceBetweenLatLngMeters(a, b) {
+        const earthRadius = 6371000;
+        const lat1 = Number(a[0]) * Math.PI / 180;
+        const lat2 = Number(b[0]) * Math.PI / 180;
+        const deltaLat = (Number(b[0]) - Number(a[0])) * Math.PI / 180;
+        const deltaLng = (Number(b[1]) - Number(a[1])) * Math.PI / 180;
+        const h = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        return 2 * earthRadius * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
+    }
+
+    // Spotを線分へ正射影する。伏見稲荷周辺の狭い範囲なので局所平面近似で十分な精度。
+    function projectSpotToRouteSegment(point, a, b) {
+        const latitudeRadians = point[0] * Math.PI / 180;
+        const metersPerLng = 111320 * Math.cos(latitudeRadians);
+        const metersPerLat = 110540;
+
+        const ax = (a[1] - point[1]) * metersPerLng;
+        const ay = (a[0] - point[0]) * metersPerLat;
+        const bx = (b[1] - point[1]) * metersPerLng;
+        const by = (b[0] - point[0]) * metersPerLat;
+        const dx = bx - ax;
+        const dy = by - ay;
+        const denominator = dx * dx + dy * dy;
+        const ratio = denominator === 0
+            ? 0
+            : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / denominator));
+
+        const projectedX = ax + dx * ratio;
+        const projectedY = ay + dy * ratio;
+        return {
+            distanceMeters: Math.hypot(projectedX, projectedY),
+            point: [
+                point[0] + projectedY / metersPerLat,
+                point[1] + projectedX / metersPerLng
+            ],
+            ratio: ratio
+        };
+    }
+
+    function getRoutePointAtMeasure(path, measure) {
+        const maxMeasure = path.length - 1;
+        const safeMeasure = Math.max(0, Math.min(maxMeasure, measure));
+        if (safeMeasure <= 0) return path[0].slice();
+        if (safeMeasure >= maxMeasure) return path[path.length - 1].slice();
+
+        const segmentIndex = Math.floor(safeMeasure);
+        const ratio = safeMeasure - segmentIndex;
+        const a = path[segmentIndex];
+        const b = path[segmentIndex + 1];
+        return [
+            a[0] + (b[0] - a[0]) * ratio,
+            a[1] + (b[1] - a[1]) * ratio
+        ];
+    }
+
+    function getRouteSubPath(path, startMeasure, endMeasure) {
+        const points = [getRoutePointAtMeasure(path, startMeasure)];
+        for (let index = 1; index < path.length - 1; index++) {
+            if (index > startMeasure + 1e-8 && index < endMeasure - 1e-8) {
+                points.push(path[index].slice());
+            }
+        }
+        points.push(getRoutePointAtMeasure(path, endMeasure));
+
+        // Remove duplicate consecutive coordinates while keeping at least two points.
+        const cleaned = [];
+        points.forEach(function (point) {
+            if (!cleaned.length || distanceBetweenLatLngMeters(cleaned[cleaned.length - 1], point) > 0.05) {
+                cleaned.push(point);
+            }
+        });
+        if (cleaned.length === 1) cleaned.push(cleaned[0].slice());
+        return cleaned;
+    }
+
+    function addAutomaticSpotConnections(baseRoutes) {
+        if (!Array.isArray(spots) || !spots.length || !baseRoutes.length) {
+            return { routes: baseRoutes, connections: [] };
+        }
+
+        const explicitEndpointIds = new Set();
+        baseRoutes.forEach(function (route) {
+            explicitEndpointIds.add(String(route.from));
+            explicitEndpointIds.add(String(route.to));
+        });
+
+        const candidatesByRoute = new Map();
+        const outsideLimit = [];
+
+        spots.forEach(function (spot) {
+            const spotId = String(spot.id);
+            if (explicitEndpointIds.has(spotId)) return;
+
+            const lat = Number(spot.lat);
+            const lng = Number(spot.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
+
+            const spotPoint = [lat, lng];
+            let nearest = null;
+
+            baseRoutes.forEach(function (route, routeIndex) {
+                for (let segmentIndex = 0; segmentIndex < route.path.length - 1; segmentIndex++) {
+                    const projection = projectSpotToRouteSegment(
+                        spotPoint,
+                        route.path[segmentIndex],
+                        route.path[segmentIndex + 1]
+                    );
+                    if (!nearest || projection.distanceMeters < nearest.distanceMeters) {
+                        nearest = {
+                            routeIndex: routeIndex,
+                            segmentIndex: segmentIndex,
+                            measure: segmentIndex + projection.ratio,
+                            distanceMeters: projection.distanceMeters,
+                            point: projection.point,
+                            spot: spot
+                        };
+                    }
+                }
+            });
+
+            if (!nearest) return;
+            if (nearest.distanceMeters > AUTO_SPOT_ROUTE_CONNECT_LIMIT_METERS) {
+                if (nearest.distanceMeters <= 60) {
+                    outsideLimit.push({
+                        id: spotId,
+                        name: spot.name || spotId,
+                        distanceMeters: Math.round(nearest.distanceMeters * 10) / 10
+                    });
+                }
+                return;
+            }
+
+            if (!candidatesByRoute.has(nearest.routeIndex)) {
+                candidatesByRoute.set(nearest.routeIndex, []);
+            }
+            candidatesByRoute.get(nearest.routeIndex).push(nearest);
+        });
+
+        const expandedRoutes = [];
+        const connectionLog = [];
+
+        baseRoutes.forEach(function (route, routeIndex) {
+            const candidates = (candidatesByRoute.get(routeIndex) || []).slice()
+                .sort(function (a, b) { return a.measure - b.measure; });
+
+            if (!candidates.length) {
+                expandedRoutes.push(route);
+                return;
+            }
+
+            // 近接スポットが同じ地点に集まる場合は、共有の接続ノードにまとめる。
+            const clusters = [];
+            candidates.forEach(function (candidate) {
+                const lastCluster = clusters[clusters.length - 1];
+                if (lastCluster &&
+                    distanceBetweenLatLngMeters(lastCluster.point, candidate.point) <= 1.5) {
+                    candidate.cluster = lastCluster;
+                } else {
+                    const cluster = {
+                        measure: candidate.measure,
+                        point: candidate.point,
+                        nodePoint: candidate.point,
+                        nodeId: `__auto_route_join_${routeIndex}_${clusters.length + 1}`
+                    };
+                    clusters.push(cluster);
+                    candidate.cluster = cluster;
+                }
+            });
+
+            const internalClusters = [];
+            clusters.forEach(function (cluster) {
+                const startDistance = distanceBetweenLatLngMeters(route.path[0], cluster.point);
+                const endDistance = distanceBetweenLatLngMeters(route.path[route.path.length - 1], cluster.point);
+                if (startDistance <= 1) {
+                    cluster.nodeId = String(route.from);
+                    cluster.nodePoint = route.path[0];
+                } else if (endDistance <= 1) {
+                    cluster.nodeId = String(route.to);
+                    cluster.nodePoint = route.path[route.path.length - 1];
+                } else {
+                    internalClusters.push(cluster);
+                }
+            });
+
+            // Endpointへの吸着も含め、各スポットの接続先を確定したノードへ同期する。
+            candidates.forEach(function (candidate) {
+                candidate.nodeId = candidate.cluster.nodeId;
+                candidate.nodePoint = candidate.cluster.nodePoint || candidate.cluster.point;
+            });
+
+            const boundaries = [{
+                measure: 0,
+                nodeId: String(route.from)
+            }];
+            internalClusters.forEach(function (cluster) {
+                boundaries.push({
+                    measure: cluster.measure,
+                    nodeId: cluster.nodeId
+                });
+            });
+            boundaries.push({
+                measure: route.path.length - 1,
+                nodeId: String(route.to)
+            });
+            boundaries.sort(function (a, b) { return a.measure - b.measure; });
+
+            for (let partIndex = 0; partIndex < boundaries.length - 1; partIndex++) {
+                const start = boundaries[partIndex];
+                const end = boundaries[partIndex + 1];
+                const segmentPath = getRouteSubPath(route.path, start.measure, end.measure);
+                expandedRoutes.push({
+                    from: start.nodeId,
+                    to: end.nodeId,
+                    name: `${route.name}（自動接続分割${partIndex + 1}）`,
+                    path: segmentPath,
+                    index: route.index,
+                    priority: route.priority,
+                    type: route.type
+                });
+            }
+
+            candidates.forEach(function (candidate) {
+                const targetPoint = candidate.nodePoint || candidate.point;
+                expandedRoutes.push({
+                    from: String(candidate.spot.id),
+                    to: candidate.nodeId,
+                    name: `${candidate.spot.name || candidate.spot.id}から既存参道への自動接続`,
+                    path: [
+                        [Number(candidate.spot.lat), Number(candidate.spot.lng)],
+                        targetPoint.slice()
+                    ],
+                    priority: 0,
+                    type: "auto-connector"
+                });
+                connectionLog.push({
+                    id: String(candidate.spot.id),
+                    name: candidate.spot.name || String(candidate.spot.id),
+                    distanceMeters: Math.round(candidate.distanceMeters * 10) / 10,
+                    route: route.name
+                });
+            });
+        });
+
+        if (connectionLog.length) {
+            console.info("近くの参道へ自動接続したスポット:", connectionLog);
+        }
+        if (outsideLimit.length) {
+            console.info("参道から35mを超えるため自動接続しなかったスポット:", outsideLimit);
+        }
+
+        return {
+            routes: expandedRoutes,
+            connections: connectionLog
+        };
+    }
+
+    function prepareRouteGraph() {
+        const baseRoutes = routes
+            .map(normalizeRouteObject)
+            .filter(Boolean);
+        const connected = addAutomaticSpotConnections(baseRoutes);
+        routes = connected.routes;
 
         console.log(
-            "V11 routes loaded:",
-            routes.length
+            "V119 routes loaded:",
+            baseRoutes.length,
+            "base routes /",
+            routes.length,
+            "graph edges /",
+            connected.connections.length,
+            "auto spot connections"
         );
     }
 
