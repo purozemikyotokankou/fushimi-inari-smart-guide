@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V115-CARTO-2KM-CIRCLE-STATIC-ROUTE-FOOT";
-    console.log("[Fushimi Inari Smart Guide] planner.js V115-CARTO-2KM-CIRCLE-STATIC-ROUTE-FOOT loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V116-CARTO-2KM-STABLE-BOUNDS-STATIC-ROUTE-FOOT";
+    console.log("[Fushimi Inari Smart Guide] planner.js V116-CARTO-2KM-STABLE-BOUNDS-STATIC-ROUTE-FOOT loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -581,40 +581,20 @@ document.addEventListener("DOMContentLoaded", function () {
         '<a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener noreferrer">Pedestrian routing: FOSSGIS / OSRM</a>, ' +
         '<a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer">Fix the map</a>';
 
-    // Leafletの標準boundsは四角形。ここではタイル矩形と半径2kmの円の
-    // 最短距離をWeb Mercatorピクセル上で計算し、円と交差しないタイルを
-    // CARTOへリクエストする前に除外する。
-    const CircleLimitedCartoTileLayer = L.TileLayer.extend({
-        _isValidTile: function (coords) {
-            if (!L.TileLayer.prototype._isValidTile.call(this, coords)) return false;
-
-            const tileSize = this.getTileSize();
-            const left = coords.x * tileSize.x;
-            const top = coords.y * tileSize.y;
-            const right = left + tileSize.x;
-            const bottom = top + tileSize.y;
-            const centerPoint = map.project(FUSHIMI_COVERAGE_CENTER, coords.z);
-            const nearestX = Math.max(left, Math.min(centerPoint.x, right));
-            const nearestY = Math.max(top, Math.min(centerPoint.y, bottom));
-            const dx = centerPoint.x - nearestX;
-            const dy = centerPoint.y - nearestY;
-            const metersPerPixel = 156543.03392804097 *
-                Math.cos(FUSHIMI_COVERAGE_CENTER.lat * Math.PI / 180) / Math.pow(2, coords.z);
-            const radiusPixels = FUSHIMI_COVERAGE_RADIUS_METERS / metersPerPixel;
-            return (dx * dx + dy * dy) <= (radiusPixels * radiusPixels);
-        }
-    });
-
+    // Leaflet標準のTileLayerを使用する。
+    // 独自の_isValidTile上書きはタイル読込そのものを止める可能性があるため使用しない。
+    // boundsで半径2km円の外接矩形内にタイル取得を制限する。
+    // 地図データは四角いタイル単位なので、円の四隅にかかるタイルは取得対象に含まれる。
     function createCartoPositronLayer(url) {
-        return new CircleLimitedCartoTileLayer(url, {
+        return L.tileLayer(url, {
             minZoom: 0,
             maxZoom: 18,
             maxNativeZoom: 18,
             bounds: FUSHIMI_COVERAGE_BOUNDS,
             noWrap: true,
-            keepBuffer: 3,
-            updateWhenIdle: false,
-            updateWhenZooming: true,
+            keepBuffer: 2,
+            updateWhenIdle: true,
+            updateWhenZooming: false,
             attribution: CARTO_ATTRIBUTION
         });
     }
