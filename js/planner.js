@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V120-MULTILINGUAL-ROUTE-PATH-FIX";
-    console.log("[Fushimi Inari Smart Guide] planner.js V120-MULTILINGUAL-ROUTE-PATH-FIX loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V121-RESTORED-ICON-IMAGES-AND-TRACES";
+    console.log("[Fushimi Inari Smart Guide] planner.js V121-RESTORED-ICON-IMAGES-AND-TRACES loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -3147,57 +3147,31 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function getCategoryMaskMarkup(spot, options = {}) {
+        // Use a real SVG image rather than CSS mask-image. External SVG masks can
+        // disappear inside Leaflet's transformed marker pane on some browsers.
         const iconFile = getCategoryBarIconFile(spot);
-        const color = options.color || "#ffffff";
-        const size = Number(options.size) || 23;
-        const style = [
-            "display:block",
-            "position:absolute",
-            "left:50%",
-            "top:50%",
-            `width:${size}px`,
-            `height:${size}px`,
-            "transform:translate(-50%,-50%)",
-            `background:${color}`,
-            `-webkit-mask-image:url('${ICON_DIR}${iconFile}')`,
-            `mask-image:url('${ICON_DIR}${iconFile}')`,
-            "-webkit-mask-repeat:no-repeat",
-            "mask-repeat:no-repeat",
-            "-webkit-mask-position:center",
-            "mask-position:center",
-            "-webkit-mask-size:contain",
-            "mask-size:contain",
-            "pointer-events:none"
-        ].join(";");
-        return `<span class="icon-category-fallback" aria-hidden="true" style="${style}"></span>`;
+        const size = Number(options.size) || 25;
+        const fallbackFile = "category-all.svg";
+        return `<img class="icon-image icon-direct icon-category" src="${ICON_DIR}${iconFile}" alt="" aria-hidden="true"
+            style="width:${size}px;height:${size}px;"
+            onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${ICON_DIR}${fallbackFile}';}else{this.style.display='none';}">`;
     }
 
     function getMarkerGlyphMarkup(spot, highlighted) {
         const iconType = getIconType(spot);
         const size = 25;
-
-        // Toilets have their own project SVG artwork. Use those exact assets
-        // instead of flattening the pictogram into the category-facilities mask.
-        if (TOILET_SVG_ICON_TYPES.has(iconType)) {
-            const grayFile = getIconFileName(iconType, false);
-            const colorFile = getIconFileName(iconType, true);
-            return `
-                <img class="icon-image icon-gray" src="${ICON_DIR}${grayFile}" alt="" aria-hidden="true"
-                    style="width:${size}px;height:${size}px;"
-                    onload="window.handlePlannerMarkerIconLoad(this)"
-                    onerror="window.handlePlannerMarkerIconError(this)">
-                <img class="icon-image icon-color" src="${ICON_DIR}${colorFile}" alt="" aria-hidden="true"
-                    style="width:${size}px;height:${size}px;"
-                    onload="window.handlePlannerMarkerIconLoad(this)"
-                    onerror="window.handlePlannerMarkerIconError(this)">
-            `;
-        }
-
-        // All other map marker pictograms reuse the existing category-bar SVG.
-        return getCategoryMaskMarkup(spot, {
-            color: highlighted ? getMarkerAccentColor(spot) : GRAY_COLOR,
-            size
-        });
+        const isProjectAsset = PROJECT_DETAIL_SVG_ICON_TYPES.has(iconType);
+        const iconFile = isProjectAsset
+            ? getIconFileName(iconType, Boolean(highlighted))
+            : getCategoryBarIconFile(spot);
+        const iconClass = isProjectAsset ? "icon-project" : "icon-category";
+        const categoryFallbackFile = getCategoryBarIconFile(spot) || "category-all.svg";
+        const fallbackFile = isProjectAsset ? categoryFallbackFile : "category-all.svg";
+        return `
+            <img class="icon-image icon-direct ${iconClass}" src="${ICON_DIR}${iconFile}" alt="" aria-hidden="true"
+                style="width:${size}px;height:${size}px;"
+                onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${ICON_DIR}${fallbackFile}';this.classList.remove('icon-project');this.classList.add('icon-category');}else{this.style.display='none';}">
+        `;
     }
 
     function getMarkerZIndexOffset(
@@ -3737,6 +3711,42 @@ document.addEventListener("DOMContentLoaded", function () {
                 transform: translate(-50%, -50%) scale(1.04);
             }
 
+            /* V121: render marker SVGs as real <img> elements. This avoids
+               missing shop/restroom pictograms caused by external SVG CSS masks. */
+            .custom-map-marker .icon-direct {
+                display: block !important;
+                position: absolute !important;
+                left: 50% !important;
+                top: 50% !important;
+                width: 26px !important;
+                height: 26px !important;
+                max-width: 26px !important;
+                max-height: 26px !important;
+                object-fit: contain !important;
+                opacity: 1 !important;
+                transform: translate(-50%, -50%) !important;
+                transform-origin: center center !important;
+                pointer-events: none !important;
+                z-index: 3 !important;
+                filter: none !important;
+                transition: transform .18s ease, filter .18s ease !important;
+            }
+            .custom-map-marker.is-highlighted .icon-direct,
+            .custom-map-marker:hover .icon-direct {
+                opacity: 1 !important;
+                filter: none !important;
+                transform: translate(-50%, -50%) scale(1.06) !important;
+            }
+            .custom-map-marker .icon-direct.is-load-error {
+                display: none !important;
+            }
+            .spot-card-iconbox .spot-card-category-image {
+                filter: grayscale(1) saturate(0) opacity(.82) !important;
+            }
+            .planner-spot.selected .spot-card-category-image {
+                filter: none !important;
+            }
+
             @keyframes
             plannerMarkerFrontBack {
 
@@ -4239,22 +4249,15 @@ document.addEventListener("DOMContentLoaded", function () {
             let symbol;
             if (PROJECT_DETAIL_SVG_ICON_TYPES.has(iconType)) {
                 const customIconFile = `${ICON_DIR}${getIconFileName(iconType, true)}`;
-                symbol = `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true" onerror="this.classList.add('is-load-error'); this.nextElementSibling.hidden=false;"> <span class="spot-card-icon-fallback" hidden>no icon</span>`;
+                const fallbackCategoryIcon = `${ICON_DIR}${getCategoryBarIconFile(spot) || "category-all.svg"}`;
+                symbol = `<img class="spot-custom-icon" src="${customIconFile}" alt="" aria-hidden="true"
+                    onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${fallbackCategoryIcon}';}else{this.classList.add('is-load-error');this.nextElementSibling.hidden=false;}"> <span class="spot-card-icon-fallback" hidden>no icon</span>`;
             } else {
                 // Use the same existing SVG asset as the category bar, avoiding
                 // 404 requests for non-existent guide/viewpoint/shrine/etc. files.
                 const categoryIconFile = getCategoryBarIconFile(spot);
-                const categoryIconColor = isSpotSelected(spot) ? getMarkerAccentColor(spot) : GRAY_COLOR;
-                const categoryIconStyle = [
-                    "display:block", "width:32px", "height:32px",
-                    `background:${categoryIconColor}`,
-                    `-webkit-mask-image:url('${ICON_DIR}${categoryIconFile}')`,
-                    `mask-image:url('${ICON_DIR}${categoryIconFile}')`,
-                    "-webkit-mask-repeat:no-repeat", "mask-repeat:no-repeat",
-                    "-webkit-mask-position:center", "mask-position:center",
-                    "-webkit-mask-size:contain", "mask-size:contain"
-                ].join(";");
-                symbol = `<span class="spot-card-category-glyph" aria-hidden="true" style="${categoryIconStyle}"></span>`;
+                symbol = `<img class="spot-custom-icon spot-card-category-image" src="${ICON_DIR}${categoryIconFile}" alt="" aria-hidden="true"
+                    onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${ICON_DIR}category-all.svg';}else{this.style.display='none';}">`;
             }
 
             card.innerHTML = `
