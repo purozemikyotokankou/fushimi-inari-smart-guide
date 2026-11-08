@@ -71,8 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // types must reuse category-bar SVGs instead of requesting missing files.
     const PROJECT_DETAIL_SVG_ICON_TYPES = new Set([
         ...TOILET_SVG_ICON_TYPES,
-        "diaper-changing", "ostomate", "station-jr", "station-keihan",
-        "washlet", "wheelchair"
+        "diaper-changing", "ostomate", "washlet", "wheelchair"
     ]);
 
     const SELECTED_STORAGE_KEY = "plannerSelectedSpots";
@@ -3081,16 +3080,14 @@ document.addEventListener("DOMContentLoaded", function () {
         ];
     }
 
-    function getIconFileName(iconType, selected) {
+    function getIconFileName(iconType) {
         const type = normalizeIconType(iconType);
 
-        if (!type) {
-            return selected ? "guide.svg" : "guide-gray.svg";
-        }
+        if (!type) return "guide.svg";
 
-        // Restore the original individual pictograms from images/icons/.
-        // The shared category color still controls the marker accent/pin.
-        return selected ? `${type}.svg` : `${type}-gray.svg`;
+        // Always use the full-color artwork. Marker selection must not switch
+        // between gray and colored SVG variants.
+        return `${type}.svg`;
     }
 
     function getMarkerAccentColor(spot) {
@@ -3157,12 +3154,15 @@ document.addEventListener("DOMContentLoaded", function () {
             onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${ICON_DIR}${fallbackFile}';}else{this.style.display='none';}">`;
     }
 
-    function getMarkerGlyphMarkup(spot, highlighted) {
+    function getMarkerGlyphMarkup(spot) {
         const iconType = getIconType(spot);
         const size = 25;
-        const isProjectAsset = PROJECT_DETAIL_SVG_ICON_TYPES.has(iconType);
+        // Only restroom/facility pictograms keep their dedicated full-color SVG.
+        // Railway and all other map markers use the matching category-bar artwork,
+        // so railway is always blue and other categories keep their own palette.
+        const isProjectAsset = TOILET_SVG_ICON_TYPES.has(iconType);
         const iconFile = isProjectAsset
-            ? getIconFileName(iconType, Boolean(highlighted))
+            ? getIconFileName(iconType)
             : getCategoryBarIconFile(spot);
         const iconClass = isProjectAsset ? "icon-project" : "icon-category";
         const categoryFallbackFile = getCategoryBarIconFile(spot) || "category-all.svg";
@@ -3222,12 +3222,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const iconType = getIconType(spot);
         const accentColor = getMarkerAccentColor(spot);
         const isHighlighted = Boolean(selected || viewed);
-        const markerColor = isHighlighted ? accentColor : GRAY_COLOR;
+        // Keep the marker's category color permanent. Selection/viewing may still
+        // emphasize size and elevation, but never changes the icon or pin color.
+        const markerColor = accentColor;
 
-        // Ordinary pins reuse the category-bar SVG; restroom pins use the existing
-        // toilet pictogram files. Unselected pins stay neutral, while selected or
-        // viewed pins use their category accent / original active restroom icon.
-        const iconMarkup = getMarkerGlyphMarkup(spot, isHighlighted);
+        // Railway uses the blue transport category SVG; toilets use their own
+        // full-color toilet pictogram. All other categories use their own palette.
+        const iconMarkup = getMarkerGlyphMarkup(spot);
 
         const classes = ["custom-map-marker"];
         const isRailway = ["station-jr", "station-keihan"].includes(iconType);
@@ -3740,11 +3741,10 @@ document.addEventListener("DOMContentLoaded", function () {
             .custom-map-marker .icon-direct.is-load-error {
                 display: none !important;
             }
-            .spot-card-iconbox .spot-card-category-image {
-                filter: grayscale(1) saturate(0) opacity(.82) !important;
-            }
-            .planner-spot.selected .spot-card-category-image {
+            .spot-card-iconbox .spot-card-category-image,
+            .spot-card-iconbox .spot-custom-icon {
                 filter: none !important;
+                opacity: 1 !important;
             }
 
             @keyframes
