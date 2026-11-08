@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V119-AUTO-SPOT-ROUTE-CONNECTIONS";
-    console.log("[Fushimi Inari Smart Guide] planner.js V119-AUTO-SPOT-ROUTE-CONNECTIONS loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V120-MULTILINGUAL-ROUTE-PATH-FIX";
+    console.log("[Fushimi Inari Smart Guide] planner.js V120-MULTILINGUAL-ROUTE-PATH-FIX loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -37,13 +37,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     refreshPlannerCategoryLanguage();
     document.getElementById("languageSelect")?.addEventListener("change", function () {
-        setTimeout(refreshPlannerCategoryLanguage, 0);
-        // The basemap and markers share Leaflet's renderer, so zoom/pan stay in sync.
-        if (activeRoutePlannerState) setTimeout(function () {
-            renderRoutePlanner(activeRoutePlannerState);
-        }, 0);
-        else if (currentDetailSpot) setTimeout(function () {
-            renderMapSpotDetail(currentDetailSpot, mapSpotDetail?.classList.contains("is-expanded"));
+        setTimeout(function () {
+            refreshPlannerCategoryLanguage();
+            // Refresh list cards, marker labels and popup text using the newly selected language.
+            filterSpots();
+            if (activeRoutePlannerState) {
+                renderRoutePlanner(activeRoutePlannerState);
+            } else if (currentDetailSpot) {
+                renderMapSpotDetail(currentDetailSpot, mapSpotDetail?.classList.contains("is-expanded"));
+            }
         }, 0);
     });
 
@@ -641,11 +643,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function getCurrentLanguage() {
 
-        return (
-            localStorage.getItem(
-                "language"
-            ) || "ja"
-        );
+        const selectorLanguage = document.getElementById("languageSelect")?.value;
+        const savedLanguage = localStorage.getItem("language");
+        return String(selectorLanguage || savedLanguage || "ja").toLowerCase().slice(0, 2);
     }
 
     // spots.json の既存データは name / description が日本語文字列のため、
@@ -678,6 +678,11 @@ document.addEventListener("DOMContentLoaded", function () {
             en: "Mount Inari Summit (Ichinomine)",
             zh: "稻荷山山顶（一之峰）",
             ko: "이나리산 정상(이치노미네)"
+        },
+        "一ノ峰": {
+            en: "Ichino-mine (First Peak)",
+            zh: "一之峰",
+            ko: "이치노미네(제1봉)"
         },
         "トイレ": {
             en: "Restroom",
@@ -763,6 +768,58 @@ document.addEventListener("DOMContentLoaded", function () {
             en: "A cafe surrounded by the greenery of Fushimi Inari, serving coffee, brunch, and sweets.",
             zh: "一家被伏见稻荷绿意环绕的咖啡馆，可享用咖啡、早午餐和甜点。",
             ko: "후시미 이나리의 푸른 자연에 둘러싸인 카페로, 커피와 브런치, 디저트를 즐길 수 있습니다."
+        },
+        "トイレ②": { en: "Restroom 2", zh: "洗手间②", ko: "화장실 ②" },
+        "トイレ③": { en: "Restroom 3", zh: "洗手间③", ko: "화장실 ③" },
+        "京阪電車龍谷大前深草駅": { en: "Keihan Ryukoku-daimae-fukakusa Station", zh: "京阪龙谷大前深草站", ko: "게이한 류코쿠다이마에후카쿠사역" },
+        "二ノ峰": { en: "Ni-no-mine (Second Peak)", zh: "二之峰", ko: "니노미네(제2봉)" },
+        "三ノ峰": { en: "San-no-mine (Third Peak)", zh: "三之峰", ko: "산노미네(제3봉)" },
+        "御劔社": { en: "Mitsurugisha Shrine", zh: "御剑社", ko: "미쓰루기샤" },
+        "おせき大神": { en: "Oseki Okami", zh: "御咳大神", ko: "오세키 오카미" },
+        "薬力大神": { en: "Yakuryoku Okami", zh: "药力大神", ko: "야쿠료쿠 오카미" },
+        "伏見稲荷周辺のトイレです。": {
+            en: "A restroom near Fushimi Inari.", zh: "伏见稻荷周边的洗手间。", ko: "후시미 이나리 주변에 있는 화장실입니다."
+        },
+        "伏見稲荷のお山側にあるトイレです。": {
+            en: "A restroom on the Mount Inari side of the shrine.", zh: "位于伏见稻荷山一侧的洗手间。", ko: "후시미 이나리 산 쪽에 있는 화장실입니다."
+        },
+        "京阪電車の駅です。": {
+            en: "A Keihan Railway station.", zh: "京阪电车车站。", ko: "게이한 전철역입니다."
+        },
+        "稲荷山の三つの峰の一つで、山頂付近にお社がある参拝スポットです。": {
+            en: "One of the three peaks of Mount Inari, with a small shrine near the summit.",
+            zh: "稻荷山三峰之一，山顶附近设有小社，是一处参拜地点。",
+            ko: "이나리산 세 봉우리 중 하나로, 정상 부근에 사당이 있는 참배 장소입니다."
+        },
+        "商売繁盛や五穀豊穣を願い、古くから多くの人々に信仰されてきた場所です。": {
+            en: "A place long visited by worshippers praying for business prosperity and abundant harvests.",
+            zh: "这里长期受到人们信仰，大家在此祈求生意兴隆和五谷丰登。",
+            ko: "장사 번창과 풍년을 기원하는 사람들이 오래전부터 찾아온 신앙의 장소입니다."
+        },
+        "ものづくりや仕事の成功を願う人々から、古くから信仰されてきた場所です。": {
+            en: "A shrine traditionally visited by people praying for success in craftsmanship and work.",
+            zh: "这里自古以来受到祈求手艺精进与工作成功的人们信仰。",
+            ko: "기술과 일의 성공을 기원하는 사람들이 예로부터 참배해 온 곳입니다."
+        },
+        "喉に関してご利益がある神様です。": {
+            en: "A deity traditionally associated with blessings for throat ailments.",
+            zh: "以保佑喉咙健康、缓解咽喉疾病而闻名的神明。",
+            ko: "목 건강과 목 관련 질환의 쾌유에 영험이 있다고 전해지는 신입니다."
+        },
+        "健康長寿や病気の回復、家族の健康を願う人々が訪れる、健康にまつわる信仰で知られる神社です。": {
+            en: "A shrine known for prayers for longevity, recovery from illness, and the health of family members.",
+            zh: "这里以祈求健康长寿、病愈康复和家人健康而闻名。",
+            ko: "장수와 병의 회복, 가족의 건강을 기원하는 사람들이 찾는 신사입니다."
+        },
+        "「もぐもぐ（食べる）」と「和」をテーマにした、人気キャラクター「ちいかわ」の常設オフィシャルグッズショップ": {
+            en: "The permanent official Chiikawa merchandise shop, themed around food and Japanese-style culture.",
+            zh: "以“吃吃”和“和风”为主题的人气角色吉伊卡哇常设官方周边商店。",
+            ko: "먹는 즐거움과 일본의 정서를 테마로 한 인기 캐릭터 치이카와의 상설 공식 굿즈 매장입니다."
+        },
+        "「eight（エイト）」は、伏見の名水と高加水・低温長時間発酵にこだわり、ハード系からスイーツ系まで毎日約50種類の焼き立てパンを届ける、京都・伏見稲荷の路地裏にある大人気ベーカリーです。": {
+            en: "Eight is a popular bakery tucked away in Fushimi Inari, known for its use of Fushimi's fine water and about 50 freshly baked breads each day.",
+            zh: "Eight是伏见稻荷小巷中的人气面包店，讲究伏见名水、高含水量及低温长时间发酵，每天供应约50种新鲜面包。",
+            ko: "Eight는 후시미의 좋은 물과 고수분·저온 장시간 발효를 고집하며 매일 약 50종의 갓 구운 빵을 선보이는 후시미 이나리의 인기 베이커리입니다."
         }
     };
 
@@ -1526,6 +1583,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 "transport",
                 fallback.transport
             );
+        }
+
+        if (normalized === "toilet") {
+            const language = String(getCurrentLanguage() || "ja").toLowerCase();
+            return ({ ja: "トイレ", en: "Restroom", zh: "洗手间", ko: "화장실" })[language] || "トイレ";
+        }
+
+        if (normalized === "guide") {
+            const language = String(getCurrentLanguage() || "ja").toLowerCase();
+            return ({ ja: "案内", en: "Information", zh: "导览", ko: "안내" })[language] || "案内";
         }
 
         return (
@@ -5603,6 +5670,24 @@ document.addEventListener("DOMContentLoaded", function () {
             return null;
         }
 
+        // Attach route endpoints to their spot marker when the source trace is
+        // within 15 m. This keeps all edges for one spot on a shared graph node.
+        const endpointSnapLimitMeters = 15;
+        const fromSpot = spots.find(item => String(item.id) === from);
+        const toSpot = spots.find(item => String(item.id) === to);
+        if (fromSpot && Number.isFinite(Number(fromSpot.lat)) && Number.isFinite(Number(fromSpot.lng))) {
+            const exactStart = [Number(fromSpot.lat), Number(fromSpot.lng)];
+            if (distanceBetweenLatLngMeters(path[0], exactStart) <= endpointSnapLimitMeters) {
+                path[0] = exactStart;
+            }
+        }
+        if (toSpot && Number.isFinite(Number(toSpot.lat)) && Number.isFinite(Number(toSpot.lng))) {
+            const exactEnd = [Number(toSpot.lat), Number(toSpot.lng)];
+            if (distanceBetweenLatLngMeters(path[path.length - 1], exactEnd) <= endpointSnapLimitMeters) {
+                path[path.length - 1] = exactEnd;
+            }
+        }
+
         return {
 
             from:
@@ -5949,7 +6034,7 @@ document.addEventListener("DOMContentLoaded", function () {
         routes = connected.routes;
 
         console.log(
-            "V119 routes loaded:",
+            "V120 routes loaded:",
             baseRoutes.length,
             "base routes /",
             routes.length,
@@ -6324,45 +6409,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
         pathEdges.reverse();
 
-        const coordinates = [];
+        const paths = [];
         let totalDistanceKm = 0;
 
-        pathEdges.forEach(
-            function (
-                edge,
-                index
-            ) {
+        pathEdges.forEach(function (edge) {
+            const points = edge.path.map(point => point.slice());
+            const previousPath = paths[paths.length - 1];
 
-                const points =
-                    edge.path.slice();
-
-                if (
-                    index > 0
-                ) {
-                    points.shift();
-                }
-
-                coordinates.push(
-                    ...points
-                );
-
-                totalDistanceKm +=
-                    routePathDistanceKm(
-                        edge.path
-                    );
+            if (previousPath && points.length >= 2 &&
+                distanceBetweenLatLngMeters(previousPath[previousPath.length - 1], points[0]) <= 1.5) {
+                // Join only when the graph nodes physically coincide.
+                previousPath.push(...points.slice(1));
+            } else if (points.length >= 2) {
+                // Keep a real gap as a separate line. Never draw a shortcut across it.
+                paths.push(points);
             }
-        );
+
+            totalDistanceKm += routePathDistanceKm(edge.path);
+        });
+
+        const coordinates = paths.length === 1 ? paths[0].slice() : (paths[0] || []);
 
         return {
-
-            coordinates:
-                coordinates,
-
-            distanceKm:
-                totalDistanceKm,
-
-            legs:
-                pathEdges
+            coordinates: coordinates,
+            paths: paths,
+            distanceKm: totalDistanceKm,
+            legs: pathEdges
         };
     }
 
@@ -6559,213 +6631,71 @@ document.addEventListener("DOMContentLoaded", function () {
                 to.id
             );
 
-        if (
-            graphRoute &&
-            graphRoute.coordinates
-                .length >= 2
-        ) {
-
+        if (graphRoute && Array.isArray(graphRoute.paths) &&
+            graphRoute.paths.some(path => Array.isArray(path) && path.length >= 2)) {
             return {
-
-                coordinates:
-                    graphRoute.coordinates,
-
-                source:
-                    "routes.json",
-
-                legs:
-                    graphRoute.legs
+                coordinates: graphRoute.coordinates,
+                paths: graphRoute.paths,
+                source: "routes.json",
+                legs: graphRoute.legs
             };
         }
 
-        const osrmCoordinates =
-            await getOSRMRoute(
-                {
-                    lat:
-                        Number(
-                            from.lat
-                        ),
-
-                    lng:
-                        Number(
-                            from.lng
-                        )
-                },
-                {
-                    lat:
-                        Number(
-                            to.lat
-                        ),
-
-                    lng:
-                        Number(
-                            to.lng
-                        )
-                }
-            );
-
-        return {
-
-            coordinates:
-                osrmCoordinates,
-
-            source:
-                "OSRM",
-
-            legs:
-                []
-        };
+        // Within this attraction, do not draw an unverified OSRM shortcut when
+        // two selected spots are not connected by the hand-checked approach data.
+        throw new Error(`${getLocalizedValue(from.name)} → ${getLocalizedValue(to.name)} は参道データで接続されていません。参道データを追加してください。`);
     }
 
     // ============================================================
     // 現在地→目的地
     // ============================================================
 
-    async function getLocationToSpotRoute(
-        location,
-        target
-    ) {
+    async function getLocationToSpotRoute(location, target) {
+        const nearest = findNearestGraphSpot(location.lat, location.lng);
 
-        const nearest =
-            findNearestGraphSpot(
-                location.lat,
-                location.lng
-            );
-
-        if (
-            nearest &&
-            nearest.distanceMeters <=
-                800
-        ) {
-
-            const graphRoute =
-                findGraphRoute(
-                    nearest.spot.id,
-                    target.id
-                );
-
-            if (
-                graphRoute &&
-                graphRoute.coordinates
-                    .length >= 2
-            ) {
-
-                let approach = [];
-
-                try {
-
-                    approach =
-                        await getOSRMRoute(
-                            {
-                                lat:
-                                    location.lat,
-
-                                lng:
-                                    location.lng
-                            },
-                            {
-                                lat:
-                                    nearest.spot.lat,
-
-                                lng:
-                                    nearest.spot.lng
-                            }
-                        );
-
-                } catch (error) {
-
-                    console.warn(
-                        "現在地→routes.json接続地点のOSRMに失敗しました。",
-                        error
-                    );
-                }
-
-                const combined =
-                    approach.length > 0
-                        ? approach.slice()
-                        : [
-                            [
-                                location.lat,
-                                location.lng
-                            ]
-                        ];
-
-                if (
-                    combined.length >
-                    0
-                ) {
-
-                    const firstRoutePoint =
-                        graphRoute
-                            .coordinates[0];
-
-                    const lastApproachPoint =
-                        combined[
-                            combined.length - 1
-                        ];
-
-                    if (
-                        !lastApproachPoint ||
-                        map.distance(
-                            lastApproachPoint,
-                            firstRoutePoint
-                        ) > 1
-                    ) {
-
-                        combined.push(
-                            firstRoutePoint
-                        );
-                    }
-                }
-
-                combined.push(
-                    ...graphRoute
-                        .coordinates
-                        .slice(1)
-                );
-
-                return {
-
-                    coordinates:
-                        combined,
-
-                    source:
-                        "HYBRID",
-
-                    legs:
-                        graphRoute.legs
-                };
+        if (nearest && nearest.distanceMeters <= 800) {
+            const graphRoute = findGraphRoute(nearest.spot.id, target.id);
+            if (!graphRoute || !Array.isArray(graphRoute.paths) ||
+                !graphRoute.paths.some(path => Array.isArray(path) && path.length >= 2)) {
+                throw new Error(`${getLocalizedValue(target.name)} まで既存の参道データがつながっていません。`);
             }
+
+            let approach;
+            try {
+                approach = await getOSRMRoute(
+                    { lat: location.lat, lng: location.lng },
+                    { lat: Number(nearest.spot.lat), lng: Number(nearest.spot.lng) }
+                );
+            } catch (error) {
+                console.warn("現在地から最寄り参道への経路を取得できませんでした。", error);
+                throw new Error("現在地から参道への道を取得できませんでした。位置情報と通信状態を確認してください。");
+            }
+
+            const paths = [];
+            if (Array.isArray(approach) && approach.length >= 2) paths.push(approach);
+            graphRoute.paths.forEach(path => {
+                if (Array.isArray(path) && path.length >= 2) paths.push(path);
+            });
+
+            return {
+                coordinates: paths[0] || [],
+                paths: paths,
+                source: "HYBRID",
+                legs: graphRoute.legs
+            };
         }
 
-        const direct =
-            await getOSRMRoute(
-                {
-                    lat:
-                        location.lat,
-
-                    lng:
-                        location.lng
-                },
-                {
-                    lat:
-                        target.lat,
-
-                    lng:
-                        target.lng
-                }
-            );
-
+        // The user is outside the mapped Fushimi area: OSRM may be used only for
+        // this external approach, then the local graph takes over once nearby.
+        const direct = await getOSRMRoute(
+            { lat: location.lat, lng: location.lng },
+            { lat: Number(target.lat), lng: Number(target.lng) }
+        );
         return {
-
-            coordinates:
-                direct,
-
-            source:
-                "OSRM",
-
-            legs:
-                []
+            coordinates: direct,
+            paths: [direct],
+            source: "OSRM",
+            legs: []
         };
     }
 
@@ -6796,6 +6726,13 @@ document.addEventListener("DOMContentLoaded", function () {
             totalMeters /
             1000
         );
+    }
+
+    function calculateRoutePathsDistance(paths) {
+        if (!Array.isArray(paths)) return 0;
+        return paths.reduce(function (total, path) {
+            return total + (Array.isArray(path) && path.length >= 2 ? calculateDistance(path) : 0);
+        }, 0);
     }
 
     // ============================================================
@@ -7086,14 +7023,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function createRoute(routeOptions = null) {
+        if (routeOptions?.destinationSpot) setSpotAsSingleDestination(routeOptions.destinationSpot);
 
-        // When launched from a spot detail, that spot is the sole destination.
-        // A chosen origin is kept separate from the destination list.
-        if (routeOptions?.destinationSpot) {
-            setSpotAsSingleDestination(routeOptions.destinationSpot);
-        }
-
-        if (selectedSpots.length === 0) {
+        if (!selectedSpots.length) {
             alert("まずスポットを1か所以上選択してください。");
             return;
         }
@@ -7110,11 +7042,9 @@ document.addEventListener("DOMContentLoaded", function () {
             routeLine = null;
         }
         clearRouteNumberMarkers();
-
         routeSegments = [];
 
         let startLocation = null;
-
         if (explicitOriginMode === "current") {
             try {
                 startLocation = await ensureCurrentLocation();
@@ -7131,184 +7061,64 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        const allCoordinates = [];
+        const routePaths = [];
         const legs = [];
+        function appendRouteLeg(route, from, to) {
+            const parts = Array.isArray(route?.paths) && route.paths.length
+                ? route.paths
+                : (Array.isArray(route?.coordinates) ? [route.coordinates] : []);
+            const validParts = parts.filter(path => Array.isArray(path) && path.length >= 2);
+            if (!validParts.length) throw new Error("徒歩ルートの座標が不足しています。");
+
+            routeSegments.push(route);
+            validParts.forEach(path => routePaths.push(path));
+            legs.push({
+                from: from,
+                to: to,
+                coordinates: validParts[0],
+                paths: validParts,
+                source: route.source
+            });
+        }
 
         try {
             if (explicitStartSpot) {
                 const firstTarget = selectedSpots[0];
                 const firstRoute = await getWalkingRoute(explicitStartSpot, firstTarget);
-                if (!firstRoute || !Array.isArray(firstRoute.coordinates) || firstRoute.coordinates.length < 2) {
-                    throw new Error("出発スポットから到着地への徒歩ルートが空です。");
-                }
-                routeSegments.push(firstRoute);
-                legs.push({
-                    from: explicitStartSpot,
-                    to: firstTarget,
-                    coordinates: firstRoute.coordinates,
-                    source: firstRoute.source
-                });
-                allCoordinates.push(...firstRoute.coordinates);
+                appendRouteLeg(firstRoute, explicitStartSpot, firstTarget);
             } else if (startLocation) {
-
-                const firstTarget =
-                    selectedSpots[0];
-
-                const firstRoute =
-                    await getLocationToSpotRoute(
-                        startLocation,
-                        firstTarget
-                    );
-
-                if (
-                    firstRoute.coordinates
-                        .length < 2
-                ) {
-
-                    throw new Error(
-                        "現在地から最初のスポットへのルートが空です。"
-                    );
-                }
-
-                routeSegments.push(
-                    firstRoute
-                );
-
-                legs.push(
-
-                    {
-
-                        from:
-                            {
-
-                                lat:
-                                    startLocation.lat,
-
-                                lng:
-                                    startLocation.lng,
-
-                                name:
-                                    "現在地"
-                            },
-
-                        to:
-                            firstTarget,
-
-                        coordinates:
-                            firstRoute
-                                .coordinates,
-
-                        source:
-                            firstRoute.source
-                    }
-                );
-
-                allCoordinates.push(
-                    ...firstRoute.coordinates
-                );
+                const firstTarget = selectedSpots[0];
+                const firstRoute = await getLocationToSpotRoute(startLocation, firstTarget);
+                appendRouteLeg(firstRoute, {
+                    lat: startLocation.lat,
+                    lng: startLocation.lng,
+                    name: "現在地"
+                }, firstTarget);
             }
 
-            for (
-                let i = 0;
-                i <
-                    selectedSpots.length - 1;
-                i++
-            ) {
-
-                const from =
-                    selectedSpots[i];
-
-                const to =
-                    selectedSpots[
-                        i + 1
-                    ];
-
-                const route =
-                    await getWalkingRoute(
-                        from,
-                        to
-                    );
-
-                if (
-                    !route ||
-                    route.coordinates
-                        .length < 2
-                ) {
-
-                    throw new Error(
-                        `${from.id} → ${to.id} のルートが取得できませんでした。`
-                    );
-                }
-
-                routeSegments.push(
-                    route
-                );
-
-                legs.push(
-
-                    {
-
-                        from:
-                            from,
-
-                        to:
-                            to,
-
-                        coordinates:
-                            route.coordinates,
-
-                        source:
-                            route.source
-                    }
-                );
-
-                const points =
-                    route.coordinates
-                        .slice();
-
-                if (
-                    allCoordinates.length >
-                    0
-                ) {
-
-                    points.shift();
-                }
-
-                allCoordinates.push(
-                    ...points
-                );
+            for (let i = 0; i < selectedSpots.length - 1; i++) {
+                const from = selectedSpots[i];
+                const to = selectedSpots[i + 1];
+                const route = await getWalkingRoute(from, to);
+                appendRouteLeg(route, from, to);
             }
-
         } catch (error) {
-
-            console.error(
-                "V11ルート取得エラー:",
-                error
-            );
-
+            console.error("ルート取得エラー:", error);
             alert(
-                "徒歩ルートを取得できませんでした。\n" +
-                "routes.json / OSRM の接続を確認してください。"
+                "徒歩ルートを作成できませんでした。\n" +
+                (error?.message || "参道データの接続を確認してください。")
             );
-
             return;
         }
 
-        if (
-            allCoordinates.length <
-            2
-        ) {
-
-            alert(
-                "ルートを作成できませんでした。"
-            );
-
+        if (!routePaths.length) {
+            alert("ルートを作成できませんでした。参道データを確認してください。");
             return;
         }
 
-        // V118: draw one static orange route line only. No white underlay,
-        // glow, trail, or moving highlight is created.
-        routeLine = L.polyline(allCoordinates, {
+        // Draw each connected path as its own polyline. Never bridge gaps between
+        // route sections with an invented straight line.
+        const routeStyle = {
             pane: "plannerRoutePane",
             renderer: routeSvgRenderer,
             className: "planner-route-base-line",
@@ -7318,99 +7128,42 @@ document.addEventListener("DOMContentLoaded", function () {
             lineCap: "round",
             lineJoin: "round",
             interactive: false
-        }).addTo(map);
+        };
+        const routeLayers = routePaths.map(path => L.polyline(path, routeStyle));
+        routeLine = L.featureGroup(routeLayers).addTo(map);
 
-        map.fitBounds(
-            routeLine.getBounds(),
-            {
-                padding:
-                    [
-                        40,
-                        40
-                    ]
-            }
-        );
-
+        map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
         renderRouteNumberMarkers();
 
-        const routeDistance =
-            calculateDistance(
-                allCoordinates
-            );
+        const routeDistance = calculateRoutePathsDistance(routePaths);
+        if (distance) distance.textContent = `${routeDistance.toFixed(2)} km`;
 
-        if (distance) {
+        const walkingMinutes = Math.ceil(routeDistance * 1000 / 80);
+        if (walkTime) walkTime.textContent = formatTime(walkingMinutes);
 
-            distance.textContent =
-                `${routeDistance.toFixed(2)} km`;
-        }
-
-        const walkingMinutes =
-            Math.ceil(
-                routeDistance *
-                1000 /
-                80
-            );
-
-        if (walkTime) {
-
-            walkTime.textContent =
-                formatTime(
-                    walkingMinutes
-                );
-        }
-
-        navigationLegs =
-            legs;
-
-        navigationLegIndex =
-            0;
-
+        navigationLegs = legs;
+        navigationLegIndex = 0;
         showNavCard();
 
         if (navStatus) {
-
             navStatus.textContent = explicitStartSpot
                 ? `${getLocalizedValue(explicitStartSpot.name)}から作成`
                 : startLocation
                     ? "現在地から作成"
                     : "ルート作成完了";
         }
-
-        if (navTitle) {
-
-            navTitle.textContent =
-                `次の目的地：${getLocalizedValue(
-                    selectedSpots[0].name
-                )}`;
-        }
-
-        setNavMeta(
-            [
-                `${selectedSpots.length}スポット`,
-
-                `${routeDistance.toFixed(2)} km`,
-
-                formatTime(
-                    walkingMinutes
-                )
-            ]
-        );
-
+        if (navTitle) navTitle.textContent = `次の目的地：${getLocalizedValue(selectedSpots[0].name)}`;
+        setNavMeta([
+            `${selectedSpots.length}スポット`,
+            `${routeDistance.toFixed(2)} km`,
+            formatTime(walkingMinutes)
+        ]);
         if (navArrival) {
-
-            navArrival.style.display =
-                "none";
-
-            navArrival.textContent =
-                "";
+            navArrival.style.display = "none";
+            navArrival.textContent = "";
         }
-
         updateNavigationPanel();
-
-        if (routeOptions?.destinationSpot) {
-            hideSpotDetail();
-        }
-        // After any route is built, collapse the category/list drawer.
+        if (routeOptions?.destinationSpot) hideSpotDetail();
         setFoodCategorySwitcherOpen(false);
         setPlannerSheetState("collapsed");
     }
@@ -7672,10 +7425,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     : `次 ${navigationLegIndex + 1}/${navigationLegs.length}`;
         }
 
-        const legDistance =
-            calculateDistance(
-                leg.coordinates
-            );
+        const legDistance = calculateRoutePathsDistance(leg.paths || [leg.coordinates]);
 
         const minutes =
             Math.ceil(
@@ -7752,7 +7502,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const progress =
             getRemainingRouteDistance(
                 location,
-                leg.coordinates
+                leg.paths || [leg.coordinates]
             );
 
         const remainingMeters =
@@ -7818,69 +7568,36 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function getRemainingRouteDistance(
-        location,
-        points
-    ) {
+    function getRemainingRouteDistance(location, pathsOrPoints) {
+        if (!Array.isArray(pathsOrPoints) || !pathsOrPoints.length) return 0;
+        const isMultiPath = Array.isArray(pathsOrPoints[0]) && Array.isArray(pathsOrPoints[0][0]);
+        const paths = (isMultiPath ? pathsOrPoints : [pathsOrPoints])
+            .filter(path => Array.isArray(path) && path.length >= 2);
+        if (!paths.length) return 0;
 
-        if (
-            !Array.isArray(points) ||
-            points.length < 2
-        ) {
-            return 0;
-        }
-
-        let nearestIndex =
-            0;
-
-        let nearestDistance =
-            Infinity;
-
-        for (
-            let i = 0;
-            i < points.length;
-            i++
-        ) {
-
-            const meters =
-                map.distance(
-                    [
-                        location.lat,
-                        location.lng
-                    ],
-                    points[i]
-                );
-
-            if (
-                meters <
-                nearestDistance
-            ) {
-
-                nearestDistance =
-                    meters;
-
-                nearestIndex =
-                    i;
+        let bestRemaining = Infinity;
+        paths.forEach(function (path, pathIndex) {
+            let nearestIndex = 0;
+            let nearestDistance = Infinity;
+            for (let i = 0; i < path.length; i++) {
+                const meters = map.distance([location.lat, location.lng], path[i]);
+                if (meters < nearestDistance) {
+                    nearestDistance = meters;
+                    nearestIndex = i;
+                }
             }
-        }
 
-        let totalMeters =
-            nearestDistance;
+            let remaining = nearestDistance;
+            for (let i = nearestIndex; i < path.length - 1; i++) {
+                remaining += map.distance(path[i], path[i + 1]);
+            }
+            for (let nextPathIndex = pathIndex + 1; nextPathIndex < paths.length; nextPathIndex++) {
+                remaining += calculateDistance(paths[nextPathIndex]) * 1000;
+            }
+            if (remaining < bestRemaining) bestRemaining = remaining;
+        });
 
-        for (
-            let i = nearestIndex;
-            i < points.length - 1;
-            i++
-        ) {
-
-            totalMeters +=
-                map.distance(
-                    points[i],
-                    points[i + 1]
-                );
-        }
-
-        return totalMeters;
+        return Number.isFinite(bestRemaining) ? bestRemaining : 0;
     }
 
     function completeNavigation() {
