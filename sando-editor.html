@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>伏見稲荷 ルートマップエディター</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css">
 <style>
 :root{--ink:#20252d;--muted:#687386;--line:#e5e9ef;--accent:#e87521;--accent2:#bd5516;--bg:#f3f5f7;--green:#16734a;--red:#b42318;--blue:#2463a6}
 *{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
@@ -21,8 +21,8 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
 <aside class="panel">
   <header class="head">
     <h1>伏見稲荷 ルートマップエディター</h1>
-    <p class="sub">GitHubの既存 <b>data/routes.json</b> を地図に表示。参道を追加して、更新した routes.json を書き出せます。</p>
-    <div class="badges"><span class="badge green">既存routes.jsonを使用</span><span class="badge">地図を見ながら編集</span></div>
+    <p class="sub">GitHubの既存 <b>data/routes.json</b> を国土地理院の地図に表示。参道を追加して、更新した routes.json を書き出せます。地図のAPIキーは不要です。</p>
+    <div class="badges"><span class="badge green">既存routes.jsonを使用</span><span class="badge">地理院地図で編集</span></div>
   </header>
   <main class="content">
     <section class="card">
@@ -68,17 +68,17 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
     <div class="footer">伏見稲荷スマートガイド / routes.json 編集ツール</div>
   </main>
 </aside>
-<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>地図の見方：</b>オレンジ線＝既存ルート ／ 青い点＝スポット　　左上の折れ線ボタンで新しい道を描けます。</div></section>
+<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>地図の見方：</b>国土地理院の標準地図 ／ オレンジ線＝既存ルート ／ 青い点＝スポット　　左上の折れ線ボタンで新しい道を描けます。</div></section>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script>
 'use strict';
 const DEFAULT_ROUTES_URL='./data/routes.json';
 const SPOTS_URL='./data/spots.json';
 const DRAFT_KEY='fushimi_routes_editor_draft_v1';
 const CENTER=[34.9672,135.7750];
-let routes=[];let spots=[];let remoteRoutes=[];let routeLines=[];let spotLayer=null;let selectedIndex=-1;let hasDraft=false;
+let routes=[];let spots=[];let remoteRoutes=[];let routeLines=[];let spotLayer=null;let selectedIndex=-1;let hasDraft=false;let restoredDraft=false;
 const $=id=>document.getElementById(id);
 const clone=v=>JSON.parse(JSON.stringify(v));
 function setStatus(message,kind='ok'){const el=$('status');el.textContent=message;el.className='status'+(kind==='ok'?'':' '+kind);}
@@ -107,13 +107,23 @@ function geoJSONLines(data){const out=[];const visit=x=>{if(!x)return;if(x.type=
 async function importGeoFiles(files){let added=0,dups=0,errors=[];const fromChoice=$('fromSelect').value,toChoice=$('toSelect').value;for(const file of files){try{const data=JSON.parse(await file.text());const lines=geoJSONLines(data);if(!lines.length){errors.push(`${file.name}：線データがありません`);continue;}for(const path of lines){const name=$('routeName').value.trim()||file.name.replace(/\.(geo)?json$/i,'')+(lines.length>1?` ${added+1}`:'');const result=addRoute(path,name,fromChoice,toChoice,`GeoJSON: ${file.name}`);if(result==='duplicate')dups++;else if(result)added++;}}catch(e){errors.push(`${file.name}：読み込みに失敗しました`);}}refreshMap(false);updateUI();setStatus(`GeoJSON取り込み：追加 ${added}本／重複スキップ ${dups}本`+(errors.length?'\n'+errors.join('\n'):''),errors.length?'warn':'ok');}
 function downloadRoutes(){const blob=new Blob([JSON.stringify(routes,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='routes.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);setStatus('routes.jsonを保存しました。GitHubの data/routes.json をこのファイルで置き換えてください。');}
 async function copyRoutes(){try{await navigator.clipboard.writeText(JSON.stringify(routes,null,2));setStatus('routes.jsonの内容をコピーしました。');}catch(e){setStatus('コピーできませんでした。「routes.jsonを保存」を使ってください。','warn');}}
-async function loadRemote(resetDraft=false){const src=$('routesUrl').value.trim()||DEFAULT_ROUTES_URL;setStatus('GitHubのroutes.jsonを読み込んでいます…');try{const url=new URL(src,location.href);url.searchParams.set('_t',Date.now());const res=await fetch(url.href,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}：routes.jsonを取得できません`);const remote=normalizeRoutes(await res.json());remoteRoutes=clone(remote);let draft=null;if(!resetDraft){try{const raw=localStorage.getItem(DRAFT_KEY);if(raw)draft=normalizeRoutes(JSON.parse(raw));}catch(e){draft=null;}}if(draft&&draft.length){const restore=confirm(`このブラウザに未反映の下書き（${draft.length}区間）があります。\n下書きを続けますか？\n\n「OK」= 下書きを続ける\n「キャンセル」= GitHubの最新 routes.json に戻す`);routes=restore?draft:clone(remote);if(!restore){localStorage.removeItem(DRAFT_KEY);hasDraft=false;}}else routes=clone(remote);try{spots=[];const su=new URL(SPOTS_URL,location.href);su.searchParams.set('_t',Date.now());const sr=await fetch(su.href,{cache:'no-store'});if(sr.ok){const sd=await sr.json();if(Array.isArray(sd))spots=sd.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));}}catch(e){spots=[];}populateNodeSelects();updateStats();renderList();refreshMap(true);setStatus(`GitHubから読み込みました。ルート ${routes.length} 区間、スポット ${spots.length} 件。${routes===remoteRoutes?'':'下書きデータを表示中です。'}`+(spots.length?'':'\n※ spots.jsonを読み込めなかったため、ルート線のみ表示しています。'),'ok');}catch(e){setStatus(`GitHubのroutes.jsonを読み込めませんでした。\n${e.message}\n\nこのHTMLをリポジトリ直下に置き、data/routes.json が存在するか確認してください。`,'error');}}
+async function loadRemote(resetDraft=false){const src=$('routesUrl').value.trim()||DEFAULT_ROUTES_URL;setStatus('GitHubのroutes.jsonを読み込んでいます…');try{const url=new URL(src,location.href);url.searchParams.set('_t',Date.now());const res=await fetch(url.href,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}：routes.jsonを取得できません`);const remote=normalizeRoutes(await res.json());remoteRoutes=clone(remote);let draft=null;if(!resetDraft){try{const raw=localStorage.getItem(DRAFT_KEY);if(raw)draft=normalizeRoutes(JSON.parse(raw));}catch(e){draft=null;}}if(draft&&draft.length){const restore=confirm(`このブラウザに未反映の下書き（${draft.length}区間）があります。\n下書きを続けますか？\n\n「OK」= 下書きを続ける\n「キャンセル」= GitHubの最新 routes.json に戻す`);routes=restore?draft:clone(remote);restoredDraft=!!restore;if(!restore){localStorage.removeItem(DRAFT_KEY);hasDraft=false;}}else{routes=clone(remote);restoredDraft=false;}try{spots=[];const su=new URL(SPOTS_URL,location.href);su.searchParams.set('_t',Date.now());const sr=await fetch(su.href,{cache:'no-store'});if(sr.ok){const sd=await sr.json();if(Array.isArray(sd))spots=sd.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));}}catch(e){spots=[];}populateNodeSelects();updateStats();renderList();refreshMap(true);setStatus(`GitHubから読み込みました。ルート ${routes.length} 区間、スポット ${spots.length} 件。${restoredDraft?'未反映の下書きデータを表示中です。':''}`+(spots.length?'':'\n※ spots.jsonを読み込めなかったため、ルート線のみ表示しています。'),'ok');}catch(e){setStatus(`GitHubのroutes.jsonを読み込めませんでした。\n${e.message}\n\nこのHTMLをリポジトリ直下に置き、data/routes.json が存在するか確認してください。`,'error');}}
 // Leaflet
 if(!window.L){setStatus('地図ライブラリを読み込めません。ネット接続を確認してください。','error');throw new Error('Leaflet missing');}
-const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView(CENTER,15);
-const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap contributors, © CARTO'}).addTo(map);
-const gsi=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{minZoom:5,maxZoom:18,attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>'});
-L.control.layers({'CARTO Positron':carto,'国土地理院（標準地図）':gsi},null,{position:'topright',collapsed:true}).addTo(map);L.control.scale({metric:true,imperial:false}).addTo(map);
+// ベースマップは国土地理院の標準地図のみを使用（APIキー不要）
+const map=L.map('map',{zoomControl:true,preferCanvas:true,maxZoom:18,minZoom:5}).setView(CENTER,15);
+const gsi=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{
+  minZoom:5,
+  maxZoom:18,
+  maxNativeZoom:18,
+  crossOrigin:true,
+  attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">地理院タイル（国土地理院）</a>',
+  tileSize:256
+}).addTo(map);
+L.control.scale({metric:true,imperial:false}).addTo(map);
+let gsiTileLoaded=false;
+gsi.on('tileload',()=>{if(!gsiTileLoaded){gsiTileLoaded=true;}});
+gsi.on('tileerror',()=>{if(!gsiTileLoaded){setStatus('国土地理院の地図タイルを読み込めません。ネット接続を確認して、ページを再読み込みしてください。APIキーは不要です。','error');}});
 if(L.drawLocal){L.drawLocal.draw.toolbar.buttons.polyline='参道を描く';L.drawLocal.draw.toolbar.actions.title='描画を中止';L.drawLocal.draw.toolbar.actions.text='キャンセル';L.drawLocal.draw.handlers.polyline.tooltip.start='参道の始点をクリック';L.drawLocal.draw.handlers.polyline.tooltip.cont='曲がり角をクリック';L.drawLocal.draw.handlers.polyline.tooltip.end='終点をダブルクリック';}
 const drawControl=new L.Control.Draw({position:'topleft',draw:{polyline:{shapeOptions:{color:'#ed7c22',weight:5,opacity:.96},showLength:true,metric:true,repeatMode:false,allowIntersection:false},polygon:false,rectangle:false,circle:false,circlemarker:false,marker:false},edit:false});map.addControl(drawControl);
 map.on(L.Draw.Event.CREATED,e=>{const ll=e.layer.getLatLngs();const path=ll.map(p=>({lat:Number(p.lat.toFixed(7)),lng:Number(p.lng.toFixed(7))}));const fc=$('fromSelect').value,tc=$('toSelect').value;const result=addRoute(path,$('routeName').value.trim(),fc,tc);if(result==='duplicate')setStatus('同じ形・同じ接続先のルートがすでにあります。重複追加はしませんでした。','warn');});
