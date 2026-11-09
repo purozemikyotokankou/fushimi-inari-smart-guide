@@ -6397,37 +6397,79 @@ body.planner-page .liquid-cursor {
 }
 
 
-/* V123 — plain orange route with one subtle moving highlight; no glow. */
+/* V122 — steady luminous route: an orange body with a soft static halo/core. */
+.leaflet-plannerRoutePane .planner-route-halo-line,
+.planner-route-halo-line {
+  stroke: #FFB84D !important;
+  stroke-width: 15px !important;
+  stroke-opacity: .22 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 4px rgba(255, 153, 0, .72))
+          drop-shadow(0 0 8px rgba(255, 184, 77, .42)) !important;
+  animation: none !important;
+  transition: none !important;
+  stroke-dasharray: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
 .leaflet-plannerRoutePane .planner-route-base-line,
 .planner-route-base-line {
   stroke: #FF9900 !important;
-  stroke-width: 6.5px !important;
+  stroke-width: 7px !important;
   stroke-opacity: 1 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  filter: none !important;
+  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .92))
+          drop-shadow(0 0 3px rgba(255, 153, 0, .92))
+          drop-shadow(0 0 6px rgba(255, 153, 0, .48)) !important;
   animation: none !important;
   transition: none !important;
   stroke-dasharray: none !important;
   pointer-events: none !important;
   vector-effect: non-scaling-stroke;
 }
-.leaflet-plannerRoutePane .planner-route-runner-line,
-.planner-route-runner-line {
-  stroke: #FFB347 !important;
-  stroke-width: 3px !important;
-  stroke-opacity: .45 !important;
+.leaflet-plannerRoutePane .planner-route-core-line,
+.planner-route-core-line {
+  stroke: #FFF1D6 !important;
+  stroke-width: 1.6px !important;
+  stroke-opacity: .62 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  filter: none !important;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, .86)) !important;
   animation: none !important;
   transition: none !important;
   stroke-dasharray: none !important;
   pointer-events: none !important;
   vector-effect: non-scaling-stroke;
 }
+
+
+/* V124 — route direction without a visible light beam or added marker.
+   A faint same-hue variation travels along the existing orange stroke. */
+.leaflet-plannerRoutePane .planner-route-tone-wave-line,
+.planner-route-tone-wave-line {
+  stroke: #FFB85A !important;
+  stroke-width: 6.2px !important;
+  stroke-opacity: .22 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-dasharray: 145 855 !important;
+  stroke-dashoffset: 0;
+  filter: none !important;
+  animation: fushimi-route-tone-wave 5.2s linear infinite !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+@keyframes fushimi-route-tone-wave {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1000; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .planner-route-runner-line {
-    display: none !important;
+  .planner-route-tone-wave-line {
+    animation: none !important;
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 0 !important;
   }
 }

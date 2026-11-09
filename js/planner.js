@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V123-SUBTLE-ROUTE-FLOW";
-    console.log("[Fushimi Inari Smart Guide] planner.js V123-SUBTLE-ROUTE-FLOW loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V122-ROUTE-SEGMENT-AND-STATIC-GLOW";
+    console.log("[Fushimi Inari Smart Guide] planner.js V122-ROUTE-SEGMENT-AND-STATIC-GLOW loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -218,9 +218,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let routeLine = null;
     let routeSegments = [];
     let routeNumberMarkers = [];
-    let routeFlowRunnerLayer = null;
-    let routeFlowAnimationFrame = null;
-    let routeFlowAnimationToken = 0;
 
     let currentLocationMarker = null;
     let currentLocation = null;
@@ -6930,149 +6927,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    // A single, low-contrast highlight travels from the route origin to its
-    // destination. The route itself never glows; there are no particles,
-    // bloom effects, persistent highlights, or moving dash patterns.
-    function stopRouteFlowAnimation() {
-        routeFlowAnimationToken += 1;
-        if (routeFlowAnimationFrame !== null) {
-            window.cancelAnimationFrame(routeFlowAnimationFrame);
-            routeFlowAnimationFrame = null;
-        }
-        if (routeFlowRunnerLayer) {
-            try {
-                if (map.hasLayer(routeFlowRunnerLayer)) map.removeLayer(routeFlowRunnerLayer);
-            } catch (error) {
-                console.warn("route flow cleanup warning:", error);
-            }
-            routeFlowRunnerLayer = null;
-        }
-    }
-
-    function buildRouteFlowMetrics(paths) {
-        const segments = [];
-        let totalDistance = 0;
-
-        (Array.isArray(paths) ? paths : []).forEach(function (path) {
-            if (!Array.isArray(path) || path.length < 2) return;
-            const points = path.map(function (point) {
-                try { return L.latLng(point); } catch (_) { return null; }
-            }).filter(function (point) {
-                return point && Number.isFinite(point.lat) && Number.isFinite(point.lng);
-            });
-            if (points.length < 2) return;
-
-            const cumulative = [0];
-            for (let i = 1; i < points.length; i++) {
-                cumulative.push(cumulative[i - 1] + map.distance(points[i - 1], points[i]));
-            }
-            const length = cumulative[cumulative.length - 1];
-            if (!(length > 0)) return;
-
-            segments.push({
-                points: points,
-                cumulative: cumulative,
-                length: length,
-                start: totalDistance
-            });
-            totalDistance += length;
-        });
-
-        return { segments: segments, totalDistance: totalDistance };
-    }
-
-    function routeFlowPointAt(segment, distanceAlongSegment) {
-        const target = Math.max(0, Math.min(segment.length, distanceAlongSegment));
-        const cumulative = segment.cumulative;
-        let index = 1;
-        while (index < cumulative.length - 1 && cumulative[index] < target) index++;
-
-        const beforeDistance = cumulative[index - 1];
-        const afterDistance = cumulative[index];
-        const span = afterDistance - beforeDistance;
-        const ratio = span > 0 ? (target - beforeDistance) / span : 0;
-        const before = segment.points[index - 1];
-        const after = segment.points[index];
-        return L.latLng(
-            before.lat + (after.lat - before.lat) * ratio,
-            before.lng + (after.lng - before.lng) * ratio
-        );
-    }
-
-    function getRouteFlowSlice(metrics, startDistance, endDistance) {
-        const slices = [];
-        metrics.segments.forEach(function (segment) {
-            const localStart = Math.max(0, startDistance - segment.start);
-            const localEnd = Math.min(segment.length, endDistance - segment.start);
-            if (localEnd <= localStart) return;
-
-            const points = [routeFlowPointAt(segment, localStart)];
-            for (let i = 1; i < segment.points.length - 1; i++) {
-                const vertexDistance = segment.cumulative[i];
-                if (vertexDistance > localStart && vertexDistance < localEnd) {
-                    points.push(segment.points[i]);
-                }
-            }
-            points.push(routeFlowPointAt(segment, localEnd));
-            if (points.length >= 2) slices.push(points);
-        });
-        return slices;
-    }
-
-    function startRouteFlowAnimation(paths) {
-        stopRouteFlowAnimation();
-        if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-        const metrics = buildRouteFlowMetrics(paths);
-        if (!metrics.segments.length || !(metrics.totalDistance > 0)) return;
-
-        const firstPoint = metrics.segments[0].points[0];
-        const latitude = firstPoint.lat * Math.PI / 180;
-        const metersPerPixel = (40075016.686 * Math.cos(latitude)) / (256 * Math.pow(2, map.getZoom()));
-        // About 18 screen pixels long at the current zoom; deliberately no glow.
-        const runnerLength = Math.max(2, Math.min(metrics.totalDistance * 0.18, Math.max(7, Math.min(75, metersPerPixel * 18))));
-        const duration = Math.max(2800, Math.min(9000, metrics.totalDistance * 10));
-        const pauseAtEnds = 950;
-        const token = routeFlowAnimationToken;
-
-        routeFlowRunnerLayer = L.polyline([], {
-            pane: "plannerRoutePane",
-            renderer: routeSvgRenderer,
-            className: "planner-route-runner-line",
-            color: "#FFB347",
-            weight: 3.0,
-            opacity: 0.45,
-            lineCap: "round",
-            lineJoin: "round",
-            interactive: false
-        }).addTo(map);
-
-        let animationStart = null;
-        function animateRouteFlow(timestamp) {
-            if (token !== routeFlowAnimationToken || !routeFlowRunnerLayer) return;
-            if (animationStart === null) animationStart = timestamp;
-
-            const cycleDuration = duration + pauseAtEnds;
-            const elapsed = (timestamp - animationStart) % cycleDuration;
-            let slices = [];
-
-            if (elapsed < duration) {
-                // Move the highlight forward. Its short tail disappears behind it.
-                const travelDistance = (elapsed / duration) * (metrics.totalDistance + runnerLength);
-                const sliceStart = Math.max(0, travelDistance - runnerLength);
-                const sliceEnd = Math.min(metrics.totalDistance, travelDistance);
-                if (sliceEnd > sliceStart) {
-                    slices = getRouteFlowSlice(metrics, sliceStart, sliceEnd);
-                }
-            }
-
-            routeFlowRunnerLayer.setLatLngs(slices);
-            routeFlowAnimationFrame = window.requestAnimationFrame(animateRouteFlow);
-        }
-
-        routeFlowAnimationFrame = window.requestAnimationFrame(animateRouteFlow);
-    }
-
     async function createRoute(routeOptions = null) {
         if (routeOptions?.destinationSpot) setSpotAsSingleDestination(routeOptions.destinationSpot);
 
@@ -7088,7 +6942,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        stopRouteFlowAnimation();
         if (routeLine) {
             map.removeLayer(routeLine);
             routeLine = null;
@@ -7168,25 +7021,67 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // The route remains a plain, steady orange line. Only a short, subtle
-        // highlight is animated over it from the departure point to the goal.
-        const routeLayers = routePaths.map(function (path) {
-            return L.polyline(path, {
-                pane: "plannerRoutePane",
-                renderer: routeSvgRenderer,
+        // Draw each connected path as its own polyline. Never bridge gaps between
+        // route sections with an invented straight line.
+        // Static layered strokes create a steady illuminated route. No moving
+        // beam, particles, dash animation, or pulsing opacity is used.
+        const routeLayerStyles = [
+            {
+                className: "planner-route-halo-line",
+                color: "#FFB84D",
+                weight: 15,
+                opacity: 0.22
+            },
+            {
                 className: "planner-route-base-line",
                 color: ROUTE_COLOR,
-                weight: 6.5,
-                opacity: 1,
-                lineCap: "round",
-                lineJoin: "round",
-                interactive: false
+                weight: 7,
+                opacity: 1
+            },
+            {
+                // A very low-contrast orange tone sweep. This is not a light beam,
+                // marker, particle, or glow; it is a thin color variation on the route.
+                className: "planner-route-tone-wave-line",
+                color: "#FFB85A",
+                weight: 6.2,
+                opacity: 0.22
+            },
+            {
+                className: "planner-route-core-line",
+                color: "#FFF1D6",
+                weight: 1.6,
+                opacity: 0.62
+            }
+        ];
+        const routeLayers = routePaths.flatMap(function (path) {
+            return routeLayerStyles.map(function (style) {
+                return L.polyline(path, {
+                    pane: "plannerRoutePane",
+                    renderer: routeSvgRenderer,
+                    className: style.className,
+                    color: style.color,
+                    weight: style.weight,
+                    opacity: style.opacity,
+                    lineCap: "round",
+                    lineJoin: "round",
+                    interactive: false
+                });
             });
         });
         routeLine = L.featureGroup(routeLayers).addTo(map);
 
+        // Normalize the moving tone overlay to the full length of each route path.
+        // That makes the sweep travel from the first coordinate toward the last,
+        // regardless of how long the route is or how far the map is zoomed.
+        routeLayers.forEach(function (layer) {
+            if (layer?.options?.className !== "planner-route-tone-wave-line") return;
+            const pathElement = typeof layer.getElement === "function"
+                ? layer.getElement()
+                : layer._path;
+            if (pathElement) pathElement.setAttribute("pathLength", "1000");
+        });
+
         map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
-        startRouteFlowAnimation(routePaths);
         renderRouteNumberMarkers();
 
         const routeDistance = calculateRoutePathsDistance(routePaths);
@@ -7363,7 +7258,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function clearRouteVisuals() {
 
-        stopRouteFlowAnimation();
         if (routeLine) {
             try {
                 map.removeLayer(routeLine);
