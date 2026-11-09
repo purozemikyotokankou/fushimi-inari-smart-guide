@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>伏見稲荷 ルートマップエディター</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+<style>
+:root{--ink:#20252d;--muted:#687386;--line:#e5e9ef;--accent:#e87521;--accent2:#bd5516;--bg:#f3f5f7;--green:#16734a;--red:#b42318;--blue:#2463a6}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+.app{height:100dvh;display:grid;grid-template-columns:370px minmax(0,1fr);overflow:hidden}.panel{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;z-index:500}.head{padding:17px 18px 13px;border-bottom:1px solid var(--line)}h1{font-size:20px;line-height:1.3;margin:0 0 6px;letter-spacing:-.03em}.sub{color:var(--muted);font-size:12px;line-height:1.55;margin:0}.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.badge{font-size:10px;font-weight:750;padding:5px 8px;border-radius:999px;background:#fff0e5;color:#9a4a16}.badge.green{background:#e9f6ee;color:#17613e}
+.content{padding:12px;overflow:auto;min-height:0}.card{border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:10px;background:#fff}h2{font-size:13px;margin:0 0 9px}.field{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}.field label{font-size:10px;color:var(--muted);font-weight:750}.field input,.field select{width:100%;padding:9px 10px;border:1px solid #d8dee7;border-radius:9px;font:12px system-ui;background:#fff;outline:none}.field input:focus,.field select:focus{border-color:#e29a65;box-shadow:0 0 0 3px #e8752118}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row{display:flex;gap:7px;align-items:center}.row.wrap{flex-wrap:wrap}.row>*{min-width:0}
+button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#27313d;color:white;white-space:nowrap}button:hover,.btn:hover{filter:brightness(1.06)}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--accent)}.soft{background:#edf1f5;color:#27313d}.greenbtn{background:#19724c}.redbtn{background:#fff0ee;color:var(--red)}.wide{width:100%}.small{font-size:10px;color:var(--muted);line-height:1.55}.status{border-radius:9px;padding:9px 10px;background:#edf7f0;color:#17613e;font-size:10px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.status.warn{background:#fff6e8;color:#80520a}.status.error{background:#fff0ee;color:#a33328}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}.stat{background:#f7f8fa;border:1px solid #edf0f3;border-radius:9px;padding:8px 6px}.stat b{display:block;font-size:19px;line-height:1.1}.stat span{font-size:9px;color:var(--muted)}.route-list{display:flex;flex-direction:column;gap:6px;max-height:275px;overflow:auto}.route{border:1px solid #edf0f3;border-radius:9px;padding:8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.route-title{font-size:11px;font-weight:750;overflow-wrap:anywhere}.route-meta{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.4}.route-actions{display:flex;gap:4px}.route-actions button{padding:6px 7px;font-size:9px}.empty{font-size:10px;color:var(--muted);padding:10px;border:1px dashed #d8dee7;border-radius:9px;text-align:center}.instructions{font-size:10px;color:#596473;line-height:1.65;padding-left:17px;margin:5px 0 0}.instructions li{margin:3px 0}.map-wrap{position:relative;min-width:0;min-height:0}#map{height:100%;width:100%;background:#edf1f2}.map-hint{position:absolute;z-index:400;top:12px;left:58px;background:#fffefaed;border:1px solid #e5e0d8;border-radius:10px;padding:8px 11px;font-size:10px;box-shadow:0 3px 12px #17212b1a;pointer-events:none;max-width:min(440px,calc(100% - 80px))}.map-hint b{color:#9c4e19}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:9px;color:var(--muted)}.legend span{display:flex;align-items:center;gap:5px}.swatch{width:17px;height:4px;border-radius:3px;background:#f08a24}.dot{width:9px;height:9px;border-radius:50%;background:#356ba8;border:2px solid #fff;box-shadow:0 0 0 1px #356ba8}.spot-label{background:#fff;border:1px solid #dce2e8;border-radius:5px;padding:1px 4px;font-size:9px;font-weight:700;color:#27313d;white-space:nowrap;box-shadow:0 1px 5px #0002}.leaflet-popup-content{font-family:system-ui,sans-serif}.leaflet-container{font-family:system-ui,sans-serif}.leaflet-draw-toolbar a{background-color:#fff}.footer{font-size:9px;color:#9299a4;text-align:center;padding:4px 0 7px}
+@media(max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:minmax(280px,56dvh) minmax(0,44dvh)}.map-wrap{grid-row:1}.panel{grid-row:2;border-right:0;border-top:1px solid var(--line)}.head{padding:9px 12px 8px}.head h1{font-size:16px}.sub{font-size:10px}.badges{margin-top:6px}.content{padding:8px 10px}.card{padding:9px;margin-bottom:8px}.route-list{max-height:120px}.map-hint{top:8px;left:54px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="panel">
+  <header class="head">
+    <h1>伏見稲荷 ルートマップエディター</h1>
+    <p class="sub">GitHubの既存 <b>data/routes.json</b> を地図に表示。参道を追加して、更新した routes.json を書き出せます。</p>
+    <div class="badges"><span class="badge green">既存routes.jsonを使用</span><span class="badge">地図を見ながら編集</span></div>
+  </header>
+  <main class="content">
+    <section class="card">
+      <h2>① GitHubのデータ</h2>
+      <div class="field"><label for="routesUrl">routes.json のURL</label><input id="routesUrl" type="text" value="./data/routes.json" spellcheck="false"></div>
+      <div class="row wrap"><button class="primary" id="reloadBtn">GitHubから再読み込み</button><button class="soft" id="resetBtn">下書きを破棄</button></div>
+      <div id="status" class="status warn" style="margin-top:9px">routes.json を読み込んでいます…</div>
+      <div class="legend"><span><i class="swatch"></i>登録済みルート</span><span><i class="dot"></i>スポット</span></div>
+    </section>
+    <section class="card">
+      <h2>② 新しいルートを描く</h2>
+      <div class="field"><label for="routeName">ルート名</label><input id="routeName" type="text" placeholder="例：二ノ峰への参道"></div>
+      <div class="grid2">
+        <div class="field"><label for="fromSelect">出発地点（from）</label><select id="fromSelect"><option value="__auto__">線の始点から自動判定</option></select></div>
+        <div class="field"><label for="toSelect">到着地点（to）</label><select id="toSelect"><option value="__auto__">線の終点から自動判定</option></select></div>
+      </div>
+      <p class="small" style="margin:0 0 8px">先に出発・到着地点を選び、地図左上の折れ線ボタンで道をなぞります。「自動判定」は線の両端に最も近いスポットを選びます。既存ルートにある中継点も選択できます。</p>
+      <div class="row wrap">
+        <label class="btn soft" for="geoFiles">GeoJSONを取り込む<input id="geoFiles" type="file" accept=".geojson,.json,application/geo+json,application/json" multiple hidden></label>
+        <button id="fitBtn" class="soft">全体を表示</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>③ routes.jsonを書き出す</h2>
+      <div class="stats"><div class="stat"><b id="routeCount">0</b><span>ルート区間</span></div><div class="stat"><b id="pointCount">0</b><span>座標点</span></div><div class="stat"><b id="lengthKm">0.00</b><span>合計距離 km</span></div></div>
+      <div class="row wrap" style="margin-top:9px"><button id="downloadBtn" class="greenbtn">routes.jsonを保存</button><button id="copyBtn" class="soft">JSONをコピー</button></div>
+      <p class="small" style="margin:8px 0 0">保存した <b>routes.json</b> をGitHubの <b>data/routes.json</b> にアップロードして置き換えます。GeoJSONマスターファイルは使いません。</p>
+    </section>
+    <section class="card">
+      <h2>④ 登録済みルート <span id="listCount" class="small"></span></h2>
+      <div class="field"><input id="routeSearch" type="search" placeholder="ルート名・スポット名で検索"></div>
+      <div id="routeList" class="route-list"><div class="empty">読み込み中…</div></div>
+    </section>
+    <section class="card">
+      <h2>使い方</h2>
+      <ol class="instructions">
+        <li>GitHubにこのHTMLを <b>sando-editor.html</b> としてリポジトリ直下に置きます。</li>
+        <li>GitHub Pagesで <b>/sando-editor.html</b> を開くと <b>data/routes.json</b> が自動表示されます。</li>
+        <li>出発地点と到着地点を選び、地図左上の折れ線アイコンで参道をなぞります。</li>
+        <li>「routes.jsonを保存」でダウンロードし、GitHubの <b>data/routes.json</b> を置き換えます。</li>
+      </ol>
+    </section>
+    <div class="footer">伏見稲荷スマートガイド / routes.json 編集ツール</div>
+  </main>
+</aside>
+<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>地図の見方：</b>オレンジ線＝既存ルート ／ 青い点＝スポット　　左上の折れ線ボタンで新しい道を描けます。</div></section>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script>
+'use strict';
+const DEFAULT_ROUTES_URL='./data/routes.json';
+const SPOTS_URL='./data/spots.json';
+const DRAFT_KEY='fushimi_routes_editor_draft_v1';
+const CENTER=[34.9672,135.7750];
+let routes=[];let spots=[];let remoteRoutes=[];let routeLines=[];let spotLayer=null;let selectedIndex=-1;let hasDraft=false;
+const $=id=>document.getElementById(id);
+const clone=v=>JSON.parse(JSON.stringify(v));
+function setStatus(message,kind='ok'){const el=$('status');el.textContent=message;el.className='status'+(kind==='ok'?'':' '+kind);}
+function asNodeKey(v){return JSON.stringify(v);}
+function validRoute(r){return r&&Object.prototype.hasOwnProperty.call(r,'from')&&Object.prototype.hasOwnProperty.call(r,'to')&&Array.isArray(r.path)&&r.path.length>=2&&r.path.every(p=>p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))&&Math.abs(Number(p.lat))<=90&&Math.abs(Number(p.lng))<=180);}
+function normalizeRoutes(data){if(!Array.isArray(data))throw new Error('routes.jsonの形式が配列ではありません');const clean=data.filter(validRoute).map(r=>({...clone(r),path:r.path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))}));if(!clean.length)throw new Error('routes.jsonに有効なルートが見つかりません');return clean;}
+function haversine(a,b){const R=6371000,rad=x=>x*Math.PI/180,la1=rad(a.lat),la2=rad(b.lat),dl=rad(b.lng-a.lng),dp=la2-la1;const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function routeLength(r){let m=0;for(let i=1;i<r.path.length;i++)m+=haversine(r.path[i-1],r.path[i]);return m;}
+function nearestSpot(point){let best=null,dist=Infinity;for(const s of spots){const d=haversine(point,{lat:Number(s.lat),lng:Number(s.lng)});if(d<dist){dist=d;best=s;}}return best?{spot:best,distance:dist}:null;}
+function coordKey(path){const pts=path.map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`);const a=pts.join('|'),b=[...pts].reverse().join('|');return a<b?a:b;}
+function routeDuplicate(candidate){const key=coordKey(candidate.path);return routes.some(r=>coordKey(r.path)===key&&((String(r.from)===String(candidate.from)&&String(r.to)===String(candidate.to))||(String(r.from)===String(candidate.to)&&String(r.to)===String(candidate.from))));}
+function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(routes));hasDraft=true;}catch(e){/* localStorage may be unavailable */}}
+function formatNode(node){const spot=spots.find(s=>String(s.id)===String(node));return spot?`${spot.name}（ID:${spot.id}）`:String(node);}
+function populateNodeSelects(){const ids=new Map();for(const s of spots)ids.set(asNodeKey(s.id),s.id);for(const r of routes){ids.set(asNodeKey(r.from),r.from);ids.set(asNodeKey(r.to),r.to);}for(const id of ['fromSelect','toSelect']){const sel=$(id),old=sel.value;sel.replaceChildren();const auto=document.createElement('option');auto.value='__auto__';auto.textContent=id==='fromSelect'?'自動判定（始点に近いスポット）':'自動判定（終点に近いスポット）';sel.append(auto);for(const node of ids.values()){const op=document.createElement('option');op.value=asNodeKey(node);op.textContent=formatNode(node);sel.append(op);}if([...sel.options].some(o=>o.value===old))sel.value=old;}}
+function selectedNode(id,point){const val=$(id).value;if(val==='__auto__'){const near=nearestSpot(point);return near?near.spot.id:`__junction_${point.lat.toFixed(5)}_${point.lng.toFixed(5)}`;}try{return JSON.parse(val);}catch(e){return val;}}
+function updateStats(){const points=routes.reduce((n,r)=>n+r.path.length,0),meters=routes.reduce((n,r)=>n+routeLength(r),0);$('routeCount').textContent=routes.length;$('pointCount').textContent=points;$('lengthKm').textContent=(meters/1000).toFixed(2);$('listCount').textContent=`（${routes.length}件）`;}
+function popupFor(route,index){const div=document.createElement('div');const title=document.createElement('b');title.textContent=route.name||`ルート ${index+1}`;const meta=document.createElement('div');meta.style.cssText='font-size:11px;margin-top:4px;color:#586174';meta.textContent=`${formatNode(route.from)} → ${formatNode(route.to)} / ${route.path.length}点 / 約${Math.round(routeLength(route))}m`;div.append(title,meta);return div;}
+function refreshMap(fit=false){routeLines=[];if(window.routeLayer)map.removeLayer(window.routeLayer);window.routeLayer=L.featureGroup();routes.forEach((r,i)=>{const line=L.polyline(r.path.map(p=>[p.lat,p.lng]),{color:i===selectedIndex?'#d74e24':'#f08a24',weight:i===selectedIndex?7:4.5,opacity:i===selectedIndex?1:.88,lineCap:'round',lineJoin:'round'});line.bindPopup(popupFor(r,i));line.on('click',()=>{selectedIndex=i;refreshMap(false);renderRouteList();});line.addTo(window.routeLayer);routeLines.push(line);});window.routeLayer.addTo(map);
+ if(spotLayer)map.removeLayer(spotLayer);spotLayer=L.layerGroup();spots.forEach(s=>{const cat=String(s.category||'');const color=cat==='交通'?'#2873bd':cat==='トイレ'?'#168b70':cat==='飲食店'?'#db7d28':cat==='買う'?'#a06abd':'#8b5bb2';const marker=L.circleMarker([Number(s.lat),Number(s.lng)],{radius:6,weight:2,color:'#fff',fillColor:color,fillOpacity:1});marker.bindTooltip(String(s.name||`スポット${s.id}`),{permanent:false,direction:'top'});marker.bindPopup(`<b>${escapeHtml(s.name||'スポット')}</b><br><small>ID: ${escapeHtml(s.id)}</small>`);marker.addTo(spotLayer);});spotLayer.addTo(map);
+ if(fit){const all=[];routes.forEach(r=>r.path.forEach(p=>all.push([p.lat,p.lng])));spots.forEach(s=>{if(Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)))all.push([Number(s.lat),Number(s.lng)]);});if(all.length)map.fitBounds(L.latLngBounds(all).pad(.08),{maxZoom:17});}}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function renderList(){const root=$('routeList');root.replaceChildren();const q=$('routeSearch').value.trim().toLowerCase();let shown=0;routes.forEach((r,i)=>{const from=formatNode(r.from),to=formatNode(r.to),name=r.name||`ルート ${i+1}`;if(q&&!`${name} ${from} ${to}`.toLowerCase().includes(q))return;shown++;const row=document.createElement('div');row.className='route';if(i===selectedIndex)row.style.borderColor='#e87521';const info=document.createElement('div');const title=document.createElement('div');title.className='route-title';title.textContent=name;const meta=document.createElement('div');meta.className='route-meta';meta.textContent=`${from} → ${to} · ${r.path.length}点 · 約${Math.round(routeLength(r))}m`;info.append(title,meta);const actions=document.createElement('div');actions.className='route-actions';const view=document.createElement('button');view.className='soft';view.textContent='見る';view.addEventListener('click',()=>{selectedIndex=i;const b=L.latLngBounds(r.path.map(p=>[p.lat,p.lng]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:18});refreshMap(false);renderList();});const del=document.createElement('button');del.className='redbtn';del.textContent='削除';del.addEventListener('click',()=>{if(!confirm(`「${name}」を作業中の routes.json から削除しますか？`))return;routes.splice(i,1);if(selectedIndex===i)selectedIndex=-1;else if(selectedIndex>i)selectedIndex--;saveDraft();populateNodeSelects();updateStats();renderList();refreshMap(false);setStatus(`${name}を作業中データから削除しました。GitHubに反映するには保存した routes.json をアップロードしてください。`,'warn');});actions.append(view,del);row.append(info,actions);root.append(row);});if(!shown){const e=document.createElement('div');e.className='empty';e.textContent=routes.length?'検索条件に一致するルートはありません。':'ルートがありません。';root.append(e);}}
+function updateUI(){populateNodeSelects();updateStats();renderList();}
+function addRoute(path,name,fromChoice,toChoice,source='地図上で作図'){if(!Array.isArray(path)||path.length<2)return false;const from=fromChoice==='__auto__'?selectedNode('fromSelect',path[0]):JSON.parse(fromChoice);const to=toChoice==='__auto__'?selectedNode('toSelect',path[path.length-1]):JSON.parse(toChoice);const route={from,to,name:name||`追加ルート ${routes.length+1}`,path:path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))};if(routeDuplicate(route))return 'duplicate';routes.push(route);selectedIndex=routes.length-1;saveDraft();updateUI();refreshMap(false);setStatus(`「${route.name}」を追加しました。${formatNode(from)} → ${formatNode(to)}。routes.jsonを保存してGitHubへ反映してください。`);return true;}
+function geoJSONLines(data){const out=[];const visit=x=>{if(!x)return;if(x.type==='FeatureCollection'&&Array.isArray(x.features)){x.features.forEach(visit);return;}if(x.type==='Feature'){visit(x.geometry);return;}if(x.type==='LineString'&&Array.isArray(x.coordinates)){const c=x.coordinates.filter(a=>Array.isArray(a)&&a.length>=2&&Number.isFinite(Number(a[0]))&&Number.isFinite(Number(a[1])));if(c.length>=2)out.push(c.map(a=>({lat:Number(a[1]),lng:Number(a[0])})));}else if(x.type==='MultiLineString'&&Array.isArray(x.coordinates)){x.coordinates.forEach(c=>visit({type:'LineString',coordinates:c}));}else if(x.type==='GeometryCollection'&&Array.isArray(x.geometries))x.geometries.forEach(visit);};visit(data);return out;}
+async function importGeoFiles(files){let added=0,dups=0,errors=[];const fromChoice=$('fromSelect').value,toChoice=$('toSelect').value;for(const file of files){try{const data=JSON.parse(await file.text());const lines=geoJSONLines(data);if(!lines.length){errors.push(`${file.name}：線データがありません`);continue;}for(const path of lines){const name=$('routeName').value.trim()||file.name.replace(/\.(geo)?json$/i,'')+(lines.length>1?` ${added+1}`:'');const result=addRoute(path,name,fromChoice,toChoice,`GeoJSON: ${file.name}`);if(result==='duplicate')dups++;else if(result)added++;}}catch(e){errors.push(`${file.name}：読み込みに失敗しました`);}}refreshMap(false);updateUI();setStatus(`GeoJSON取り込み：追加 ${added}本／重複スキップ ${dups}本`+(errors.length?'\n'+errors.join('\n'):''),errors.length?'warn':'ok');}
+function downloadRoutes(){const blob=new Blob([JSON.stringify(routes,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='routes.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);setStatus('routes.jsonを保存しました。GitHubの data/routes.json をこのファイルで置き換えてください。');}
+async function copyRoutes(){try{await navigator.clipboard.writeText(JSON.stringify(routes,null,2));setStatus('routes.jsonの内容をコピーしました。');}catch(e){setStatus('コピーできませんでした。「routes.jsonを保存」を使ってください。','warn');}}
+async function loadRemote(resetDraft=false){const src=$('routesUrl').value.trim()||DEFAULT_ROUTES_URL;setStatus('GitHubのroutes.jsonを読み込んでいます…');try{const url=new URL(src,location.href);url.searchParams.set('_t',Date.now());const res=await fetch(url.href,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}：routes.jsonを取得できません`);const remote=normalizeRoutes(await res.json());remoteRoutes=clone(remote);let draft=null;if(!resetDraft){try{const raw=localStorage.getItem(DRAFT_KEY);if(raw)draft=normalizeRoutes(JSON.parse(raw));}catch(e){draft=null;}}if(draft&&draft.length){const restore=confirm(`このブラウザに未反映の下書き（${draft.length}区間）があります。\n下書きを続けますか？\n\n「OK」= 下書きを続ける\n「キャンセル」= GitHubの最新 routes.json に戻す`);routes=restore?draft:clone(remote);if(!restore){localStorage.removeItem(DRAFT_KEY);hasDraft=false;}}else routes=clone(remote);try{spots=[];const su=new URL(SPOTS_URL,location.href);su.searchParams.set('_t',Date.now());const sr=await fetch(su.href,{cache:'no-store'});if(sr.ok){const sd=await sr.json();if(Array.isArray(sd))spots=sd.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));}}catch(e){spots=[];}populateNodeSelects();updateStats();renderList();refreshMap(true);setStatus(`GitHubから読み込みました。ルート ${routes.length} 区間、スポット ${spots.length} 件。${routes===remoteRoutes?'':'下書きデータを表示中です。'}`+(spots.length?'':'\n※ spots.jsonを読み込めなかったため、ルート線のみ表示しています。'),'ok');}catch(e){setStatus(`GitHubのroutes.jsonを読み込めませんでした。\n${e.message}\n\nこのHTMLをリポジトリ直下に置き、data/routes.json が存在するか確認してください。`,'error');}}
+// Leaflet
+if(!window.L){setStatus('地図ライブラリを読み込めません。ネット接続を確認してください。','error');throw new Error('Leaflet missing');}
+const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView(CENTER,15);
+const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap contributors, © CARTO'}).addTo(map);
+const gsi=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{minZoom:5,maxZoom:18,attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>'});
+L.control.layers({'CARTO Positron':carto,'国土地理院（標準地図）':gsi},null,{position:'topright',collapsed:true}).addTo(map);L.control.scale({metric:true,imperial:false}).addTo(map);
+if(L.drawLocal){L.drawLocal.draw.toolbar.buttons.polyline='参道を描く';L.drawLocal.draw.toolbar.actions.title='描画を中止';L.drawLocal.draw.toolbar.actions.text='キャンセル';L.drawLocal.draw.handlers.polyline.tooltip.start='参道の始点をクリック';L.drawLocal.draw.handlers.polyline.tooltip.cont='曲がり角をクリック';L.drawLocal.draw.handlers.polyline.tooltip.end='終点をダブルクリック';}
+const drawControl=new L.Control.Draw({position:'topleft',draw:{polyline:{shapeOptions:{color:'#ed7c22',weight:5,opacity:.96},showLength:true,metric:true,repeatMode:false,allowIntersection:false},polygon:false,rectangle:false,circle:false,circlemarker:false,marker:false},edit:false});map.addControl(drawControl);
+map.on(L.Draw.Event.CREATED,e=>{const ll=e.layer.getLatLngs();const path=ll.map(p=>({lat:Number(p.lat.toFixed(7)),lng:Number(p.lng.toFixed(7))}));const fc=$('fromSelect').value,tc=$('toSelect').value;const result=addRoute(path,$('routeName').value.trim(),fc,tc);if(result==='duplicate')setStatus('同じ形・同じ接続先のルートがすでにあります。重複追加はしませんでした。','warn');});
+$('reloadBtn').addEventListener('click',()=>loadRemote(false));$('resetBtn').addEventListener('click',()=>{if(confirm('ブラウザ内の下書きを破棄して、GitHubの最新routes.jsonを読み込みますか？')){localStorage.removeItem(DRAFT_KEY);hasDraft=false;loadRemote(true);}});$('downloadBtn').addEventListener('click',downloadRoutes);$('copyBtn').addEventListener('click',copyRoutes);$('fitBtn').addEventListener('click',()=>{const b=window.routeLayer?.getBounds();if(b?.isValid())map.fitBounds(b.pad(.08),{maxZoom:17});});$('geoFiles').addEventListener('change',async e=>{const files=[...e.target.files];if(files.length)await importGeoFiles(files);e.target.value='';});$('routeSearch').addEventListener('input',renderList);
+loadRemote(false);
+</script>
+</body>
+</html>
