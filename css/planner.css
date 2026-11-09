@@ -6445,30 +6445,33 @@ body.planner-page .liquid-cursor {
 }
 
 
-/* V125 — visible directional flow without arrows, particles, or a glowing beam.
-   A warm orange tone band travels directly on the existing route stroke. */
+/* V126 — a short white beam travels along the steady orange route.
+   The orange route remains visible underneath; only this compact beam moves. */
 .leaflet-plannerRoutePane .planner-route-tone-wave-line,
 .planner-route-tone-wave-line {
-  stroke: #FFB347 !important;
-  stroke-width: 6.8px !important;
-  stroke-opacity: .76 !important;
+  stroke: #FFFFFF !important;
+  stroke-width: 4.2px !important;
+  stroke-opacity: .98 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  stroke-dasharray: 260 740 !important;
+  /* Short beam: about one tenth of each normalized route path. */
+  stroke-dasharray: 105 895 !important;
   stroke-dashoffset: 0;
-  filter: none !important;
-  animation: fushimi-route-tone-wave 2.35s linear infinite !important;
+  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .98))
+          drop-shadow(0 0 4px rgba(255, 255, 255, .82))
+          drop-shadow(0 0 8px rgba(255, 153, 0, .72)) !important;
+  animation: fushimi-route-white-beam 3.2s linear infinite !important;
   pointer-events: none !important;
   vector-effect: non-scaling-stroke;
   will-change: stroke-dashoffset;
 }
-@keyframes fushimi-route-tone-wave {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -1000; }
+@keyframes fushimi-route-white-beam {
+  0%   { stroke-dashoffset: 0; }
+  88%  { stroke-dashoffset: -1000; }
+  100% { stroke-dashoffset: -1000; }
 }
 @media (prefers-reduced-motion: reduce) {
   .planner-route-tone-wave-line {
-    animation-duration: 3.6s !important;
-    stroke-opacity: .52 !important;
+    animation-duration: 4.2s !important;
   }
 }
