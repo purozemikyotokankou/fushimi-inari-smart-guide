@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V121-RESTORED-ICON-IMAGES-AND-TRACES";
-    console.log("[Fushimi Inari Smart Guide] planner.js V121-RESTORED-ICON-IMAGES-AND-TRACES loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V122-ROUTE-SEGMENT-AND-STATIC-GLOW";
+    console.log("[Fushimi Inari Smart Guide] planner.js V122-ROUTE-SEGMENT-AND-STATIC-GLOW loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -613,8 +613,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "plannerRoutePane"
     ).style.zIndex = "450";
 
-    // V59: use a real SVG renderer for the route so stroke-dashoffset animations
-    // can move along the actual routed geometry even though the base map prefers Canvas.
+    // V122: render layered static route strokes through SVG for a consistent luminous line.
     const routeSvgRenderer = L.svg({
         pane: "plannerRoutePane",
         padding: 0.5
@@ -5854,61 +5853,164 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const explicitEndpointIds = new Set();
+        const endpointRouteCounts = new Map();
         baseRoutes.forEach(function (route) {
-            explicitEndpointIds.add(String(route.from));
-            explicitEndpointIds.add(String(route.to));
+            [String(route.from), String(route.to)].forEach(function (id) {
+                explicitEndpointIds.add(id);
+                endpointRouteCounts.set(id, (endpointRouteCounts.get(id) || 0) + 1);
+            });
         });
 
+        // A regular spot may attach within 35 m. A spot that already has exactly
+        // one route edge may also rejoin a nearby shared trace within 8 m. This
+        // prevents a single endpoint spur (for example, a toilet spur) from
+        // forcing every route to travel back to that spur's original junction.
+        const AUTO_SPOT_REJOIN_LIMIT_METERS = 8;
+        const SHARED_TRACE_TOLERANCE_METERS = 1.5;
         const candidatesByRoute = new Map();
         const outsideLimit = [];
+        const spotRecords = [];
 
         spots.forEach(function (spot) {
             const spotId = String(spot.id);
-            if (explicitEndpointIds.has(spotId)) return;
+            const incidentRouteCount = endpointRouteCounts.get(spotId) || 0;
+            const isSingleEdgeEndpoint = explicitEndpointIds.has(spotId) && incidentRouteCount === 1;
+
+            // Spots already connected to several explicit route edges are
+            // intentionally left alone; their topology is already defined.
+            if (explicitEndpointIds.has(spotId) && !isSingleEdgeEndpoint) return;
 
             const lat = Number(spot.lat);
             const lng = Number(spot.lng);
             if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
 
             const spotPoint = [lat, lng];
-            let nearest = null;
+            const projections = [];
 
             baseRoutes.forEach(function (route, routeIndex) {
+                // For a one-edge endpoint, preserve its existing edge and search
+                // only for an additional, nearby trace to rejoin.
+                if (isSingleEdgeEndpoint &&
+                    (String(route.from) === spotId || String(route.to) === spotId)) {
+                    return;
+                }
+
                 for (let segmentIndex = 0; segmentIndex < route.path.length - 1; segmentIndex++) {
                     const projection = projectSpotToRouteSegment(
                         spotPoint,
                         route.path[segmentIndex],
                         route.path[segmentIndex + 1]
                     );
-                    if (!nearest || projection.distanceMeters < nearest.distanceMeters) {
-                        nearest = {
-                            routeIndex: routeIndex,
-                            segmentIndex: segmentIndex,
-                            measure: segmentIndex + projection.ratio,
-                            distanceMeters: projection.distanceMeters,
-                            point: projection.point,
-                            spot: spot
-                        };
-                    }
+                    projections.push({
+                        routeIndex: routeIndex,
+                        segmentIndex: segmentIndex,
+                        measure: segmentIndex + projection.ratio,
+                        distanceMeters: projection.distanceMeters,
+                        point: projection.point
+                    });
                 }
             });
 
-            if (!nearest) return;
-            if (nearest.distanceMeters > AUTO_SPOT_ROUTE_CONNECT_LIMIT_METERS) {
+            if (!projections.length) return;
+            projections.sort(function (a, b) { return a.distanceMeters - b.distanceMeters; });
+            const nearest = projections[0];
+            const connectionLimit = isSingleEdgeEndpoint
+                ? AUTO_SPOT_REJOIN_LIMIT_METERS
+                : AUTO_SPOT_ROUTE_CONNECT_LIMIT_METERS;
+
+            if (nearest.distanceMeters > connectionLimit) {
                 if (nearest.distanceMeters <= 60) {
                     outsideLimit.push({
                         id: spotId,
                         name: spot.name || spotId,
-                        distanceMeters: Math.round(nearest.distanceMeters * 10) / 10
+                        distanceMeters: Math.round(nearest.distanceMeters * 10) / 10,
+                        limitMeters: connectionLimit
                     });
                 }
                 return;
             }
 
-            if (!candidatesByRoute.has(nearest.routeIndex)) {
-                candidatesByRoute.set(nearest.routeIndex, []);
+            // Several routes.json edges can describe the same physical trace.
+            // Attach this spot to every coincident copy, not just the first
+            // match returned by the nearest-segment search. This is important
+            // when two hand-drawn traces overlap but lead to different nodes.
+            const matchingByRoute = new Map();
+            projections.forEach(function (candidate) {
+                if (candidate.distanceMeters > nearest.distanceMeters + SHARED_TRACE_TOLERANCE_METERS) return;
+                if (distanceBetweenLatLngMeters(candidate.point, nearest.point) > SHARED_TRACE_TOLERANCE_METERS) return;
+
+                const previous = matchingByRoute.get(candidate.routeIndex);
+                if (!previous || candidate.distanceMeters < previous.distanceMeters) {
+                    matchingByRoute.set(candidate.routeIndex, candidate);
+                }
+            });
+
+            if (!matchingByRoute.size) return;
+            spotRecords.push({
+                spot: spot,
+                spotPoint: spotPoint,
+                nearest: nearest,
+                matches: Array.from(matchingByRoute.values()),
+                joinCluster: null
+            });
+        });
+
+        // Give geometrically coincident spot connections one shared graph node.
+        // This also keeps nearby spot connectors from creating parallel, almost
+        // identical junctions on the same path.
+        const joinClusters = [];
+        spotRecords.sort(function (a, b) {
+            return a.nearest.distanceMeters - b.nearest.distanceMeters;
+        });
+
+        spotRecords.forEach(function (record) {
+            let cluster = null;
+            for (const candidateCluster of joinClusters) {
+                if (distanceBetweenLatLngMeters(candidateCluster.point, record.nearest.point) <= SHARED_TRACE_TOLERANCE_METERS) {
+                    cluster = candidateCluster;
+                    break;
+                }
             }
-            candidatesByRoute.get(nearest.routeIndex).push(nearest);
+            if (!cluster) {
+                cluster = {
+                    point: record.nearest.point.slice(),
+                    nodeId: `__auto_spot_route_join_${joinClusters.length + 1}`
+                };
+                joinClusters.push(cluster);
+            }
+            record.joinCluster = cluster;
+        });
+
+        // If a matched trace meets an existing graph endpoint exactly, reuse
+        // that endpoint ID as the shared node rather than creating a duplicate.
+        spotRecords.forEach(function (record) {
+            for (const match of record.matches) {
+                const route = baseRoutes[match.routeIndex];
+                if (distanceBetweenLatLngMeters(match.point, route.path[0]) <= 1) {
+                    record.joinCluster.nodeId = String(route.from);
+                    break;
+                }
+                if (distanceBetweenLatLngMeters(match.point, route.path[route.path.length - 1]) <= 1) {
+                    record.joinCluster.nodeId = String(route.to);
+                    break;
+                }
+            }
+        });
+
+        spotRecords.forEach(function (record) {
+            record.matches.forEach(function (match) {
+                if (!candidatesByRoute.has(match.routeIndex)) {
+                    candidatesByRoute.set(match.routeIndex, []);
+                }
+                candidatesByRoute.get(match.routeIndex).push({
+                    spot: record.spot,
+                    spotPoint: record.spotPoint,
+                    point: match.point,
+                    measure: match.measure,
+                    distanceMeters: match.distanceMeters,
+                    joinCluster: record.joinCluster
+                });
+            });
         });
 
         const expandedRoutes = [];
@@ -5923,54 +6025,32 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            // 近接スポットが同じ地点に集まる場合は、共有の接続ノードにまとめる。
-            const clusters = [];
+            // One boundary per shared graph node on this route. If multiple
+            // nearby spots use the same junction, their connector edges still
+            // point to the same node and the route itself is split only once.
+            const uniqueCandidates = [];
             candidates.forEach(function (candidate) {
-                const lastCluster = clusters[clusters.length - 1];
-                if (lastCluster &&
-                    distanceBetweenLatLngMeters(lastCluster.point, candidate.point) <= 1.5) {
-                    candidate.cluster = lastCluster;
-                } else {
-                    const cluster = {
-                        measure: candidate.measure,
-                        point: candidate.point,
-                        nodePoint: candidate.point,
-                        nodeId: `__auto_route_join_${routeIndex}_${clusters.length + 1}`
-                    };
-                    clusters.push(cluster);
-                    candidate.cluster = cluster;
+                const existing = uniqueCandidates.find(function (item) {
+                    return item.joinCluster === candidate.joinCluster;
+                });
+                if (!existing) {
+                    uniqueCandidates.push(candidate);
+                } else if (candidate.distanceMeters < existing.distanceMeters) {
+                    existing.measure = candidate.measure;
+                    existing.point = candidate.point;
+                    existing.distanceMeters = candidate.distanceMeters;
                 }
             });
-
-            const internalClusters = [];
-            clusters.forEach(function (cluster) {
-                const startDistance = distanceBetweenLatLngMeters(route.path[0], cluster.point);
-                const endDistance = distanceBetweenLatLngMeters(route.path[route.path.length - 1], cluster.point);
-                if (startDistance <= 1) {
-                    cluster.nodeId = String(route.from);
-                    cluster.nodePoint = route.path[0];
-                } else if (endDistance <= 1) {
-                    cluster.nodeId = String(route.to);
-                    cluster.nodePoint = route.path[route.path.length - 1];
-                } else {
-                    internalClusters.push(cluster);
-                }
-            });
-
-            // Endpointへの吸着も含め、各スポットの接続先を確定したノードへ同期する。
-            candidates.forEach(function (candidate) {
-                candidate.nodeId = candidate.cluster.nodeId;
-                candidate.nodePoint = candidate.cluster.nodePoint || candidate.cluster.point;
-            });
+            uniqueCandidates.sort(function (a, b) { return a.measure - b.measure; });
 
             const boundaries = [{
                 measure: 0,
                 nodeId: String(route.from)
             }];
-            internalClusters.forEach(function (cluster) {
+            uniqueCandidates.forEach(function (candidate) {
                 boundaries.push({
-                    measure: cluster.measure,
-                    nodeId: cluster.nodeId
+                    measure: candidate.measure,
+                    nodeId: candidate.joinCluster.nodeId
                 });
             });
             boundaries.push({
@@ -5982,6 +6062,7 @@ document.addEventListener("DOMContentLoaded", function () {
             for (let partIndex = 0; partIndex < boundaries.length - 1; partIndex++) {
                 const start = boundaries[partIndex];
                 const end = boundaries[partIndex + 1];
+                if (end.measure - start.measure < 1e-9 && start.nodeId === end.nodeId) continue;
                 const segmentPath = getRouteSubPath(route.path, start.measure, end.measure);
                 expandedRoutes.push({
                     from: start.nodeId,
@@ -5993,26 +6074,27 @@ document.addEventListener("DOMContentLoaded", function () {
                     type: route.type
                 });
             }
+        });
 
-            candidates.forEach(function (candidate) {
-                const targetPoint = candidate.nodePoint || candidate.point;
-                expandedRoutes.push({
-                    from: String(candidate.spot.id),
-                    to: candidate.nodeId,
-                    name: `${candidate.spot.name || candidate.spot.id}から既存参道への自動接続`,
-                    path: [
-                        [Number(candidate.spot.lat), Number(candidate.spot.lng)],
-                        targetPoint.slice()
-                    ],
-                    priority: 0,
-                    type: "auto-connector"
-                });
-                connectionLog.push({
-                    id: String(candidate.spot.id),
-                    name: candidate.spot.name || String(candidate.spot.id),
-                    distanceMeters: Math.round(candidate.distanceMeters * 10) / 10,
-                    route: route.name
-                });
+        // Add one real connector per spot. All coincident route copies above
+        // share its destination node, so the router can choose the shortest
+        // continuation without jumping to an unrelated branch.
+        spotRecords.forEach(function (record) {
+            const nodeId = record.joinCluster.nodeId;
+            const targetPoint = record.nearest.point.slice();
+            expandedRoutes.push({
+                from: String(record.spot.id),
+                to: nodeId,
+                name: `${record.spot.name || record.spot.id}から既存参道への自動接続`,
+                path: [record.spotPoint.slice(), targetPoint],
+                priority: 0,
+                type: "auto-connector"
+            });
+            connectionLog.push({
+                id: String(record.spot.id),
+                name: record.spot.name || String(record.spot.id),
+                distanceMeters: Math.round(record.nearest.distanceMeters * 10) / 10,
+                matchedRoutes: record.matches.map(match => baseRoutes[match.routeIndex].name)
             });
         });
 
@@ -6020,7 +6102,7 @@ document.addEventListener("DOMContentLoaded", function () {
             console.info("近くの参道へ自動接続したスポット:", connectionLog);
         }
         if (outsideLimit.length) {
-            console.info("参道から35mを超えるため自動接続しなかったスポット:", outsideLimit);
+            console.info("接続距離の上限を超えたため自動接続しなかったスポット:", outsideLimit);
         }
 
         return {
@@ -6037,7 +6119,7 @@ document.addEventListener("DOMContentLoaded", function () {
         routes = connected.routes;
 
         console.log(
-            "V120 routes loaded:",
+            "V122 routes loaded:",
             baseRoutes.length,
             "base routes /",
             routes.length,
@@ -6047,54 +6129,10 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    function getEdgeCost(
-        route
-    ) {
-
-        const distanceKm =
-            routePathDistanceKm(
-                route.path
-            );
-
-        let cost =
-            distanceKm;
-
-        if (
-            route.priority > 0
-        ) {
-
-            cost *= Math.max(
-                0.75,
-                1 -
-                Math.min(
-                    route.priority,
-                    100
-                ) / 1000
-            );
-        }
-
-        const routeName =
-            route.name.toLowerCase();
-
-        if (
-            route.type ===
-                "main" ||
-            route.type ===
-                "shrine" ||
-            route.type ===
-                "mountain" ||
-            routeName.includes(
-                "gis実測"
-            ) ||
-            routeName.includes(
-                "実測"
-            )
-        ) {
-
-            cost *= 0.995;
-        }
-
-        return cost;
+    function getEdgeCost(route) {
+        // Physical distance is the primary route cost. Route priority/type must
+        // not make a longer detour win over a shorter walkable trace.
+        return routePathDistanceKm(route.path);
     }
 
     function buildGraph() {
@@ -6190,253 +6228,117 @@ document.addEventListener("DOMContentLoaded", function () {
     // 最適ルート探索
     // ============================================================
 
-    function findGraphRoute(
-        fromId,
-        toId
-    ) {
+    function findGraphRoute(fromId, toId) {
+        const start = String(fromId);
+        const goal = String(toId);
 
-        const start =
-            String(
-                fromId
-            );
-
-        const goal =
-            String(
-                toId
-            );
-
-        if (
-            start === goal
-        ) {
-
+        if (start === goal) {
             return {
-
-                coordinates:
-                    [],
-
-                distanceKm:
-                    0,
-
-                legs:
-                    []
+                coordinates: [],
+                paths: [],
+                distanceKm: 0,
+                legs: []
             };
         }
 
-        const graph =
-            buildGraph();
+        const graph = buildGraph();
+        if (!graph.has(start) || !graph.has(goal)) return null;
 
-        if (
-            !graph.has(start) ||
-            !graph.has(goal)
-        ) {
+        const distances = new Map();
+        const segmentCounts = new Map();
+        const previous = new Map();
+        const queue = [];
+        const DISTANCE_TIE_TOLERANCE_KM = 0.0005; // 0.5 m: treat as the same practical distance.
 
-            return null;
+        graph.forEach(function (_, node) {
+            distances.set(node, Infinity);
+            segmentCounts.set(node, Infinity);
+        });
+        distances.set(start, 0);
+        segmentCounts.set(start, 0);
+        queue.push({ node: start, distance: 0, segmentCount: 0 });
+
+        function isBetterRoute(nextDistance, nextCount, currentDistance, currentCount) {
+            if (!Number.isFinite(currentDistance)) return true;
+            if (nextDistance < currentDistance - DISTANCE_TIE_TOLERANCE_KM) return true;
+            return Math.abs(nextDistance - currentDistance) <= DISTANCE_TIE_TOLERANCE_KM && nextCount < currentCount;
         }
 
-        const distances =
-            new Map();
+        while (queue.length > 0) {
+            queue.sort(function (a, b) {
+                const difference = a.distance - b.distance;
+                if (Math.abs(difference) > DISTANCE_TIE_TOLERANCE_KM) return difference;
+                return a.segmentCount - b.segmentCount;
+            });
 
-        const previous =
-            new Map();
+            const current = queue.shift();
+            if (!current) break;
 
-        const visited =
-            new Set();
-
-        const queue = [];
-
-        graph.forEach(
-            function (
-                _,
-                node
-            ) {
-
-                distances.set(
-                    node,
-                    Infinity
-                );
-            }
-        );
-
-        distances.set(
-            start,
-            0
-        );
-
-        queue.push({
-
-            node:
-                start,
-
-            distance:
-                0
-        });
-
-        while (
-            queue.length > 0
-        ) {
-
-            queue.sort(
-                function (
-                    a,
-                    b
-                ) {
-
-                    return (
-                        a.distance -
-                        b.distance
-                    );
-                }
-            );
-
-            const current =
-                queue.shift();
-
-            if (!current) {
-                break;
-            }
-
-            const node =
-                current.node;
-
-            if (
-                visited.has(
-                    node
-                )
-            ) {
+            const knownDistance = distances.get(current.node) ?? Infinity;
+            const knownCount = segmentCounts.get(current.node) ?? Infinity;
+            if (Math.abs(current.distance - knownDistance) > DISTANCE_TIE_TOLERANCE_KM ||
+                current.segmentCount !== knownCount) {
                 continue;
             }
 
-            visited.add(
-                node
-            );
+            if (current.node === goal) break;
 
-            if (
-                node === goal
-            ) {
-                break;
-            }
+            const edges = graph.get(current.node) || [];
+            edges.forEach(function (edge) {
+                const nextDistance = current.distance + edge.cost;
+                const nextCount = current.segmentCount + 1;
+                const knownNextDistance = distances.get(edge.to) ?? Infinity;
+                const knownNextCount = segmentCounts.get(edge.to) ?? Infinity;
 
-            const edges =
-                graph.get(
-                    node
-                ) || [];
+                if (!isBetterRoute(nextDistance, nextCount, knownNextDistance, knownNextCount)) return;
 
-            edges.forEach(
-                function (
-                    edge
-                ) {
-
-                    if (
-                        visited.has(
-                            edge.to
-                        )
-                    ) {
-                        return;
-                    }
-
-                    const nextDistance =
-                        current.distance +
-                        edge.cost;
-
-                    if (
-                        nextDistance <
-                        (
-                            distances.get(
-                                edge.to
-                            ) ??
-                            Infinity
-                        )
-                    ) {
-
-                        distances.set(
-                            edge.to,
-                            nextDistance
-                        );
-
-                        previous.set(
-                            edge.to,
-                            {
-
-                                previousNode:
-                                    node,
-
-                                edge:
-                                    edge
-                            }
-                        );
-
-                        queue.push({
-
-                            node:
-                                edge.to,
-
-                            distance:
-                                nextDistance
-                        });
-                    }
-                }
-            );
+                distances.set(edge.to, nextDistance);
+                segmentCounts.set(edge.to, nextCount);
+                previous.set(edge.to, {
+                    previousNode: current.node,
+                    edge: edge
+                });
+                queue.push({
+                    node: edge.to,
+                    distance: nextDistance,
+                    segmentCount: nextCount
+                });
+            });
         }
 
-        if (
-            !previous.has(
-                goal
-            )
-        ) {
-            return null;
-        }
+        if (!previous.has(goal)) return null;
 
         const pathEdges = [];
         let cursor = goal;
-
-        while (
-            cursor !== start
-        ) {
-
-            const record =
-                previous.get(
-                    cursor
-                );
-
-            if (!record) {
-                return null;
-            }
-
-            pathEdges.push(
-                record.edge
-            );
-
-            cursor =
-                record.previousNode;
+        while (cursor !== start) {
+            const record = previous.get(cursor);
+            if (!record) return null;
+            pathEdges.push(record.edge);
+            cursor = record.previousNode;
         }
-
         pathEdges.reverse();
 
         const paths = [];
         let totalDistanceKm = 0;
-
         pathEdges.forEach(function (edge) {
             const points = edge.path.map(point => point.slice());
             const previousPath = paths[paths.length - 1];
 
             if (previousPath && points.length >= 2 &&
                 distanceBetweenLatLngMeters(previousPath[previousPath.length - 1], points[0]) <= 1.5) {
-                // Join only when the graph nodes physically coincide.
                 previousPath.push(...points.slice(1));
             } else if (points.length >= 2) {
-                // Keep a real gap as a separate line. Never draw a shortcut across it.
+                // Preserve genuine geometry gaps; never draw an invented bridge.
                 paths.push(points);
             }
-
             totalDistanceKm += routePathDistanceKm(edge.path);
         });
 
-        const coordinates = paths.length === 1 ? paths[0].slice() : (paths[0] || []);
-
         return {
-            coordinates: coordinates,
+            coordinates: paths.length === 1 ? paths[0].slice() : (paths[0] || []),
             paths: paths,
             distanceKm: totalDistanceKm,
+            segmentCount: pathEdges.length,
             legs: pathEdges
         };
     }
@@ -7121,18 +7023,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Draw each connected path as its own polyline. Never bridge gaps between
         // route sections with an invented straight line.
-        const routeStyle = {
-            pane: "plannerRoutePane",
-            renderer: routeSvgRenderer,
-            className: "planner-route-base-line",
-            color: ROUTE_COLOR,
-            weight: 6,
-            opacity: 1,
-            lineCap: "round",
-            lineJoin: "round",
-            interactive: false
-        };
-        const routeLayers = routePaths.map(path => L.polyline(path, routeStyle));
+        // Static layered strokes create a steady illuminated route. No moving
+        // beam, particles, dash animation, or pulsing opacity is used.
+        const routeLayerStyles = [
+            {
+                className: "planner-route-halo-line",
+                color: "#FFB84D",
+                weight: 15,
+                opacity: 0.22
+            },
+            {
+                className: "planner-route-base-line",
+                color: ROUTE_COLOR,
+                weight: 7,
+                opacity: 1
+            },
+            {
+                className: "planner-route-core-line",
+                color: "#FFF1D6",
+                weight: 1.6,
+                opacity: 0.62
+            }
+        ];
+        const routeLayers = routePaths.flatMap(function (path) {
+            return routeLayerStyles.map(function (style) {
+                return L.polyline(path, {
+                    pane: "plannerRoutePane",
+                    renderer: routeSvgRenderer,
+                    className: style.className,
+                    color: style.color,
+                    weight: style.weight,
+                    opacity: style.opacity,
+                    lineCap: "round",
+                    lineJoin: "round",
+                    interactive: false
+                });
+            });
+        });
         routeLine = L.featureGroup(routeLayers).addTo(map);
 
         map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });

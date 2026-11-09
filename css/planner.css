@@ -6395,3 +6395,51 @@ body.planner-page .liquid-cursor {
 #plannerCategoryTray #foodCategoryOptions .food-choice-button.active .category-label {
   color: #202124 !important;
 }
+
+
+/* V122 — steady luminous route: an orange body with a soft static halo/core. */
+.leaflet-plannerRoutePane .planner-route-halo-line,
+.planner-route-halo-line {
+  stroke: #FFB84D !important;
+  stroke-width: 15px !important;
+  stroke-opacity: .22 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 4px rgba(255, 153, 0, .72))
+          drop-shadow(0 0 8px rgba(255, 184, 77, .42)) !important;
+  animation: none !important;
+  transition: none !important;
+  stroke-dasharray: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+.leaflet-plannerRoutePane .planner-route-base-line,
+.planner-route-base-line {
+  stroke: #FF9900 !important;
+  stroke-width: 7px !important;
+  stroke-opacity: 1 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .92))
+          drop-shadow(0 0 3px rgba(255, 153, 0, .92))
+          drop-shadow(0 0 6px rgba(255, 153, 0, .48)) !important;
+  animation: none !important;
+  transition: none !important;
+  stroke-dasharray: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
+.leaflet-plannerRoutePane .planner-route-core-line,
+.planner-route-core-line {
+  stroke: #FFF1D6 !important;
+  stroke-width: 1.6px !important;
+  stroke-opacity: .62 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, .86)) !important;
+  animation: none !important;
+  transition: none !important;
+  stroke-dasharray: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+}
