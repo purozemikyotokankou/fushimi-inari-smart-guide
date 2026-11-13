@@ -115,7 +115,7 @@ function populateNodeSelects(){const ids=new Map();for(const s of spots)ids.set(
 function selectedNode(id,point){const val=$(id).value;if(val==='__auto__'){const near=nearestSpot(point);return near?near.spot.id:`__junction_${point.lat.toFixed(5)}_${point.lng.toFixed(5)}`;}try{return JSON.parse(val);}catch(e){return val;}}
 function updateStats(){const points=routes.reduce((n,r)=>n+r.path.length,0),meters=routes.reduce((n,r)=>n+routeLength(r),0);$('routeCount').textContent=routes.length;$('pointCount').textContent=points;$('lengthKm').textContent=(meters/1000).toFixed(2);$('listCount').textContent=`（${routes.length}件）`;}
 function popupFor(route,index){const div=document.createElement('div');const title=document.createElement('b');title.textContent=route.name||`ルート ${index+1}`;const meta=document.createElement('div');meta.style.cssText='font-size:11px;margin-top:4px;color:#586174';meta.textContent=`${formatNode(route.from)} → ${formatNode(route.to)} / ${route.path.length}点 / 約${Math.round(routeLength(route))}m`;div.append(title,meta);return div;}
-function refreshMap(fit=false){routeLines=[];if(window.routeLayer)map.removeLayer(window.routeLayer);window.routeLayer=L.featureGroup();routes.forEach((r,i)=>{const line=L.polyline(r.path.map(p=>[p.lat,p.lng]),{color:i===selectedIndex?'#d74e24':'#f08a24',weight:i===selectedIndex?7:4.5,opacity:i===selectedIndex?1:.88,lineCap:'round',lineJoin:'round'});line.bindPopup(popupFor(r,i));line.on('click',()=>{selectedIndex=i;refreshMap(false);renderRouteList();});line.addTo(window.routeLayer);routeLines.push(line);});window.routeLayer.addTo(map);
+function refreshMap(fit=false){routeLines=[];if(window.routeLayer)map.removeLayer(window.routeLayer);window.routeLayer=L.featureGroup();routes.forEach((r,i)=>{const line=L.polyline(r.path.map(p=>[p.lat,p.lng]),{color:i===selectedIndex?'#d74e24':'#f08a24',weight:i===selectedIndex?5:3.5,opacity:i===selectedIndex?1:.88,lineCap:'round',lineJoin:'round'});line.bindPopup(popupFor(r,i));line.on('click',()=>{selectedIndex=i;refreshMap(false);renderRouteList();});line.addTo(window.routeLayer);routeLines.push(line);});window.routeLayer.addTo(map);
  if(spotLayer)map.removeLayer(spotLayer);spotLayer=L.layerGroup();spots.forEach(s=>{const cat=String(s.category||'');const color=cat==='交通'?'#2873bd':cat==='トイレ'?'#168b70':cat==='飲食店'?'#db7d28':cat==='買う'?'#a06abd':'#8b5bb2';const marker=L.circleMarker([Number(s.lat),Number(s.lng)],{radius:6,weight:2,color:'#fff',fillColor:color,fillOpacity:1});marker.bindTooltip(String(s.name||`スポット${s.id}`),{permanent:false,direction:'top'});marker.bindPopup(`<b>${escapeHtml(s.name||'スポット')}</b><br><small>ID: ${escapeHtml(s.id)}</small>`);marker.addTo(spotLayer);});spotLayer.addTo(map);
  if(fit){const all=[];routes.forEach(r=>r.path.forEach(p=>all.push([p.lat,p.lng])));spots.forEach(s=>{if(Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)))all.push([Number(s.lat),Number(s.lng)]);});if(all.length)map.fitBounds(L.latLngBounds(all).pad(.08),{maxZoom:17});}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -185,7 +185,55 @@ let gsiTileLoaded=false;
 gsi.on('tileload',()=>{if(!gsiTileLoaded){gsiTileLoaded=true;}});
 gsi.on('tileerror',()=>{if(!gsiTileLoaded){setStatus('国土地理院の地図タイルを読み込めません。ネット接続を確認して、ページを再読み込みしてください。APIキーは不要です。','error');}});
 if(L.drawLocal){L.drawLocal.draw.toolbar.buttons.polyline='参道を描く';L.drawLocal.draw.toolbar.actions.title='描画を中止';L.drawLocal.draw.toolbar.actions.text='キャンセル';L.drawLocal.draw.handlers.polyline.tooltip.start='参道の始点をクリック';L.drawLocal.draw.handlers.polyline.tooltip.cont='曲がり角をクリック';L.drawLocal.draw.handlers.polyline.tooltip.end='終点をダブルクリック';}
-const drawControl=new L.Control.Draw({position:'topleft',draw:{polyline:{shapeOptions:{color:'#ed7c22',weight:5,opacity:.96},showLength:true,metric:true,repeatMode:false,allowIntersection:false},polygon:false,rectangle:false,circle:false,circlemarker:false,marker:false},edit:false});map.addControl(drawControl);
+// 線の頂点ハンドルを少し小さくし、作図中の線幅も細くする。
+const routeVertexIcon=L.divIcon({className:'leaflet-div-icon leaflet-editing-icon',iconSize:[6,6]});
+const routeTouchVertexIcon=L.divIcon({className:'leaflet-div-icon leaflet-editing-icon leaflet-touch-icon',iconSize:[12,12]});
+
+// Leaflet.draw標準の「終点マーカーを1回クリックすると終了」を無効化し、
+// 地図上のダブルクリックだけで作図を確定できるようにする。
+L.Draw.Polyline.include({
+  _updateFinishHandler:function(){
+    (this._markers||[]).forEach(marker=>marker.off('click',this._finishShape,this));
+  },
+  _cleanUpShape:function(){
+    (this._markers||[]).forEach(marker=>{
+      marker.off('click',this._finishShape,this);
+      marker.off('dblclick',this._finishShape,this);
+    });
+  },
+  _endPoint:function(clientX,clientY,e){
+    if(!this._mouseDownOrigin)return;
+    const dragCheckDistance=L.point(clientX,clientY).distanceTo(this._mouseDownOrigin);
+    const lastPointDistance=this._calculateFinishDistance(e.latlng);
+    if(this.options.maxPoints>1&&this.options.maxPoints===this._markers.length+1){
+      this.addVertex(e.latlng);
+      this._finishShape();
+    }else if(lastPointDistance>2&&Math.abs(dragCheckDistance)<9*(window.devicePixelRatio||1)){
+      // ダブルクリックの2回目で同じ座標が重複登録されないようにする。
+      this.addVertex(e.latlng);
+    }
+    this._enableNewMarkers();
+    this._mouseDownOrigin=null;
+  }
+});
+
+const drawControl=new L.Control.Draw({position:'topleft',draw:{polyline:{
+  shapeOptions:{color:'#ed7c22',weight:3.5,opacity:.96},
+  icon:routeVertexIcon,
+  touchIcon:routeTouchVertexIcon,
+  showLength:true,metric:true,repeatMode:false,allowIntersection:false
+},polygon:false,rectangle:false,circle:false,circlemarker:false,marker:false},edit:false});
+map.addControl(drawControl);
+
+// Leaflet.drawの確定操作をダブルクリックに統一する（単クリックでは終了しない）。
+const polylineDrawHandler=drawControl._toolbars?.draw?._modes?.polyline?.handler;
+map.getContainer().addEventListener('dblclick',event=>{
+  if(!polylineDrawHandler||!polylineDrawHandler._enabled)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if((polylineDrawHandler._markers||[]).length<2)return;
+  polylineDrawHandler._finishShape();
+},true);
 map.on(L.Draw.Event.CREATED,e=>{const ll=e.layer.getLatLngs();const path=ll.map(p=>({lat:Number(p.lat.toFixed(7)),lng:Number(p.lng.toFixed(7))}));const fc=$('fromSelect').value,tc=$('toSelect').value;const result=addRoute(path,$('routeName').value.trim(),fc,tc);if(result==='duplicate')setStatus('同じ形・同じ接続先のルートがすでにあります。重複追加はしませんでした。','warn');});
 $('reloadBtn').addEventListener('click',()=>loadRemote(false));$('resetBtn').addEventListener('click',()=>{if(confirm('ブラウザ内の下書きを破棄して、GitHubの最新routes.jsonを読み込みますか？')){localStorage.removeItem(DRAFT_KEY);hasDraft=false;loadRemote(true);}});$('downloadBtn').addEventListener('click',downloadRoutes);$('copyBtn').addEventListener('click',copyRoutes);$('fitBtn').addEventListener('click',()=>{const b=window.routeLayer?.getBounds();if(b?.isValid())map.fitBounds(b.pad(.08),{maxZoom:17});});$('geoFiles').addEventListener('change',async e=>{const files=[...e.target.files];if(files.length)await importGeoFiles(files);e.target.value='';});$('makeAverageBtn').addEventListener('click',makeAverageCandidates);$('addSinglesBtn').addEventListener('click',addImportedSingles);$('clearTracesBtn').addEventListener('click',clearImportedTraces);
 // OSのファイルをページ全体・地図・専用ドロップエリアのどこに落としてもGeoJSONを取り込む
