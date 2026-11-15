@@ -29,8 +29,8 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
     <section class="card">
       <h2>① GitHubのデータ</h2>
       <div class="field"><label for="routesUrl">routes.json のURL</label><input id="routesUrl" type="text" value="./data/routes.json" spellcheck="false"></div>
-      <div class="row wrap"><button class="primary" id="reloadBtn">GitHubから再読み込み</button><button class="soft" id="resetBtn">下書きを破棄</button></div>
-      <div id="status" class="status warn" style="margin-top:9px">routes.json を読み込んでいます…</div>
+      <div class="row wrap"><button class="primary" id="reloadBtn">GitHubの最新データを確認</button><button class="soft" id="resetBtn">GitHubの状態に戻す</button><button class="redbtn" id="startOverBtn">一からやり直す</button></div>
+      <p class="small" style="margin:7px 0 0">「一からやり直す」は、このエディター内の作業ルートを空にします。GitHub上の routes.json は変更されません。「GitHubの状態に戻す」で元のデータに戻せます。</p><div id="status" class="status warn" style="margin-top:9px">routes.json を読み込んでいます…</div>
       <div class="legend"><span><i class="swatch"></i>登録済みルート</span><span><i class="dot"></i>スポット</span></div>
     </section>
     <section class="card">
@@ -63,6 +63,12 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
       <div class="preview-legend"><span><i class="preview-line"></i>読み込んだ線</span><span><i class="preview-average"></i>平均化した線</span></div>
       <div id="averageList" class="trace-list" style="margin-top:8px"><div class="empty">まだGeoJSONは読み込まれていません。</div></div>
       <p class="small" style="margin:8px 0 0">注意：AとBの両端が一致した線だけを平均します。Aだけが同じA〜BとA〜Cは別扱いです。スポットIDが異なる終点は混ぜず、スポットに紐づかない終点は8m以内かつ線形状が近い場合だけまとめます。元の線は残り、平均グループは平均線、1本だけの線は単独線として追加できます。</p>
+      <div class="route-average-tools" style="border-top:1px solid var(--line);margin-top:13px;padding-top:12px">
+        <h2>エディター内のルートも平均化</h2>
+        <p class="small" style="margin:0 0 8px">⑤の登録済みルート一覧で「平均に選ぶ」を押して、同じ出発地点・到着地点の線を2本以上選択してください。線の形が大きく違うものや、別の分岐は自動で別グループになります。平均線を確認してから、元の選択ルートと置き換えます。</p>
+        <div class="row wrap"><span id="routeAverageSelectionStatus" class="small">平均対象：0本</span><button class="primary" id="makeRouteAverageBtn">選択したルートを平均化</button><button class="soft" id="clearRouteAverageSelectionBtn">選択解除</button></div>
+        <div id="routeAverageList" class="trace-list" style="margin-top:8px"><div class="empty">⑤のルート一覧から平均対象を選んでください。</div></div>
+      </div>
     </section>
     <section class="card">
       <h2>④ routes.jsonを書き出す</h2>
@@ -87,7 +93,7 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
     <div class="footer">伏見稲荷スマートガイド / routes.json 編集ツール</div>
   </main>
 </aside>
-<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>地図の見方：</b>国土地理院の標準地図 ／ オレンジ線＝既存ルート ／ 青い点＝スポット　　左上の折れ線ボタンで新しい道を描けます。</div></section>
+<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>地図の見方：</b>国土地理院の標準地図 ／ オレンジ線＝登録済みルート ／ 青線＝平均対象 ／ 紫線＝手描き平均候補 ／ 青い点＝スポット　　左上の折れ線ボタンで新しい道を描けます。</div></section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -96,32 +102,64 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
 const DEFAULT_ROUTES_URL='./data/routes.json';
 const SPOTS_URL='./data/spots.json';
 const DRAFT_KEY='fushimi_routes_editor_draft_v1';
+const BLANK_DRAFT_KEY='fushimi_routes_editor_blank_v1';
 const CENTER=[34.9672,135.7750];
 let routes=[];let spots=[];let remoteRoutes=[];let routeLines=[];let spotLayer=null;let tracePreviewLayer=null;let importedTraces=[];let averageCandidates=[];let traceGroups=[];let groupingPrepared=false;let selectedIndex=-1;let hasDraft=false;let restoredDraft=false;
+let selectedAverageIndexes=new Set();let routeAverageCandidates=[];
 const $=id=>document.getElementById(id);
 const clone=v=>JSON.parse(JSON.stringify(v));
 function setStatus(message,kind='ok'){const el=$('status');el.textContent=message;el.className='status'+(kind==='ok'?'':' '+kind);}
 function asNodeKey(v){return JSON.stringify(v);}
 function validRoute(r){return r&&Object.prototype.hasOwnProperty.call(r,'from')&&Object.prototype.hasOwnProperty.call(r,'to')&&Array.isArray(r.path)&&r.path.length>=2&&r.path.every(p=>p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))&&Math.abs(Number(p.lat))<=90&&Math.abs(Number(p.lng))<=180);}
-function normalizeRoutes(data){if(!Array.isArray(data))throw new Error('routes.jsonの形式が配列ではありません');const clean=data.filter(validRoute).map(r=>({...clone(r),path:r.path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))}));if(!clean.length)throw new Error('routes.jsonに有効なルートが見つかりません');return clean;}
+function normalizeRoutes(data){if(!Array.isArray(data))throw new Error('routes.jsonの形式が配列ではありません');const clean=data.filter(validRoute).map(r=>({...clone(r),path:r.path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))}));if(data.length>0&&!clean.length)throw new Error('routes.jsonに有効なルートが見つかりません');return clean;}
 function haversine(a,b){const R=6371000,rad=x=>x*Math.PI/180,la1=rad(a.lat),la2=rad(b.lat),dl=rad(b.lng-a.lng),dp=la2-la1;const h=Math.sin(dp/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
 function routeLength(r){let m=0;for(let i=1;i<r.path.length;i++)m+=haversine(r.path[i-1],r.path[i]);return m;}
 function nearestSpot(point){let best=null,dist=Infinity;for(const s of spots){const d=haversine(point,{lat:Number(s.lat),lng:Number(s.lng)});if(d<dist){dist=d;best=s;}}return best?{spot:best,distance:dist}:null;}
 function coordKey(path){const pts=path.map(p=>`${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`);const a=pts.join('|'),b=[...pts].reverse().join('|');return a<b?a:b;}
 function routeDuplicate(candidate){const key=coordKey(candidate.path);return routes.some(r=>coordKey(r.path)===key&&((String(r.from)===String(candidate.from)&&String(r.to)===String(candidate.to))||(String(r.from)===String(candidate.to)&&String(r.to)===String(candidate.from))));}
-function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(routes));hasDraft=true;}catch(e){/* localStorage may be unavailable */}}
+function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(routes));if(routes.length===0)localStorage.setItem(BLANK_DRAFT_KEY,'1');else localStorage.removeItem(BLANK_DRAFT_KEY);hasDraft=true;}catch(e){/* localStorage may be unavailable */}}
 function formatNode(node){const spot=spots.find(s=>String(s.id)===String(node));return spot?`${spot.name}（ID:${spot.id}）`:String(node);}
 function populateNodeSelects(){const ids=new Map();for(const s of spots)ids.set(asNodeKey(s.id),s.id);for(const r of routes){ids.set(asNodeKey(r.from),r.from);ids.set(asNodeKey(r.to),r.to);}for(const id of ['fromSelect','toSelect']){const sel=$(id),old=sel.value;sel.replaceChildren();const auto=document.createElement('option');auto.value='__auto__';auto.textContent=id==='fromSelect'?'自動判定（始点に近いスポット）':'自動判定（終点に近いスポット）';sel.append(auto);for(const node of ids.values()){const op=document.createElement('option');op.value=asNodeKey(node);op.textContent=formatNode(node);sel.append(op);}if([...sel.options].some(o=>o.value===old))sel.value=old;}}
 function selectedNode(id,point){const val=$(id).value;if(val==='__auto__'){const near=nearestSpot(point);return near?near.spot.id:`__junction_${point.lat.toFixed(5)}_${point.lng.toFixed(5)}`;}try{return JSON.parse(val);}catch(e){return val;}}
 function updateStats(){const points=routes.reduce((n,r)=>n+r.path.length,0),meters=routes.reduce((n,r)=>n+routeLength(r),0);$('routeCount').textContent=routes.length;$('pointCount').textContent=points;$('lengthKm').textContent=(meters/1000).toFixed(2);$('listCount').textContent=`（${routes.length}件）`;}
 function popupFor(route,index){const div=document.createElement('div');const title=document.createElement('b');title.textContent=route.name||`ルート ${index+1}`;const meta=document.createElement('div');meta.style.cssText='font-size:11px;margin-top:4px;color:#586174';meta.textContent=`${formatNode(route.from)} → ${formatNode(route.to)} / ${route.path.length}点 / 約${Math.round(routeLength(route))}m`;div.append(title,meta);return div;}
-function refreshMap(fit=false){routeLines=[];if(window.routeLayer)map.removeLayer(window.routeLayer);window.routeLayer=L.featureGroup();routes.forEach((r,i)=>{const line=L.polyline(r.path.map(p=>[p.lat,p.lng]),{color:i===selectedIndex?'#d74e24':'#f08a24',weight:i===selectedIndex?5:3.5,opacity:i===selectedIndex?1:.88,lineCap:'round',lineJoin:'round'});line.bindPopup(popupFor(r,i));line.on('click',()=>{selectedIndex=i;refreshMap(false);renderRouteList();});line.addTo(window.routeLayer);routeLines.push(line);});window.routeLayer.addTo(map);
+function refreshMap(fit=false){routeLines=[];if(window.routeLayer)map.removeLayer(window.routeLayer);window.routeLayer=L.featureGroup();routes.forEach((r,i)=>{const averageSelected=selectedAverageIndexes.has(i);const line=L.polyline(r.path.map(p=>[p.lat,p.lng]),{color:i===selectedIndex?'#d74e24':averageSelected?'#2589bd':'#f08a24',weight:i===selectedIndex?5:averageSelected?5:3.5,opacity:i===selectedIndex||averageSelected?1:.88,lineCap:'round',lineJoin:'round'});line.bindPopup(popupFor(r,i));line.on('click',()=>{selectedIndex=i;refreshMap(false);renderList();});line.addTo(window.routeLayer);routeLines.push(line);});window.routeLayer.addTo(map);
  if(spotLayer)map.removeLayer(spotLayer);spotLayer=L.layerGroup();spots.forEach(s=>{const cat=String(s.category||'');const color=cat==='交通'?'#2873bd':cat==='トイレ'?'#168b70':cat==='飲食店'?'#db7d28':cat==='買う'?'#a06abd':'#8b5bb2';const marker=L.circleMarker([Number(s.lat),Number(s.lng)],{radius:6,weight:2,color:'#fff',fillColor:color,fillOpacity:1});marker.bindTooltip(String(s.name||`スポット${s.id}`),{permanent:false,direction:'top'});marker.bindPopup(`<b>${escapeHtml(s.name||'スポット')}</b><br><small>ID: ${escapeHtml(s.id)}</small>`);marker.addTo(spotLayer);});spotLayer.addTo(map);
  if(fit){const all=[];routes.forEach(r=>r.path.forEach(p=>all.push([p.lat,p.lng])));spots.forEach(s=>{if(Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)))all.push([Number(s.lat),Number(s.lng)]);});if(all.length)map.fitBounds(L.latLngBounds(all).pad(.08),{maxZoom:17});}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function renderList(){const root=$('routeList');root.replaceChildren();const q=$('routeSearch').value.trim().toLowerCase();let shown=0;routes.forEach((r,i)=>{const from=formatNode(r.from),to=formatNode(r.to),name=r.name||`ルート ${i+1}`;if(q&&!`${name} ${from} ${to}`.toLowerCase().includes(q))return;shown++;const row=document.createElement('div');row.className='route';if(i===selectedIndex)row.style.borderColor='#e87521';const info=document.createElement('div');const title=document.createElement('div');title.className='route-title';title.textContent=name;const meta=document.createElement('div');meta.className='route-meta';meta.textContent=`${from} → ${to} · ${r.path.length}点 · 約${Math.round(routeLength(r))}m`;info.append(title,meta);const actions=document.createElement('div');actions.className='route-actions';const view=document.createElement('button');view.className='soft';view.textContent='見る';view.addEventListener('click',()=>{selectedIndex=i;const b=L.latLngBounds(r.path.map(p=>[p.lat,p.lng]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:18});refreshMap(false);renderList();});const del=document.createElement('button');del.className='redbtn';del.textContent='削除';del.addEventListener('click',()=>{if(!confirm(`「${name}」を作業中の routes.json から削除しますか？`))return;routes.splice(i,1);if(selectedIndex===i)selectedIndex=-1;else if(selectedIndex>i)selectedIndex--;saveDraft();populateNodeSelects();updateStats();renderList();refreshMap(false);setStatus(`${name}を作業中データから削除しました。GitHubに反映するには保存した routes.json をアップロードしてください。`,'warn');});actions.append(view,del);row.append(info,actions);root.append(row);});if(!shown){const e=document.createElement('div');e.className='empty';e.textContent=routes.length?'検索条件に一致するルートはありません。':'ルートがありません。';root.append(e);}}
+function renderList(){
+ const root=$('routeList');root.replaceChildren();const q=$('routeSearch').value.trim().toLowerCase();let shown=0;
+ routes.forEach((r,i)=>{
+  const from=formatNode(r.from),to=formatNode(r.to),name=r.name||`ルート ${i+1}`;
+  if(q&&!`${name} ${from} ${to}`.toLowerCase().includes(q))return;
+  shown++;const row=document.createElement('div');row.className='route';
+  if(i===selectedIndex)row.style.borderColor='#e87521';
+  else if(selectedAverageIndexes.has(i))row.style.borderColor='#2589bd';
+  const info=document.createElement('div');const title=document.createElement('div');title.className='route-title';title.textContent=name;
+  const meta=document.createElement('div');meta.className='route-meta';meta.textContent=`${from} → ${to} · ${r.path.length}点 · 約${Math.round(routeLength(r))}m`;info.append(title,meta);
+  const actions=document.createElement('div');actions.className='route-actions';
+  const average=document.createElement('button');average.className=selectedAverageIndexes.has(i)?'primary':'soft';average.textContent=selectedAverageIndexes.has(i)?'平均対象中':'平均に選ぶ';
+  average.title='このルートを平均化の対象にする';
+  average.addEventListener('click',()=>{
+   if(selectedAverageIndexes.has(i))selectedAverageIndexes.delete(i);else selectedAverageIndexes.add(i);
+   routeAverageCandidates=[];refreshMap(false);renderList();renderRouteAverageWorkbench();refreshTracePreview();
+  });
+  const view=document.createElement('button');view.className='soft';view.textContent='見る';view.addEventListener('click',()=>{selectedIndex=i;const b=L.latLngBounds(r.path.map(p=>[p.lat,p.lng]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:18});refreshMap(false);renderList();});
+  const del=document.createElement('button');del.className='redbtn';del.textContent='削除';del.addEventListener('click',()=>{
+   if(!confirm(`「${name}」を作業中の routes.json から削除しますか？`))return;
+   routes.splice(i,1);
+   const nextSelection=new Set();for(const selected of selectedAverageIndexes){if(selected!==i)nextSelection.add(selected>i?selected-1:selected);}selectedAverageIndexes=nextSelection;
+   routeAverageCandidates=[];
+   if(selectedIndex===i)selectedIndex=-1;else if(selectedIndex>i)selectedIndex--;
+   saveDraft();updateUI();refreshMap(false);renderRouteAverageWorkbench();refreshTracePreview();
+   setStatus(`${name}を作業中データから削除しました。GitHubに反映するには保存した routes.json をアップロードしてください。`,'warn');
+  });
+  actions.append(average,view,del);row.append(info,actions);root.append(row);
+ });
+ if(!shown){const e=document.createElement('div');e.className='empty';e.textContent=routes.length?'検索条件に一致するルートはありません。':'ルートがありません。';root.append(e);}
+}
 function updateUI(){populateNodeSelects();updateStats();renderList();}
-function addRoute(path,name,fromChoice,toChoice,source='地図上で作図'){if(!Array.isArray(path)||path.length<2)return false;const from=fromChoice==='__auto__'?selectedNode('fromSelect',path[0]):JSON.parse(fromChoice);const to=toChoice==='__auto__'?selectedNode('toSelect',path[path.length-1]):JSON.parse(toChoice);const route={from,to,name:name||`追加ルート ${routes.length+1}`,path:path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))};if(routeDuplicate(route))return 'duplicate';routes.push(route);selectedIndex=routes.length-1;saveDraft();updateUI();refreshMap(false);setStatus(`「${route.name}」を追加しました。${formatNode(from)} → ${formatNode(to)}。routes.jsonを保存してGitHubへ反映してください。`);return true;}
+function addRoute(path,name,fromChoice,toChoice,source='地図上で作図'){if(!Array.isArray(path)||path.length<2)return false;const from=fromChoice==='__auto__'?selectedNode('fromSelect',path[0]):JSON.parse(fromChoice);const to=toChoice==='__auto__'?selectedNode('toSelect',path[path.length-1]):JSON.parse(toChoice);const route={from,to,name:name||`追加ルート ${routes.length+1}`,path:path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))};if(routeDuplicate(route))return 'duplicate';routes.push(route);selectedIndex=routes.length-1;routeAverageCandidates=[];saveDraft();updateUI();refreshMap(false);refreshTracePreview();renderRouteAverageWorkbench();setStatus(`「${route.name}」を追加しました。${formatNode(from)} → ${formatNode(to)}。routes.jsonを保存してGitHubへ反映してください。`);return true;}
 function geoJSONLines(data){const out=[];const visit=x=>{if(!x)return;if(x.type==='FeatureCollection'&&Array.isArray(x.features)){x.features.forEach(visit);return;}if(x.type==='Feature'){visit(x.geometry);return;}if(x.type==='LineString'&&Array.isArray(x.coordinates)){const c=x.coordinates.filter(a=>Array.isArray(a)&&a.length>=2&&Number.isFinite(Number(a[0]))&&Number.isFinite(Number(a[1])));if(c.length>=2)out.push(c.map(a=>({lat:Number(a[1]),lng:Number(a[0])})));}else if(x.type==='MultiLineString'&&Array.isArray(x.coordinates)){x.coordinates.forEach(c=>visit({type:'LineString',coordinates:c}));}else if(x.type==='GeometryCollection'&&Array.isArray(x.geometries))x.geometries.forEach(visit);};visit(data);return out;}
 function renderTraceWorkbench(){
   const root=$('averageList');if(!root)return;root.replaceChildren();
@@ -139,7 +177,7 @@ function renderTraceWorkbench(){
   if(singles.length){const heading=document.createElement('div');heading.className='small';heading.style.cssText='font-weight:800;margin:10px 0 4px';heading.textContent=`単独線（平均化しない） ${singles.length}本`;root.append(heading);singles.forEach((g,i)=>{const t=g[0],item=document.createElement('div');item.className='trace-item';const from=inferNodeForEndpoint(t.path[0]),to=inferNodeForEndpoint(t.path[t.path.length-1]);const title=document.createElement('strong');title.textContent=`${formatNode(from)} → ${formatNode(to)}：1本`;const meta=document.createElement('small');meta.textContent=`${t.source} ／ 約${Math.round(routeLength({path:t.path}))}m`;const row=document.createElement('div');row.className='row wrap';const view=document.createElement('button');view.className='soft';view.textContent='地図で確認';view.onclick=()=>{const b=L.latLngBounds(t.path.map(p=>[p.lat,p.lng]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:18});};const add=document.createElement('button');add.className='greenbtn';add.textContent=t.applied?'追加済み':'この単独線を追加';add.disabled=!!t.applied;add.onclick=()=>addSingleTrace(t);row.append(view,add);item.append(title,meta,row);root.append(item);});}
   if(!avgCount&&!singles.length){const info=document.createElement('div');info.className='empty';info.textContent='追加できる線がありません。';root.append(info);}
 }
-function refreshTracePreview(){if(typeof map==='undefined')return;if(tracePreviewLayer)map.removeLayer(tracePreviewLayer);tracePreviewLayer=L.layerGroup();importedTraces.forEach((t,i)=>{const line=L.polyline(t.path.map(p=>[p.lat,p.lng]),{color:'#2a87bd',weight:3,opacity:.52,dashArray:'5 5',lineCap:'round',lineJoin:'round'});line.bindTooltip(`読み込み線 ${i+1}：${escapeHtml(t.source)}`);line.addTo(tracePreviewLayer);});averageCandidates.forEach((c,i)=>{const line=L.polyline(c.path.map(p=>[p.lat,p.lng]),{color:c.applied?'#89939d':'#139968',weight:7,opacity:.95,lineCap:'round',lineJoin:'round'});line.bindTooltip(`平均化候補 ${i+1}（${c.traceCount}本）`);line.bindPopup(`<b>${escapeHtml(c.name)}</b><br>元の線：${c.traceCount}本<br>最大ズレ：約${c.maxDeviation.toFixed(1)}m`);line.addTo(tracePreviewLayer);});tracePreviewLayer.addTo(map);tracePreviewLayer.eachLayer(layer=>{if(layer.bringToFront)layer.bringToFront();});}
+function refreshTracePreview(){if(typeof map==='undefined')return;if(tracePreviewLayer)map.removeLayer(tracePreviewLayer);tracePreviewLayer=L.layerGroup();importedTraces.forEach((t,i)=>{const line=L.polyline(t.path.map(p=>[p.lat,p.lng]),{color:'#2a87bd',weight:3,opacity:.52,dashArray:'5 5',lineCap:'round',lineJoin:'round'});line.bindTooltip(`読み込み線 ${i+1}：${escapeHtml(t.source)}`);line.addTo(tracePreviewLayer);});averageCandidates.forEach((c,i)=>{const line=L.polyline(c.path.map(p=>[p.lat,p.lng]),{color:c.applied?'#89939d':'#139968',weight:7,opacity:.95,lineCap:'round',lineJoin:'round'});line.bindTooltip(`GeoJSON平均化候補 ${i+1}（${c.traceCount}本）`);line.bindPopup(`<b>${escapeHtml(c.name)}</b><br>元の線：${c.traceCount}本<br>最大ズレ：約${c.maxDeviation.toFixed(1)}m`);line.addTo(tracePreviewLayer);});routeAverageCandidates.forEach((c,i)=>{const line=L.polyline(c.path.map(p=>[p.lat,p.lng]),{color:'#a044c7',weight:7,opacity:.95,lineCap:'round',lineJoin:'round'});line.bindTooltip(`手描きルート平均候補 ${i+1}（${c.traceCount}本）`);line.bindPopup(`<b>${escapeHtml(c.name)}</b><br>置き換え対象：${c.traceCount}本<br>最大ズレ：約${c.maxDeviation.toFixed(1)}m`);line.addTo(tracePreviewLayer);});tracePreviewLayer.addTo(map);tracePreviewLayer.eachLayer(layer=>{if(layer.bringToFront)layer.bringToFront();});}
 function endpointSpotId(point){const near=nearestSpot(point);return near&&near.distance<=60?String(near.spot.id):null;}
 function endpointSideMatch(a,b,tolerance){const distance=haversine(a,b);const idA=endpointSpotId(a),idB=endpointSpotId(b);if(idA!==null&&idB!==null&&idA!==idB)return false;const allowed=(idA!==null&&idB!==null)?tolerance:Math.min(tolerance,8);return distance<=allowed;}
 function endpointPairOrientation(a,b,tolerance){const a0=a.path[0],a1=a.path[a.path.length-1],b0=b.path[0],b1=b.path[b.path.length-1];const directOk=endpointSideMatch(a0,b0,tolerance)&&endpointSideMatch(a1,b1,tolerance);const reverseOk=endpointSideMatch(a0,b1,tolerance)&&endpointSideMatch(a1,b0,tolerance);if(!directOk&&!reverseOk)return null;const directScore=haversine(a0,b0)+haversine(a1,b1),reverseScore=haversine(a0,b1)+haversine(a1,b0);return{reverse:reverseOk&&(!directOk||reverseScore<directScore),endpointScore:Math.min(directScore,reverseScore)};}
@@ -152,6 +190,23 @@ function groupTracesByEndpoints(traces,tolerance){
   traces.forEach(trace=>{let best=-1,bestScore=Infinity;groups.forEach((group,gi)=>{let score=0,ok=true;for(const member of group){const result=tracePairSimilarity(member,trace,tolerance);if(!result.match){ok=false;break;}score+=result.score;}if(ok&&score<bestScore){best=gi;bestScore=score;}});if(best>=0)groups[best].push(trace);else groups.push([trace]);});
   return groups;
 }
+function registeredRoutePairSimilarity(a,b,tolerance){
+  const sameDirection=String(a.route.from)===String(b.route.from)&&String(a.route.to)===String(b.route.to);
+  const reverseDirection=String(a.route.from)===String(b.route.to)&&String(a.route.to)===String(b.route.from);
+  if(!sameDirection&&!reverseDirection)return{match:false,score:Infinity};
+  const result=tracePairSimilarity(a,b,tolerance);
+  if(!result.match)return result;
+  const expectedReverse=!sameDirection&&reverseDirection;
+  if(result.reverse!==expectedReverse)return{match:false,score:Infinity};
+  return result;
+}
+function groupRegisteredRouteTraces(traces,tolerance){
+  // 登録済みルートは座標だけでなくfrom/to IDも一致する場合だけ平均する。
+  // 同じ場所の近くを通る別スポット・別分岐を誤って混ぜるのを防ぐ。
+  const groups=[];
+  traces.forEach(trace=>{let best=-1,bestScore=Infinity;groups.forEach((group,gi)=>{let score=0,ok=true;for(const member of group){const result=registeredRoutePairSimilarity(member,trace,tolerance);if(!result.match){ok=false;break;}score+=result.score;}if(ok&&score<bestScore){best=gi;bestScore=score;}});if(best>=0)groups[best].push(trace);else groups.push([trace]);});
+  return groups;
+}
 function reversePath(path){return [...path].reverse().map(p=>({lat:p.lat,lng:p.lng}));}
 function resamplePath(path,count){const cumulative=[0];for(let i=1;i<path.length;i++)cumulative.push(cumulative[i-1]+haversine(path[i-1],path[i]));const total=cumulative[cumulative.length-1];if(total<0.5)return Array.from({length:count},()=>({...path[0]}));const out=[];let seg=1;for(let i=0;i<count;i++){const target=total*i/(count-1);while(seg<cumulative.length-1&&cumulative[seg]<target)seg++;const start=cumulative[seg-1],end=cumulative[seg],span=end-start;const f=span>0?(target-start)/span:0;out.push({lat:path[seg-1].lat+(path[seg].lat-path[seg-1].lat)*f,lng:path[seg-1].lng+(path[seg].lng-path[seg-1].lng)*f});}return out;}
 function inferNodeForEndpoint(point){const near=nearestSpot(point);if(near&&near.distance<=80)return near.spot.id;return `__junction_${Number(point.lat).toFixed(5)}_${Number(point.lng).toFixed(5)}`;}
@@ -162,12 +217,81 @@ function makeAverageCandidates(){if(importedTraces.length<1){setStatus('先にGe
 function addSingleTrace(t){if(!t||t.applied)return;const from=inferNodeForEndpoint(t.path[0]),to=inferNodeForEndpoint(t.path[t.path.length-1]);const result=addRoute(t.path,t.source,JSON.stringify(from),JSON.stringify(to),'GeoJSON単独線');if(result==='duplicate'){t.applied=true;renderTraceWorkbench();setStatus(`「${t.source}」は既存ルートと同じため追加しませんでした。`,'warn');return;}if(result){t.applied=true;renderTraceWorkbench();}}
 function adoptAverage(index){const c=averageCandidates[index];if(!c||c.applied)return;if(c.maxDeviation>20&&!confirm(`このグループは最大約${c.maxDeviation.toFixed(1)}mのズレがあります。違う参道を平均していないか地図で確認しましたか？
 平均線をroutes.jsonに追加しますか？`))return;const result=addRoute(c.path,c.name,JSON.stringify(c.from),JSON.stringify(c.to),'複数GeoJSONの平均');if(result==='duplicate'){setStatus('平均線と同じルートがすでにroutes.jsonにあります。追加しませんでした。','warn');return;}c.applied=true;refreshTracePreview();renderTraceWorkbench();}
+function renderRouteAverageWorkbench(){
+ const root=$('routeAverageList');if(!root)return;root.replaceChildren();
+ const selected=[...selectedAverageIndexes].filter(i=>Number.isInteger(i)&&i>=0&&i<routes.length).sort((a,b)=>a-b);
+ $('routeAverageSelectionStatus').textContent=`平均対象：${selected.length}本`;
+ if(!selected.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='⑤の登録済みルート一覧で「平均に選ぶ」を押してください。2本以上の線を選ぶと平均化できます。';root.append(empty);return;}
+ const selectedInfo=document.createElement('div');selectedInfo.className='trace-item';
+ const names=document.createElement('small');names.textContent=selected.map(i=>routes[i].name||`ルート ${i+1}`).join(' ／ ');
+ const title=document.createElement('strong');title.textContent=`選択中のルート：${selected.length}本`;selectedInfo.append(title,names);root.append(selectedInfo);
+ if(!routeAverageCandidates.length){const info=document.createElement('div');info.className='empty';info.textContent='「選択したルートを平均化」を押して、同じA〜Bの線を判定してください。';root.append(info);return;}
+ routeAverageCandidates.forEach((c,i)=>{
+  const item=document.createElement('div');item.className='trace-item';
+  const title=document.createElement('strong');title.textContent=`${formatNode(c.from)} → ${formatNode(c.to)}：${c.traceCount}本を平均`;
+  const meta=document.createElement('small');meta.textContent=`${c.path.length}点 ／ 約${Math.round(routeLength({path:c.path}))}m ／ 最大ズレ ${c.maxDeviation.toFixed(1)}m`;
+  const warning=document.createElement('small');warning.style.color=c.maxDeviation>20?'#a33328':'#17613e';warning.textContent=c.maxDeviation>20?'線同士のズレが大きめです。違う参道・分岐を混ぜていないか地図で確認してください。':'線同士のズレは比較的小さめです。';
+  const source=document.createElement('small');source.textContent=`置き換え対象：${c.sourceNames.join('、')}`;
+  const row=document.createElement('div');row.className='row wrap';
+  const view=document.createElement('button');view.className='soft';view.textContent='平均線を地図で確認';view.onclick=()=>{const b=L.latLngBounds(c.path.map(p=>[p.lat,p.lng]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:18});};
+  const replace=document.createElement('button');replace.className='greenbtn';replace.textContent='元の線を平均線に置き換える';replace.onclick=()=>replaceSelectedRoutesWithAverage(i);
+  row.append(view,replace);item.append(title,meta,warning,source,row);root.append(item);
+ });
+}
+function makeSelectedRoutesAverage(){
+ const indexes=[...selectedAverageIndexes].filter(i=>Number.isInteger(i)&&i>=0&&i<routes.length).sort((a,b)=>a-b);
+ if(indexes.length<2){setStatus('平均化するには、⑤の一覧から2本以上のルートを選択してください。','warn');return;}
+ const tolerance=Math.max(3,Math.min(150,Number($('endpointTolerance').value)||25));
+ const count=Math.max(20,Math.min(300,Math.round(Number($('averageSamples').value)||100)));
+ const traces=indexes.map(i=>({source:routes[i].name||`ルート ${i+1}`,path:routes[i].path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)})),routeIndex:i,route:routes[i]}));
+ const groups=groupRegisteredRouteTraces(traces,tolerance);
+ routeAverageCandidates=groups.filter(g=>g.length>=2).map((group,i)=>{
+  const candidate=averageTraceGroup(group,i,count);const reference=group[0].route;
+  candidate.name=`${reference.name||'参道ルート'}（平均）`;candidate.from=reference.from;candidate.to=reference.to;
+  candidate.sourceIndexes=group.map(t=>t.routeIndex);candidate.sourceNames=group.map(t=>t.source);candidate.applied=false;
+  return candidate;
+ });
+ renderRouteAverageWorkbench();refreshTracePreview();
+ const averaged=routeAverageCandidates.reduce((n,c)=>n+c.traceCount,0);const singles=groups.filter(g=>g.length===1).length;
+ if(!routeAverageCandidates.length){setStatus(`選択した${indexes.length}本の中に、平均化できる同じA〜B・同じ形状のグループがありませんでした。出発・到着地点と線の形を確認してください。`,`warn`);return;}
+ setStatus(`手描きルートの平均化候補：${routeAverageCandidates.length}組／対象${averaged}本／単独・別形状${singles}本。平均線を地図で確認してから置き換えてください。`,'ok');
+}
+function replaceSelectedRoutesWithAverage(index){
+ const candidate=routeAverageCandidates[index];if(!candidate)return;
+ const sourceIndexes=[...new Set(candidate.sourceIndexes||[])].filter(i=>Number.isInteger(i)&&i>=0&&i<routes.length).sort((a,b)=>a-b);
+ if(sourceIndexes.length!==candidate.traceCount){setStatus('平均化の対象ルートが変更されています。もう一度選び直してください。','warn');routeAverageCandidates=[];renderRouteAverageWorkbench();refreshTracePreview();return;}
+ if(candidate.maxDeviation>20&&!confirm(`このグループは最大約${candidate.maxDeviation.toFixed(1)}mのズレがあります。別の参道を平均していないか地図で確認しましたか？
+
+元の${sourceIndexes.length}本を平均線1本に置き換えますか？`))return;
+ const sourceSet=new Set(sourceIndexes);const route={from:candidate.from,to:candidate.to,name:candidate.name,path:candidate.path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}))};
+ const key=coordKey(route.path);const duplicate=routes.some((r,i)=>!sourceSet.has(i)&&coordKey(r.path)===key&&((String(r.from)===String(route.from)&&String(r.to)===String(route.to))||(String(r.from)===String(route.to)&&String(r.to)===String(route.from))));
+ if(duplicate){setStatus('同じ平均線が、置き換え対象以外の routes.json にすでにあります。重複を避けるため置き換えませんでした。','warn');return;}
+ const insertAt=sourceIndexes[0];
+ const remapIndex=oldIndex=>{const removedBefore=sourceIndexes.filter(i=>i<oldIndex).length;const afterDelete=oldIndex-removedBefore;return afterDelete>=insertAt?afterDelete+1:afterDelete;};
+ const remainingSelected=[...selectedAverageIndexes].filter(i=>!sourceSet.has(i)).map(remapIndex);
+ const remainingCandidates=routeAverageCandidates.filter((_,i)=>i!==index).map(c=>({...c,sourceIndexes:c.sourceIndexes.map(remapIndex)}));
+ routes=routes.filter((r,i)=>!sourceSet.has(i));routes.splice(insertAt,0,route);
+ selectedIndex=insertAt;selectedAverageIndexes=new Set(remainingSelected);routeAverageCandidates=remainingCandidates;saveDraft();updateUI();refreshMap(false);refreshTracePreview();renderRouteAverageWorkbench();
+ setStatus(`選択した${sourceIndexes.length}本を平均線1本に置き換えました。${remainingCandidates.length?`ほかに平均化候補が${remainingCandidates.length}組残っています。`:''}元の線は作業中データから外れています。GitHub上の routes.json はまだ変更されていません。`,'ok');
+}
+function clearSelectedRouteAverageSelection(){selectedAverageIndexes.clear();routeAverageCandidates=[];renderList();refreshMap(false);refreshTracePreview();renderRouteAverageWorkbench();setStatus('手描きルートの平均対象を解除しました。');}
 function addImportedSingles(){if(!importedTraces.length){setStatus('先にGeoJSONを読み込んでください。','warn');return;}if(!groupingPrepared)makeAverageCandidates();const singles=traceGroups.filter(g=>g.length===1).map(g=>g[0]).filter(t=>!t.applied);if(!singles.length){setStatus('追加できる単独線はありません。複数本のグループは平均線を採用してください。','warn');return;}let added=0,dups=0;for(const t of singles){const from=inferNodeForEndpoint(t.path[0]),to=inferNodeForEndpoint(t.path[t.path.length-1]);const result=addRoute(t.path,t.source,JSON.stringify(from),JSON.stringify(to),'GeoJSON単独線');if(result==='duplicate'){dups++;t.applied=true;}else if(result){added++;t.applied=true;}}renderTraceWorkbench();setStatus(`単独線を追加：${added}本／既存重複 ${dups}本。平均化グループ内の元線は追加していません。`,'ok');}
 function clearImportedTraces(){if(!importedTraces.length&&!averageCandidates.length)return;if(!confirm('読み込んだ線と平均化候補をクリアしますか？routes.jsonに採用済みのルートは残ります。'))return;importedTraces=[];averageCandidates=[];traceGroups=[];groupingPrepared=false;refreshTracePreview();renderTraceWorkbench();setStatus('読み込んだ線と平均化候補をクリアしました。');}
 async function importGeoFiles(files){let imported=0,errors=[];const geoFiles=[...files].filter(f=>/\.(geojson|json)$/i.test(f.name)||f.type==='application/geo+json'||f.type==='application/json');if(!geoFiles.length){setStatus('GeoJSONまたはJSONファイルをドロップしてください。','warn');return;}for(const file of geoFiles){try{const data=JSON.parse(await file.text());const lines=geoJSONLines(data);if(!lines.length){errors.push(`${file.name}：LineString形式の線データが見つかりません`);continue;}let lineNo=0;for(const path of lines){lineNo++;importedTraces.push({source:lines.length===1?file.name:`${file.name} / 線${lineNo}`,path});imported++;}}catch(e){errors.push(`${file.name}：JSONを読み込めません（GeoJSON形式を確認してください）`);}}averageCandidates=[];traceGroups=[];groupingPrepared=false;refreshTracePreview();renderTraceWorkbench();const b=importedTraces.length?L.latLngBounds(importedTraces.flatMap(t=>t.path.map(p=>[p.lat,p.lng]))):null;if(b&&b.isValid())map.fitBounds(b.pad(.15),{maxZoom:18});setStatus(`GeoJSONを作業台に読み込みました：${imported}本。routes.jsonにはまだ追加していません。③で平均化するか、「単独線だけを追加」を押してください。`+(errors.length?'\n'+errors.join('\n'):''),errors.length?'warn':'ok');}
 function downloadRoutes(){const blob=new Blob([JSON.stringify(routes,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='routes.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);setStatus('routes.jsonを保存しました。GitHubの data/routes.json をこのファイルで置き換えてください。');}
 async function copyRoutes(){try{await navigator.clipboard.writeText(JSON.stringify(routes,null,2));setStatus('routes.jsonの内容をコピーしました。');}catch(e){setStatus('コピーできませんでした。「routes.jsonを保存」を使ってください。','warn');}}
-async function loadRemote(resetDraft=false){const src=$('routesUrl').value.trim()||DEFAULT_ROUTES_URL;setStatus('GitHubのroutes.jsonを読み込んでいます…');try{const url=new URL(src,location.href);url.searchParams.set('_t',Date.now());const res=await fetch(url.href,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}：routes.jsonを取得できません`);const remote=normalizeRoutes(await res.json());remoteRoutes=clone(remote);let draft=null;if(!resetDraft){try{const raw=localStorage.getItem(DRAFT_KEY);if(raw)draft=normalizeRoutes(JSON.parse(raw));}catch(e){draft=null;}}if(draft&&draft.length){const restore=confirm(`このブラウザに未反映の下書き（${draft.length}区間）があります。\n下書きを続けますか？\n\n「OK」= 下書きを続ける\n「キャンセル」= GitHubの最新 routes.json に戻す`);routes=restore?draft:clone(remote);restoredDraft=!!restore;if(!restore){localStorage.removeItem(DRAFT_KEY);hasDraft=false;}}else{routes=clone(remote);restoredDraft=false;}try{spots=[];const su=new URL(SPOTS_URL,location.href);su.searchParams.set('_t',Date.now());const sr=await fetch(su.href,{cache:'no-store'});if(sr.ok){const sd=await sr.json();if(Array.isArray(sd))spots=sd.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));}}catch(e){spots=[];}populateNodeSelects();updateStats();renderList();refreshMap(true);if(importedTraces.length)refreshTracePreview();setStatus(`GitHubから読み込みました。ルート ${routes.length} 区間、スポット ${spots.length} 件。${restoredDraft?'未反映の下書きデータを表示中です。':''}`+(spots.length?'':'\n※ spots.jsonを読み込めなかったため、ルート線のみ表示しています。'),'ok');}catch(e){setStatus(`GitHubのroutes.jsonを読み込めませんでした。\n${e.message}\n\nこのHTMLをリポジトリ直下に置き、data/routes.json が存在するか確認してください。`,'error');}}
+async function loadRemote(resetDraft=false){const src=$('routesUrl').value.trim()||DEFAULT_ROUTES_URL;setStatus('GitHubのroutes.jsonを読み込んでいます…');try{const url=new URL(src,location.href);url.searchParams.set('_t',Date.now());const res=await fetch(url.href,{cache:'no-store'});if(!res.ok)throw new Error(`HTTP ${res.status}：routes.jsonを取得できません`);const remote=normalizeRoutes(await res.json());remoteRoutes=clone(remote);const blankDraft=!resetDraft&&localStorage.getItem(BLANK_DRAFT_KEY)==='1';let draft=null;if(!resetDraft&&!blankDraft){try{const raw=localStorage.getItem(DRAFT_KEY);if(raw)draft=normalizeRoutes(JSON.parse(raw));}catch(e){draft=null;}}if(blankDraft){routes=[];restoredDraft=true;}else if(draft&&draft.length){const restore=confirm(`このブラウザに未反映の下書き（${draft.length}区間）があります。\n下書きを続けますか？\n\n「OK」= 下書きを続ける\n「キャンセル」= GitHubの最新 routes.json に戻す`);routes=restore?draft:clone(remote);restoredDraft=!!restore;if(!restore){localStorage.removeItem(DRAFT_KEY);localStorage.removeItem(BLANK_DRAFT_KEY);hasDraft=false;}}else{routes=clone(remote);restoredDraft=false;}if(resetDraft){localStorage.removeItem(DRAFT_KEY);localStorage.removeItem(BLANK_DRAFT_KEY);hasDraft=false;}selectedIndex=-1;selectedAverageIndexes.clear();routeAverageCandidates=[];try{spots=[];const su=new URL(SPOTS_URL,location.href);su.searchParams.set('_t',Date.now());const sr=await fetch(su.href,{cache:'no-store'});if(sr.ok){const sd=await sr.json();if(Array.isArray(sd))spots=sd.filter(s=>Number.isFinite(Number(s.lat))&&Number.isFinite(Number(s.lng)));}}catch(e){spots=[];}populateNodeSelects();updateStats();renderList();refreshMap(true);refreshTracePreview();renderRouteAverageWorkbench();setStatus(`GitHubから読み込みました。ルート ${routes.length} 区間、スポット ${spots.length} 件。${restoredDraft?(blankDraft?'一からやり直した空の作業状態を復元しました。':'未反映の下書きデータを表示中です。'):''}`+(spots.length?'':'\n※ spots.jsonを読み込めなかったため、ルート線のみ表示しています。'),'ok');}catch(e){setStatus(`GitHubのroutes.jsonを読み込めませんでした。\n${e.message}\n\nこのHTMLをリポジトリ直下に置き、data/routes.json が存在するか確認してください。`,'error');}}
+function startOverFromScratch(){
+ const count=routes.length;const traceCount=importedTraces.length;
+ if(!confirm(`作業中のルート${count}区間と、読み込んだGeoJSON${traceCount}本を空にして、一から描き直しますか？\n\nこの操作で消えるのは、このブラウザ内の作業データだけです。GitHub上の data/routes.json は変更されません。元に戻すときは「GitHubの状態に戻す」を押してください。`))return;
+ if(polylineDrawHandler&&polylineDrawHandler._enabled)polylineDrawHandler.disable();
+ routes=[];selectedIndex=-1;selectedAverageIndexes.clear();routeAverageCandidates=[];
+ importedTraces=[];averageCandidates=[];traceGroups=[];groupingPrepared=false;
+ $('geoFiles').value='';$('routeName').value='';$('routeSearch').value='';$('fromSelect').value='__auto__';$('toSelect').value='__auto__';
+ try{localStorage.setItem(DRAFT_KEY,'[]');localStorage.setItem(BLANK_DRAFT_KEY,'1');hasDraft=true;}catch(e){hasDraft=false;}
+ updateUI();refreshMap(true);refreshTracePreview();renderTraceWorkbench();renderRouteAverageWorkbench();
+ setStatus(`一からやり直す状態にしました。作業ルートは0区間です。GitHub上の元データ（${remoteRoutes.length}区間）は変更していません。`,'warn');
+}
 // Leaflet
 if(!window.L){setStatus('地図ライブラリを読み込めません。ネット接続を確認してください。','error');throw new Error('Leaflet missing');}
 // ベースマップは国土地理院の標準地図のみを使用（APIキー不要）
@@ -235,7 +359,7 @@ map.getContainer().addEventListener('dblclick',event=>{
   polylineDrawHandler._finishShape();
 },true);
 map.on(L.Draw.Event.CREATED,e=>{const ll=e.layer.getLatLngs();const path=ll.map(p=>({lat:Number(p.lat.toFixed(7)),lng:Number(p.lng.toFixed(7))}));const fc=$('fromSelect').value,tc=$('toSelect').value;const result=addRoute(path,$('routeName').value.trim(),fc,tc);if(result==='duplicate')setStatus('同じ形・同じ接続先のルートがすでにあります。重複追加はしませんでした。','warn');});
-$('reloadBtn').addEventListener('click',()=>loadRemote(false));$('resetBtn').addEventListener('click',()=>{if(confirm('ブラウザ内の下書きを破棄して、GitHubの最新routes.jsonを読み込みますか？')){localStorage.removeItem(DRAFT_KEY);hasDraft=false;loadRemote(true);}});$('downloadBtn').addEventListener('click',downloadRoutes);$('copyBtn').addEventListener('click',copyRoutes);$('fitBtn').addEventListener('click',()=>{const b=window.routeLayer?.getBounds();if(b?.isValid())map.fitBounds(b.pad(.08),{maxZoom:17});});$('geoFiles').addEventListener('change',async e=>{const files=[...e.target.files];if(files.length)await importGeoFiles(files);e.target.value='';});$('makeAverageBtn').addEventListener('click',makeAverageCandidates);$('addSinglesBtn').addEventListener('click',addImportedSingles);$('clearTracesBtn').addEventListener('click',clearImportedTraces);
+$('reloadBtn').addEventListener('click',()=>loadRemote(false));$('resetBtn').addEventListener('click',()=>{if(confirm('ブラウザ内の下書きを破棄して、GitHubの最新routes.jsonを読み込みますか？')){localStorage.removeItem(DRAFT_KEY);localStorage.removeItem(BLANK_DRAFT_KEY);hasDraft=false;loadRemote(true);}});$('startOverBtn').addEventListener('click',startOverFromScratch);$('makeRouteAverageBtn').addEventListener('click',makeSelectedRoutesAverage);$('clearRouteAverageSelectionBtn').addEventListener('click',clearSelectedRouteAverageSelection);$('downloadBtn').addEventListener('click',downloadRoutes);$('copyBtn').addEventListener('click',copyRoutes);$('fitBtn').addEventListener('click',()=>{const b=window.routeLayer?.getBounds();if(b?.isValid())map.fitBounds(b.pad(.08),{maxZoom:17});});$('geoFiles').addEventListener('change',async e=>{const files=[...e.target.files];if(files.length)await importGeoFiles(files);e.target.value='';});$('makeAverageBtn').addEventListener('click',makeAverageCandidates);$('addSinglesBtn').addEventListener('click',addImportedSingles);$('clearTracesBtn').addEventListener('click',clearImportedTraces);
 // OSのファイルをページ全体・地図・専用ドロップエリアのどこに落としてもGeoJSONを取り込む
 let fileDragDepth=0;
 const dropOverlay=$('globalDropOverlay');
@@ -249,6 +373,7 @@ dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.a
 dropZone.addEventListener('dragleave',e=>{if(!dropZone.contains(e.relatedTarget))dropZone.classList.remove('dragover');});
 $('routeSearch').addEventListener('input',renderList);
 renderTraceWorkbench();
+renderRouteAverageWorkbench();
 loadRemote(false);
 </script>
 </body>
