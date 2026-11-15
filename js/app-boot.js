@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const CACHE_NAME = 'fushimi-smart-guide-v129';
+  const CACHE_NAME = 'fushimi-smart-guide-v130';
   const REQUIRED_ASSETS = [
     './index.html',
     './home.html',
@@ -23,7 +23,6 @@
     './data/spots.json',
     './data/routes.json',
     './noicon.svg',
-    './images/hero1.jpg',
     './shop.svg',
     './eat.svg',
     './images/icons/category-all.svg',
@@ -215,9 +214,9 @@
       let response;
       // Add a one-time query token to same-origin preload requests. This avoids
       // an older active service worker returning its previous cached copy while
-      // the v129 cache is being warmed during an update.
+      // the v130 cache is being warmed during an update.
       const fetchUrl = new URL(absoluteUrl);
-      if (!isExternal) fetchUrl.searchParams.set('__fushimi_preload', 'v129');
+      if (!isExternal) fetchUrl.searchParams.set('__fushimi_preload', 'v130');
       try {
         response = await fetch(fetchUrl.href, {
           cache: 'reload',
