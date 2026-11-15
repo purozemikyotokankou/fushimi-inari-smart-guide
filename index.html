@@ -527,6 +527,129 @@
                 transition: none;
             }
         }
+
+        /* =========================================================
+           Startup / offline preparation screen
+           ========================================================= */
+        #fushimi-startup-overlay[hidden] { display: none !important; }
+        #fushimi-startup-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: grid;
+            place-items: center;
+            padding: max(22px, env(safe-area-inset-top)) 22px max(22px, env(safe-area-inset-bottom));
+            background: rgba(246, 246, 244, .88);
+            backdrop-filter: blur(28px) saturate(1.18);
+            -webkit-backdrop-filter: blur(28px) saturate(1.18);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s ease;
+        }
+        #fushimi-startup-overlay.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .fushimi-boot-card {
+            width: min(440px, 100%);
+            padding: 42px 30px 30px;
+            border: 1px solid rgba(255,255,255,.78);
+            border-radius: 30px;
+            text-align: center;
+            color: #202023;
+            background: linear-gradient(150deg, rgba(255,255,255,.91), rgba(255,255,255,.68));
+            box-shadow: 0 28px 80px rgba(35, 25, 27, .13), inset 0 1px 0 #fff;
+        }
+        .fushimi-boot-emblem {
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 20px;
+            display: grid;
+            place-items: center;
+            border-radius: 25px;
+            border: 1px solid rgba(196,0,24,.10);
+            color: #c40018;
+            font-size: 35px;
+            background: linear-gradient(145deg, #fff, #f9e9eb);
+            box-shadow: 0 12px 32px rgba(196,0,24,.12), inset 0 1px 0 #fff;
+            animation: fushimiBootFloat 2.8s ease-in-out infinite;
+        }
+        .fushimi-boot-brand {
+            margin: 0 0 12px;
+            color: rgba(32,32,35,.46);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .19em;
+        }
+        .fushimi-boot-card h2 {
+            margin: 0;
+            font-size: clamp(21px, 5vw, 26px);
+            line-height: 1.35;
+            letter-spacing: -.035em;
+            font-weight: 750;
+        }
+        .fushimi-boot-intro {
+            min-height: 42px;
+            margin: 12px 0 25px;
+            color: rgba(32,32,35,.62);
+            font-size: 13px;
+            line-height: 1.75;
+        }
+        .fushimi-boot-track {
+            height: 7px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(35,35,38,.09);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
+        }
+        .fushimi-boot-track span {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #c40018, #ed6b79);
+            box-shadow: 0 0 14px rgba(196,0,24,.20);
+            transition: width .24s ease;
+        }
+        .fushimi-boot-status {
+            min-height: 22px;
+            margin: 15px 0 3px;
+            color: #39393d;
+            font-size: 13px;
+            font-weight: 650;
+        }
+        .fushimi-boot-count {
+            margin: 0;
+            color: rgba(32,32,35,.45);
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+        }
+        .fushimi-boot-note {
+            margin: 22px 0 0;
+            color: rgba(32,32,35,.43);
+            font-size: 10px;
+            line-height: 1.65;
+        }
+        @keyframes fushimiBootFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        @media (max-width: 480px) {
+            .fushimi-boot-card { padding: 36px 24px 26px; border-radius: 26px; }
+            .fushimi-boot-emblem { width: 68px; height: 68px; border-radius: 22px; }
+        }
+        @media (max-height: 540px) {
+            .fushimi-boot-card { padding: 20px 24px 18px; }
+            .fushimi-boot-emblem { width: 52px; height: 52px; margin-bottom: 10px; border-radius: 17px; font-size: 26px; }
+            .fushimi-boot-brand { margin-bottom: 6px; }
+            .fushimi-boot-intro { min-height: 0; margin: 7px 0 14px; }
+            .fushimi-boot-note { margin-top: 12px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .fushimi-boot-emblem { animation: none; }
+            #fushimi-startup-overlay, .fushimi-boot-track span { transition: none; }
+        }
+
     </style>
 </head>
 
@@ -569,7 +692,25 @@
     </div>
 
 
+
+    <div id="fushimi-startup-overlay" aria-hidden="true" hidden>
+        <section class="fushimi-boot-card" role="status" aria-live="polite" aria-atomic="true">
+            <div class="fushimi-boot-emblem" aria-hidden="true">⛩</div>
+            <p class="fushimi-boot-brand">FUSHIMI INARI · SMART GUIDE</p>
+            <h2 id="fushimi-boot-title">ガイドを準備しています</h2>
+            <p class="fushimi-boot-intro" id="fushimi-boot-intro">オフラインでも使えるように、必要なデータを保存しています。</p>
+            <div class="fushimi-boot-track" id="fushimi-boot-progress" role="progressbar" aria-label="Preparation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span id="fushimi-boot-progress-fill"></span>
+            </div>
+            <p class="fushimi-boot-status" id="fushimi-boot-status">アプリと観光データを保存中…</p>
+            <p class="fushimi-boot-count" id="fushimi-boot-count">0 / 62 項目を確認</p>
+            <p class="fushimi-boot-note">初回の準備が終わると、次回からオフラインでも一部の機能を利用できます。</p>
+        </section>
+    </div>
+
     <script src="js/liquid-cursor.js?v=94" defer></script>
+    <script src="js/app-boot.js?v=129" defer></script>
+    <script src="js/offline.js?v=129" defer></script>
 
     <script src="js/language.js"></script>
 

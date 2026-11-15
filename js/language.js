@@ -356,6 +356,13 @@ function selectLanguage(language) {
 
     localStorage.setItem("language", language);
 
+    // The index starts offline preparation as soon as it opens. Once a visitor
+    // chooses a language, show the startup screen until essential files are ready.
+    if (window.FushimiAppBoot && typeof window.FushimiAppBoot.start === "function") {
+        window.FushimiAppBoot.start(language);
+        return;
+    }
+
     window.location.href = "home.html";
 
 }
