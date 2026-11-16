@@ -1,7 +1,7 @@
-/* Fushimi Inari Smart Guide — offline support (v134) */
+/* Fushimi Inari Smart Guide — offline support (v135) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v134';
+const CACHE_NAME = 'fushimi-smart-guide-v135';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',

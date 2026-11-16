@@ -6475,3 +6475,29 @@ body.planner-page .liquid-cursor {
     animation-duration: 4.2s !important;
   }
 }
+
+
+/* V135 — animate one beam over the complete ordered journey, not per fragment. */
+.leaflet-plannerRoutePane .planner-route-tone-wave-line,
+.planner-route-tone-wave-line {
+  stroke: #FFFFFF !important;
+  stroke-width: 4.2px !important;
+  stroke-opacity: .98 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  stroke-dasharray: 105 895 !important;
+  stroke-dashoffset: 0 !important;
+  filter: drop-shadow(0 0 1.5px rgba(255,255,255,.98))
+          drop-shadow(0 0 4px rgba(255,255,255,.82))
+          drop-shadow(0 0 8px rgba(255,153,0,.72)) !important;
+  animation: fushimi-route-white-beam 3.2s linear infinite !important;
+  transition: none !important;
+  pointer-events: none !important;
+  vector-effect: non-scaling-stroke;
+  will-change: stroke-dashoffset;
+}
+@keyframes fushimi-route-white-beam {
+  0% { stroke-dashoffset: 0; }
+  88% { stroke-dashoffset: -1000; }
+  100% { stroke-dashoffset: -1000; }
+}

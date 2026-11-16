@@ -6459,7 +6459,7 @@ document.addEventListener("DOMContentLoaded", function () {
         routes = network.routes;
 
         console.log(
-            "V134 routes loaded:",
+            "V135 routes loaded:",
             baseRoutes.length,
             "base routes /",
             routes.length,
@@ -7273,6 +7273,81 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    // ============================================================
+    // 選択された全ルート区間を、出発地→到着地の一本の座標列へ統合
+    // - 各区間の順序は経路検索結果の順序を維持
+    // - 近接する接続点だけを同一点へスナップ
+    // - 大きな隙間を直線でごまかさず、ルート作成自体を停止
+    // ============================================================
+    const ROUTE_RENDER_JOIN_TOLERANCE_METERS = 3;
+
+    function joinOrderedRoutePathParts(parts, toleranceMeters = ROUTE_RENDER_JOIN_TOLERANCE_METERS) {
+        const merged = [];
+        let joinedParts = 0;
+        let maximumJoinGapMeters = 0;
+
+        for (let partIndex = 0; partIndex < (Array.isArray(parts) ? parts.length : 0); partIndex++) {
+            const rawPath = parts[partIndex];
+            if (!Array.isArray(rawPath)) continue;
+
+            const path = [];
+            rawPath.forEach(function (point) {
+                const lat = Number(Array.isArray(point) ? point[0] : point?.lat);
+                const lng = Number(Array.isArray(point) ? point[1] : (point?.lng ?? point?.lon));
+                if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
+                const next = [lat, lng];
+                if (!path.length || distanceBetweenLatLngMeters(path[path.length - 1], next) > 0.05) {
+                    path.push(next);
+                }
+            });
+
+            if (path.length < 2) continue;
+            if (!merged.length) {
+                merged.push(...path);
+                continue;
+            }
+
+            const previousEnd = merged[merged.length - 1];
+            const nextStart = path[0];
+            const gapMeters = distanceBetweenLatLngMeters(previousEnd, nextStart);
+            maximumJoinGapMeters = Math.max(maximumJoinGapMeters, gapMeters);
+
+            if (gapMeters > toleranceMeters) {
+                return {
+                    ok: false,
+                    path: [],
+                    gapMeters: gapMeters,
+                    partIndex: partIndex,
+                    joinedParts: joinedParts,
+                    maximumJoinGapMeters: maximumJoinGapMeters
+                };
+            }
+
+            // 同じ接続点として扱える範囲だけ midpoint に揃え、重複点を1点にする。
+            const junction = [
+                (previousEnd[0] + nextStart[0]) / 2,
+                (previousEnd[1] + nextStart[1]) / 2
+            ];
+            merged[merged.length - 1] = junction;
+            for (let i = 1; i < path.length; i++) {
+                const point = path[i];
+                if (distanceBetweenLatLngMeters(merged[merged.length - 1], point) > 0.05) {
+                    merged.push(point);
+                }
+            }
+            joinedParts++;
+        }
+
+        return {
+            ok: merged.length >= 2,
+            path: merged,
+            gapMeters: 0,
+            partIndex: -1,
+            joinedParts: joinedParts,
+            maximumJoinGapMeters: maximumJoinGapMeters
+        };
+    }
+
     async function createRoute(routeOptions = null) {
         if (routeOptions?.destinationSpot) setSpotAsSingleDestination(routeOptions.destinationSpot);
 
@@ -7294,6 +7369,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         clearRouteNumberMarkers();
         routeSegments = [];
+        navigationLegs = [];
+        navigationLegIndex = 0;
+        hideNavCard();
 
         let startLocation = null;
         if (explicitOriginMode === "current") {
@@ -7321,13 +7399,21 @@ document.addEventListener("DOMContentLoaded", function () {
             const validParts = parts.filter(path => Array.isArray(path) && path.length >= 2);
             if (!validParts.length) throw new Error("徒歩ルートの座標が不足しています。");
 
+            const stitchedLeg = joinOrderedRoutePathParts(validParts);
+            if (!stitchedLeg.ok) {
+                throw new Error(
+                    `「${getLocalizedValue(from?.name || "出発地")} → ${getLocalizedValue(to?.name || "到着地")}」の内部に約${stitchedLeg.gapMeters.toFixed(1)}mの線の切れ目があります。` +
+                    "切れ目を勝手な直線でつながず、安全のため描画を中止しました。"
+                );
+            }
+
             routeSegments.push(route);
-            validParts.forEach(path => routePaths.push(path));
+            routePaths.push(stitchedLeg.path);
             legs.push({
                 from: from,
                 to: to,
-                coordinates: validParts[0],
-                paths: validParts,
+                coordinates: stitchedLeg.path,
+                paths: [stitchedLeg.path],
                 source: route.source
             });
         }
@@ -7354,6 +7440,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 appendRouteLeg(route, from, to);
             }
         } catch (error) {
+            routeSegments = [];
+            navigationLegs = [];
+            navigationLegIndex = 0;
+            hideNavCard();
             console.error("ルート取得エラー:", error);
             alert(
                 "徒歩ルートを作成できませんでした。\n" +
@@ -7367,10 +7457,25 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        // Draw each connected path as its own polyline. Never bridge gaps between
-        // route sections with an invented straight line.
-        // Static layered strokes create a steady illuminated route. No moving
-        // beam, particles, dash animation, or pulsing opacity is used.
+        // 経路検索の全区間を、出発地から到着地まで一本の連続した座標列へ統合する。
+        // ベース線・白いビーム・アニメーションは、すべて同一の座標列を共有する。
+        // 複数の独立したpolylineへビームを付けると、各線でアニメーションが
+        // 同時に先頭から再生され「関係ない場所だけ光る」ように見えるため、
+        // この画面では1旅行につき tone-wave を必ず1本だけ生成する。
+        const stitchedJourney = joinOrderedRoutePathParts(routePaths);
+        if (!stitchedJourney.ok) {
+            routeSegments = [];
+            navigationLegs = [];
+            const gap = Number(stitchedJourney.gapMeters || 0).toFixed(1);
+            console.error("[ルート描画] 区間間の接続が切れています", stitchedJourney);
+            alert(
+                `案内線を一本につなげられません。区間 ${stitchedJourney.partIndex + 1} の接続に約${gap}mの隙間があります。\n` +
+                "不自然な直線や別の区間を光らせないため、ルート表示を中止しました。参道データの接続を確認してください。"
+            );
+            return;
+        }
+
+        const completeJourneyPath = stitchedJourney.path;
         const routeLayerStyles = [
             {
                 className: "planner-route-halo-line",
@@ -7385,12 +7490,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 opacity: 1
             },
             {
-                // A very low-contrast orange tone sweep. This is not a light beam,
-                // marker, particle, or glow; it is a thin color variation on the route.
+                // V126-style compact white beam. It is created exactly once,
+                // over the complete origin-to-destination journey.
                 className: "planner-route-tone-wave-line",
-                color: "#FFB85A",
-                weight: 6.2,
-                opacity: 0.22
+                color: "#FFFFFF",
+                weight: 4.2,
+                opacity: 0.98
             },
             {
                 className: "planner-route-core-line",
@@ -7399,38 +7504,41 @@ document.addEventListener("DOMContentLoaded", function () {
                 opacity: 0.62
             }
         ];
-        const routeLayers = routePaths.flatMap(function (path) {
-            return routeLayerStyles.map(function (style) {
-                return L.polyline(path, {
-                    pane: "plannerRoutePane",
-                    renderer: routeSvgRenderer,
-                    className: style.className,
-                    color: style.color,
-                    weight: style.weight,
-                    opacity: style.opacity,
-                    lineCap: "round",
-                    lineJoin: "round",
-                    interactive: false
-                });
+
+        const routeLayers = routeLayerStyles.map(function (style) {
+            return L.polyline(completeJourneyPath, {
+                pane: "plannerRoutePane",
+                renderer: routeSvgRenderer,
+                className: style.className,
+                color: style.color,
+                weight: style.weight,
+                opacity: style.opacity,
+                lineCap: "round",
+                lineJoin: "round",
+                smoothFactor: 0,
+                interactive: false
             });
         });
         routeLine = L.featureGroup(routeLayers).addTo(map);
 
-        // Normalize the moving tone overlay to the full length of each route path.
-        // That makes the sweep travel from the first coordinate toward the last,
-        // regardless of how long the route is or how far the map is zoomed.
-        routeLayers.forEach(function (layer) {
-            if (layer?.options?.className !== "planner-route-tone-wave-line") return;
-            const pathElement = typeof layer.getElement === "function"
-                ? layer.getElement()
-                : layer._path;
-            if (pathElement) pathElement.setAttribute("pathLength", "1000");
+        // One normalized path length = one beam that moves from the first
+        // coordinate to the final coordinate, not one beam per route fragment.
+        const toneWaveLayer = routeLayers.find(function (layer) {
+            return layer?.options?.className === "planner-route-tone-wave-line";
         });
+        if (toneWaveLayer) {
+            const pathElement = typeof toneWaveLayer.getElement === "function"
+                ? toneWaveLayer.getElement()
+                : toneWaveLayer._path;
+            if (pathElement) pathElement.setAttribute("pathLength", "1000");
+        }
 
+        // All visual layers now share exactly one route geometry.
+        const routePathsForDisplay = [completeJourneyPath];
         map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
         renderRouteNumberMarkers();
 
-        const routeDistance = calculateRoutePathsDistance(routePaths);
+        const routeDistance = calculateRoutePathsDistance(routePathsForDisplay);
         if (distance) distance.textContent = `${routeDistance.toFixed(2)} km`;
 
         const walkingMinutes = Math.ceil(routeDistance * 1000 / 80);
