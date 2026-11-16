@@ -532,7 +532,8 @@ document.addEventListener("DOMContentLoaded", function () {
         (CARTO_BASEMAP_API_KEY ? "?key=" + encodeURIComponent(CARTO_BASEMAP_API_KEY) : "");
     const CARTO_ATTRIBUTION =
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
-        '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
+        '&copy; <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a> · ' +
+        '<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Weather data by Open-Meteo.com</a>';
 
     const cartoPositronLayer = L.tileLayer(CARTO_POSITRON_TILE_URL, {
         minZoom: 0,
@@ -6455,6 +6456,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // ============================================================
     // OSRM
     // ============================================================
+    // Show the routing-engine credit only after an OSRM route is actually returned.
+    const OSRM_ROUTE_ATTRIBUTION =
+        'Routing by <a href="https://project-osrm.org/" target="_blank" rel="noopener noreferrer">OSRM</a>';
+    let osrmRouteAttributionAdded = false;
 
     async function getOSRMRoute(
         fromPoint,
@@ -6501,24 +6506,19 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
 
-        return (
-            data.routes[0]
-                .geometry
-                .coordinates
-                .map(
-                    function (coord) {
+        const routeCoordinates = data.routes[0]
+            .geometry
+            .coordinates
+            .map(function (coord) {
+                return [Number(coord[1]), Number(coord[0])];
+            });
 
-                        return [
-                            Number(
-                                coord[1]
-                            ),
-                            Number(
-                                coord[0]
-                            )
-                        ];
-                    }
-                )
-        );
+        if (!osrmRouteAttributionAdded && map.attributionControl) {
+            map.attributionControl.addAttribution(OSRM_ROUTE_ATTRIBUTION);
+            osrmRouteAttributionAdded = true;
+        }
+
+        return routeCoordinates;
     }
 
     // ============================================================
