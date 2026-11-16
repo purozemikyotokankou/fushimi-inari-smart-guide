@@ -8146,7 +8146,9 @@
         "lat": 34.9670187,
         "lng": 135.7747212
       }
-    ]
+    ],
+    "oneway": true,
+    "direction": "downhill"
   },
   {
     "from": 4,

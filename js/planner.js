@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V122-ROUTE-SEGMENT-AND-STATIC-GLOW";
-    console.log("[Fushimi Inari Smart Guide] planner.js V122-ROUTE-SEGMENT-AND-STATIC-GLOW loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V136-ROUTE-NETWORK-CONTINUOUS-PATH";
+    console.log("[Fushimi Inari Smart Guide] planner.js V136-ROUTE-NETWORK-CONTINUOUS-PATH loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -204,6 +204,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let spots = [];
     let routes = [];
+    let preparedRouteGraph = null;
     let selectedSpots = [];
     let currentDetailSpot = null;
     let activeRoutePlannerState = null;
@@ -5636,8 +5637,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const from = resolveEndpoint(0, declaredFrom, "start");
         const to = resolveEndpoint(path.length - 1, declaredTo, "end");
-        const oneWay = route.oneway === true || route.oneWay === true || route.one_way === true ||
-            String(route.oneway ?? route.oneWay ?? route.one_way ?? "").toLowerCase() === "yes";
+        const oneWayValue = route.oneway ?? route.oneWay ?? route.one_way ?? route.one_way_only;
+        const oneWay = oneWayValue === true ||
+            ["yes", "true", "1", "oneway", "one-way"].includes(String(oneWayValue ?? "").trim().toLowerCase());
 
         return {
             from: from,
@@ -6263,6 +6265,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     const intersection = getSegmentIntersection(first.a, first.b, second.a, second.b);
                     if (!intersection) continue;
+
+                    // 近似・平均化された線が平行に近いまま交差した場合、
+                    // GPSの微小な揺れで生じた見かけの交差である可能性が高い。
+                    // 端点が別の線に接続するケースは上の端点接続処理で拾うため、
+                    // ここでは角度のはっきりした線同士の交差だけを分岐点にする。
+                    const firstDx = first.b.x - first.a.x;
+                    const firstDy = first.b.y - first.a.y;
+                    const secondDx = second.b.x - second.a.x;
+                    const secondDy = second.b.y - second.a.y;
+                    const firstLength = Math.hypot(firstDx, firstDy);
+                    const secondLength = Math.hypot(secondDx, secondDy);
+                    if (firstLength < 0.05 || secondLength < 0.05) continue;
+                    const cosine = Math.min(1, Math.abs(
+                        (firstDx * secondDx + firstDy * secondDy) / (firstLength * secondLength)
+                    ));
+                    const crossingAngle = Math.acos(cosine) * 180 / Math.PI;
+                    if (crossingAngle < 18) continue;
+
+                    // 線の端同士・端点上の分岐は、4m以内の端点接続で処理する。
+                    // 交差処理で同じ場所に微小な別ノードを重ねない。
+                    if (intersection.t < 0.015 || intersection.t > 0.985 ||
+                        intersection.u < 0.015 || intersection.u > 0.985) continue;
+
                     const point = toLatLng(intersection.point);
                     pushCandidate(point, [
                         { routeIndex: first.routeIndex, measure: first.segmentIndex + intersection.t, side: null },
@@ -6302,14 +6327,31 @@ document.addEventListener("DOMContentLoaded", function () {
             return ids;
         }
         const candidateSpotIds = candidates.map(getCandidateSpotIds);
+        // 分岐候補を距離1.5mの空間グリッドでまとめる。
+        // 候補点を全件総当たりすると交差の多いGPSデータで初期化が重くなるため、
+        // 近傍セルだけを比較して同じ分岐点をクラスタ化する。
+        const candidateGrid = new Map();
+        const candidateCellSize = ROUTE_JUNCTION_CLUSTER_LIMIT_METERS;
         for (let i = 0; i < candidates.length; i++) {
-            for (let j = i + 1; j < candidates.length; j++) {
-                if (distanceBetweenLatLngMeters(candidates[i].point, candidates[j].point) > ROUTE_JUNCTION_CLUSTER_LIMIT_METERS) continue;
-                const idsA = candidateSpotIds[i];
-                const idsB = candidateSpotIds[j];
-                if (idsA.size && idsB.size && [...idsA].some(id => !idsB.has(id))) continue;
-                unionRoots(i, j);
+            const xy = toXY(candidates[i].point);
+            const cellX = Math.floor(xy.x / candidateCellSize);
+            const cellY = Math.floor(xy.y / candidateCellSize);
+            for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                for (let offsetY = -1; offsetY <= 1; offsetY++) {
+                    const bucket = candidateGrid.get(`${cellX + offsetX}:${cellY + offsetY}`);
+                    if (!bucket) continue;
+                    for (const j of bucket) {
+                        if (distanceBetweenLatLngMeters(candidates[i].point, candidates[j].point) > ROUTE_JUNCTION_CLUSTER_LIMIT_METERS) continue;
+                        const idsA = candidateSpotIds[i];
+                        const idsB = candidateSpotIds[j];
+                        if (idsA.size && idsB.size && [...idsA].some(id => !idsB.has(id))) continue;
+                        unionRoots(i, j);
+                    }
+                }
             }
+            const key = `${cellX}:${cellY}`;
+            if (!candidateGrid.has(key)) candidateGrid.set(key, []);
+            candidateGrid.get(key).push(i);
         }
 
         const candidateGroups = new Map();
@@ -6457,9 +6499,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const connected = addAutomaticSpotConnections(baseRoutes);
         const network = connectRouteNetworkJunctions(connected.routes);
         routes = network.routes;
+        // 参道データは初期化後に変化しないため、経路検索ごとにグラフを
+        // 作り直さず、ここで一度だけ組み立てて共有する。
+        preparedRouteGraph = buildGraph();
 
         console.log(
-            "V135 routes loaded:",
+            "V136 routes loaded:",
             baseRoutes.length,
             "base routes /",
             routes.length,
@@ -6469,7 +6514,11 @@ document.addEventListener("DOMContentLoaded", function () {
             network.junctionCount,
             "geometric junctions /",
             network.splitRouteCount,
-            "split routes"
+            "split routes /",
+            preparedRouteGraph.size,
+            "graph nodes /",
+            routes.filter(route => route.oneway).length,
+            "one-way segments"
         );
     }
 
@@ -6588,7 +6637,7 @@ document.addEventListener("DOMContentLoaded", function () {
             };
         }
 
-        const graph = buildGraph();
+        const graph = preparedRouteGraph || buildGraph();
         if (!graph.has(start) || !graph.has(goal)) return null;
 
         const distances = new Map();
