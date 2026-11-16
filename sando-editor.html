@@ -22,8 +22,8 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
 <aside class="panel">
   <header class="head">
     <h1>伏見稲荷 ルートマップエディター V5</h1>
-    <p class="sub">GitHubの既存 <b>data/routes.json</b> を国土地理院の地図に表示。参道を追加して、更新した routes.json を書き出せます。地図のAPIキーは不要です。</p>
-    <div class="badges"><span class="badge green">既存routes.jsonを使用</span><span class="badge">地理院地図で編集</span></div>
+    <p class="sub">GitHubの既存 <b>data/routes.json</b> を地図上に表示。国土地理院・OpenStreetMap・OpenTopoMapを切り替えて参道を確認し、更新した routes.json を書き出せます。</p>
+    <div class="badges"><span class="badge green">既存routes.jsonを使用</span><span class="badge">背景地図3種類を切替</span></div>
   </header>
   <main class="content">
     <section class="card">
@@ -93,7 +93,7 @@ button,.btn{border:0;border-radius:9px;padding:9px 11px;font:700 11px system-ui;
     <div class="footer">伏見稲荷スマートガイド / routes.json 編集ツール</div>
   </main>
 </aside>
-<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>地図の見方：</b>国土地理院の標準地図 ／ オレンジ線＝登録済みルート ／ 青線＝平均対象 ／ 紫線＝手描き平均候補 ／ 青い点＝スポット　　左上の折れ線ボタンで新しい道を描けます。</div></section>
+<section class="map-wrap"><div id="map" aria-label="伏見稲荷のルート地図"></div><div class="map-hint"><b>背景地図：</b>右上の「背景地図」で国土地理院・OpenStreetMap・OpenTopoMapを切り替えできます。オレンジ線＝登録済みルート ／ 青線＝平均対象 ／ 紫線＝平均候補 ／ 青い点＝スポット。左上の折れ線ボタンで道を描けます。</div></section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
@@ -294,20 +294,37 @@ function startOverFromScratch(){
 }
 // Leaflet
 if(!window.L){setStatus('地図ライブラリを読み込めません。ネット接続を確認してください。','error');throw new Error('Leaflet missing');}
-// ベースマップは国土地理院の標準地図のみを使用（APIキー不要）
+// 背景地図：国土地理院・OpenStreetMap・OpenTopoMapを切り替え可能にする。
+// OSM標準タイルは閲覧中の範囲だけを通常表示し、一括取得・先読みは行わない。
 const map=L.map('map',{zoomControl:true,preferCanvas:true,maxZoom:18,minZoom:5}).setView(CENTER,15);
 const gsi=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{
-  minZoom:5,
-  maxZoom:18,
-  maxNativeZoom:18,
-  crossOrigin:true,
+  minZoom:5,maxZoom:18,maxNativeZoom:18,crossOrigin:true,keepBuffer:2,
   attribution:'<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">地理院タイル（国土地理院）</a>',
   tileSize:256
-}).addTo(map);
+});
+const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  minZoom:5,maxZoom:18,maxNativeZoom:19,crossOrigin:true,keepBuffer:2,
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+});
+const topo=L.tileLayer('https://tile.opentopomap.org/{z}/{x}/{y}.png',{
+  minZoom:5,maxZoom:18,maxNativeZoom:17,crossOrigin:true,keepBuffer:2,
+  attribution:'Map data: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener noreferrer">OpenTopoMap</a> (CC-BY-SA)'
+});
+const baseLayers={'国土地理院（標準地図）':gsi,'OpenStreetMap':osm,'OpenTopoMap（地形図）':topo};
+const BASEMAP_PREF_KEY='fushimi_sando_editor_basemap_v1';
+let initialBase='国土地理院（標準地図）';
+try{const saved=localStorage.getItem(BASEMAP_PREF_KEY);if(saved&&Object.prototype.hasOwnProperty.call(baseLayers,saved))initialBase=saved;}catch(e){}
+baseLayers[initialBase].addTo(map);
+L.control.layers(baseLayers,null,{collapsed:false,position:'topright'}).addTo(map);
+map.on('baselayerchange',e=>{
+  const selected=Object.keys(baseLayers).find(name=>baseLayers[name]===e.layer);
+  if(selected){try{localStorage.setItem(BASEMAP_PREF_KEY,selected);}catch(err){}setStatus(`背景地図を「${selected}」に切り替えました。地図上の道と現地の通行状況を照合してください。`,'ok');}
+});
+function watchBaseTileErrors(layer,label){let shown=false;layer.on('tileerror',()=>{if(!shown&&map.hasLayer(layer)){shown=true;setStatus(`${label}の地図タイルを一部読み込めません。ネット接続を確認するか、別の背景地図に切り替えてください。`,'warn');}});}
+watchBaseTileErrors(gsi,'国土地理院');
+watchBaseTileErrors(osm,'OpenStreetMap');
+watchBaseTileErrors(topo,'OpenTopoMap');
 L.control.scale({metric:true,imperial:false}).addTo(map);
-let gsiTileLoaded=false;
-gsi.on('tileload',()=>{if(!gsiTileLoaded){gsiTileLoaded=true;}});
-gsi.on('tileerror',()=>{if(!gsiTileLoaded){setStatus('国土地理院の地図タイルを読み込めません。ネット接続を確認して、ページを再読み込みしてください。APIキーは不要です。','error');}});
 if(L.drawLocal){L.drawLocal.draw.toolbar.buttons.polyline='参道を描く';L.drawLocal.draw.toolbar.actions.title='描画を中止';L.drawLocal.draw.toolbar.actions.text='キャンセル';L.drawLocal.draw.handlers.polyline.tooltip.start='参道の始点をクリック';L.drawLocal.draw.handlers.polyline.tooltip.cont='曲がり角をクリック';L.drawLocal.draw.handlers.polyline.tooltip.end='終点をダブルクリック';}
 // 線の頂点ハンドルを少し小さくし、作図中の線幅も細くする。
 const routeVertexIcon=L.divIcon({className:'leaflet-div-icon leaflet-editing-icon',iconSize:[6,6]});
