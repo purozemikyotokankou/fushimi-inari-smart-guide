@@ -6486,7 +6486,8 @@ body.planner-page .liquid-cursor {
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
   stroke-dasharray: 105 895 !important;
-  stroke-dashoffset: 0 !important;
+  /* Keep the initial offset as a normal declaration so the keyframe can move it. */
+  stroke-dashoffset: 0;
   filter: drop-shadow(0 0 1.5px rgba(255,255,255,.98))
           drop-shadow(0 0 4px rgba(255,255,255,.82))
           drop-shadow(0 0 8px rgba(255,153,0,.72)) !important;
