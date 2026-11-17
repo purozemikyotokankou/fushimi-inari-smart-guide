@@ -1,9 +1,9 @@
-/* Fushimi Inari Smart Guide — offline support (v143) */
+/* Fushimi Inari Smart Guide — offline support (v144) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v143';
+const CACHE_NAME = 'fushimi-smart-guide-v144';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 143;
+const WORKER_VERSION = 144;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
@@ -79,10 +79,114 @@ async function preloadVideoLast(client) {
   client?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'cached' });
 }
 
+const PRELOAD_CORE = [
+  './index.html', './home.html', './planner.html', './spots.html',
+  './css/style.css', './css/planner.css',
+  './js/language.js', './js/home-ui.js', './js/home-boot.js',
+  './js/planner.js', './js/planner-weather.js', './js/planner-ambient-light.js',
+  './js/spots.js', './js/carto-config.js', './js/liquid-cursor.js', './js/app-boot.js',
+  './service-worker.js',
+  'https://unpkg.com/leaflet/dist/leaflet.js',
+  'https://unpkg.com/leaflet/dist/leaflet.css'
+];
+const PRELOAD_DATA = ['./data/spots.json', './data/routes.json'];
+const PRELOAD_ICONS = [
+  './noicon.svg', './shop.svg', './eat.svg',
+  './images/icons/category-all.svg', './images/icons/category-back.svg',
+  './images/icons/category-buy.svg', './images/icons/category-facilities.svg',
+  './images/icons/category-food-shop.svg', './images/icons/category-food.svg',
+  './images/icons/category-sightseeing.svg', './images/icons/category-transport.svg',
+  './images/icons/current-location.svg', './images/icons/diaper-changing-gray.svg',
+  './images/icons/diaper-changing.svg', './images/icons/ostomate-gray.svg',
+  './images/icons/ostomate.svg', './images/icons/search.svg',
+  './images/icons/station-jr-gray.svg', './images/icons/station-jr.svg',
+  './images/icons/station-keihan-gray.svg', './images/icons/station-keihan.svg',
+  './images/icons/toilet-female-gray.svg', './images/icons/toilet-female.svg',
+  './images/icons/toilet-gray.svg', './images/icons/toilet-japanese-gray.svg',
+  './images/icons/toilet-japanese.svg', './images/icons/toilet-male-gray.svg',
+  './images/icons/toilet-male.svg', './images/icons/toilet-western-gray.svg',
+  './images/icons/toilet-western.svg', './images/icons/toilet.svg',
+  './images/icons/washlet-gray.svg', './images/icons/washlet.svg',
+  './images/icons/wheelchair-gray.svg', './images/icons/wheelchair.svg'
+];
+const PRELOAD_HERO_IMAGES = ['./images/hero2.jpg', './images/hero3.jpg', './images/hero4.jpg'];
+const MAX_BACKGROUND_IMAGE_BYTES = 600 * 1024;
+
+function absoluteUrl(path) {
+  return new URL(path, self.registration.scope).href;
+}
+
+async function cacheOne(path, { refresh = false, imageLimit = 0 } = {}) {
+  const cache = await caches.open(CACHE_NAME);
+  const url = absoluteUrl(path);
+  const cached = await cache.match(url, { ignoreSearch: true });
+  if (cached && !refresh) return true;
+  const external = new URL(url).origin !== self.location.origin;
+  try {
+    const request = new Request(url, {
+      method: 'GET',
+      cache: refresh ? 'reload' : 'default',
+      ...(external ? { mode: 'no-cors' } : {})
+    });
+    const response = await fetch(request);
+    if (!response || (!response.ok && response.type !== 'opaque')) return !!cached;
+    if (imageLimit && response.type !== 'opaque') {
+      const declared = Number(response.headers.get('content-length')) || 0;
+      if (declared > imageLimit) return !!cached;
+      const blob = await response.clone().blob();
+      if (!blob.size || blob.size > imageLimit) return !!cached;
+    }
+    await cache.put(url, response.clone());
+    return true;
+  } catch (_) {
+    return !!cached;
+  }
+}
+
+async function cacheGroup(paths, concurrency = 4, options = {}) {
+  for (let i = 0; i < paths.length; i += concurrency) {
+    await Promise.all(paths.slice(i, i + concurrency).map((path) => cacheOne(path, options)));
+  }
+}
+
+async function preloadAllSilently(client) {
+  // App shell and map data first; the visitor is already free to use the site.
+  await cacheGroup(PRELOAD_CORE, 5);
+  await cacheGroup(PRELOAD_DATA, 2, { refresh: true });
+  const cache = await caches.open(CACHE_NAME);
+  let spotImages = [];
+  try {
+    const spotsResponse = await cache.match(absoluteUrl('./data/spots.json'), { ignoreSearch: true });
+    const spots = spotsResponse ? await spotsResponse.clone().json() : [];
+    if (Array.isArray(spots)) {
+      spotImages = spots
+        .map((spot) => spot && typeof spot.image === 'string' ? spot.image.trim() : '')
+        .filter((image) => image && !/^https?:\/\//i.test(image) && !image.includes('..') && /\.(?:jpe?g|png|webp|avif)$/i.test(image))
+        .map((image) => `./images/${image.replace(/^\/+/, '')}`);
+    }
+  } catch (_) { /* Keep the rest of the offline cache useful if the JSON is malformed. */ }
+
+  const allImages = Array.from(new Set([...PRELOAD_HERO_IMAGES, ...spotImages]));
+  await cacheGroup(PRELOAD_ICONS, 5);
+  await cacheGroup(allImages, 3, { imageLimit: MAX_BACKGROUND_IMAGE_BYTES });
+
+  // Large video is deliberately last and never blocks page navigation.
+  await preloadVideoLast(client);
+  client?.postMessage({ type: 'FUSHIMI_SILENT_PRELOAD_RESULT', status: 'finished' });
+}
+
 self.addEventListener('message', (event) => {
   const data = event.data || {};
   if (data.type === 'FUSHIMI_GET_VERSION' && event.ports && event.ports[0]) {
     event.ports[0].postMessage({ version: WORKER_VERSION });
+    return;
+  }
+  if (data.type === 'FUSHIMI_PRELOAD_ALL_SILENT') {
+    const task = preloadAllSilently(event.source).catch((error) => {
+      console.warn('[Fushimi SW] Silent offline preparation stopped; normal online loading remains available:', error);
+    });
+    // Keep the worker alive for the full background cache task, including after navigation.
+    event.waitUntil(task);
     return;
   }
   if (data.type === 'FUSHIMI_PRELOAD_VIDEO_LAST') {
@@ -203,16 +307,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isPreloadImage = url.searchParams.get('__fushimi_preload') === 'v143'
-    && /\.(?:jpe?g|png|webp|avif)$/i.test(url.pathname);
-  if (sameOrigin && isPreloadImage) {
-    event.respondWith((async () => {
-      const cached = await matchCached(request);
-      if (cached) return cached;
-      try { return await fetch(request); } catch (_) { return Response.error(); }
-    })());
-    return;
-  }
 
   event.respondWith((async () => {
     const cached = await matchCached(request);
