@@ -1,22 +1,47 @@
-/* Fushimi Inari Smart Guide — offline support (v140) */
+/* Fushimi Inari Smart Guide — offline support (v142) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v140';
+const CACHE_NAME = 'fushimi-smart-guide-v142';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 140;
+const WORKER_VERSION = 142;
+const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
   'https://unpkg.com/leaflet/dist/leaflet.css'
 ];
 
 self.addEventListener('install', (event) => {
-  // The index page performs the measured pre-cache while the visitor sees
-  // the language screen. Keep installation itself quick and reliable.
+  // The language page warms the cache after the worker takes control.
   event.waitUntil(self.skipWaiting());
 });
 
+async function migrateCachedVideo(newCache) {
+  // Keep a previously downloaded video when upgrading from V140, avoiding a
+  // needless full download just because the application cache version changed.
+  const canonicalUrl = new URL(`.${VIDEO_PATH}`, self.registration.scope).href;
+  if (await newCache.match(canonicalUrl, { ignoreSearch: true })) return;
+  const oldNames = (await caches.keys()).filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME);
+  for (const name of oldNames) {
+    try {
+      const oldCache = await caches.open(name);
+      const requests = await oldCache.keys();
+      const videoRequest = requests.find((request) => new URL(request.url).pathname.endsWith(VIDEO_PATH));
+      if (!videoRequest) continue;
+      const response = await oldCache.match(videoRequest);
+      if (response) {
+        await newCache.put(canonicalUrl, response.clone());
+        return;
+      }
+    } catch (error) {
+      console.warn('[Fushimi SW] Previous video cache migration skipped:', error);
+    }
+  }
+}
+
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
+    const currentCache = await caches.open(CACHE_NAME);
+    await migrateCachedVideo(currentCache);
     const keys = await caches.keys();
     await Promise.all(keys
       .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
@@ -25,12 +50,6 @@ self.addEventListener('activate', (event) => {
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     clients.forEach((client) => client.postMessage({ type: 'FUSHIMI_SW_ACTIVE', version: WORKER_VERSION }));
   })());
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'FUSHIMI_GET_VERSION' && event.ports && event.ports[0]) {
-    event.ports[0].postMessage({ version: WORKER_VERSION });
-  }
 });
 
 async function matchCached(request) {
@@ -45,6 +64,38 @@ async function fetchAndCache(request, cache) {
   return response;
 }
 
+async function preloadVideoLast(client) {
+  const cache = await caches.open(CACHE_NAME);
+  const url = new URL(`.${VIDEO_PATH}`, self.registration.scope).href;
+  const cached = await cache.match(url, { ignoreSearch: true });
+  if (cached) {
+    client?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'already-cached' });
+    return;
+  }
+  const response = await fetch(new Request(url, { method: 'GET', cache: 'reload' }));
+  if (!response || !response.ok) throw new Error(`Video HTTP ${response ? response.status : 'no response'}`);
+  // Cache.put consumes a clone, leaving the original response stream independent.
+  await cache.put(url, response.clone());
+  client?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'cached' });
+}
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type === 'FUSHIMI_GET_VERSION' && event.ports && event.ports[0]) {
+    event.ports[0].postMessage({ version: WORKER_VERSION });
+    return;
+  }
+  if (data.type === 'FUSHIMI_PRELOAD_VIDEO_LAST') {
+    const task = preloadVideoLast(event.source).catch((error) => {
+      console.warn('[Fushimi SW] Background video preload failed; home playback can still stream:', error);
+      event.source?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'failed' });
+    });
+    // Extend the worker lifetime through the full download, even after the
+    // language page navigates to home.html.
+    event.waitUntil(task);
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -53,8 +104,7 @@ self.addEventListener('fetch', (event) => {
   const sameOrigin = url.origin === self.location.origin;
   const cachePromise = caches.open(CACHE_NAME);
 
-  // Browsers commonly request MP4 video in byte ranges. Return a valid 206
-  // response from the complete cached file so the home hero can seek/play offline.
+  // Serve byte ranges from a fully cached MP4 for offline seeking and playback.
   if (sameOrigin && url.pathname.endsWith('.mp4') && request.headers.has('range')) {
     event.respondWith((async () => {
       const cached = await caches.match(new URL(request.url).href, { ignoreSearch: true });
@@ -64,24 +114,18 @@ self.addEventListener('fetch', (event) => {
       const blob = await cached.blob();
       const rangeHeader = request.headers.get('range') || '';
       const match = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader.trim());
-      if (!match) {
-        return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${blob.size}` } });
-      }
+      if (!match) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${blob.size}` } });
       let start = match[1] ? Number(match[1]) : NaN;
       let end = match[2] ? Number(match[2]) : NaN;
       if (Number.isNaN(start)) {
         const suffixLength = end;
-        if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
-          return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${blob.size}` } });
-        }
+        if (!Number.isFinite(suffixLength) || suffixLength <= 0) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${blob.size}` } });
         start = Math.max(0, blob.size - suffixLength);
         end = blob.size - 1;
       } else if (Number.isNaN(end)) {
         end = blob.size - 1;
       }
-      if (start < 0 || start >= blob.size || end < start) {
-        return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${blob.size}` } });
-      }
+      if (start < 0 || start >= blob.size || end < start) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${blob.size}` } });
       end = Math.min(end, blob.size - 1);
       const part = blob.slice(start, end + 1);
       return new Response(part, {
@@ -97,24 +141,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Only the Leaflet library is cached cross-origin. CARTO/OSM map tiles and
-  // live weather endpoints are deliberately left to their providers.
+  // Cache only Leaflet cross-origin assets; CARTO tiles and live APIs remain online.
   if (!sameOrigin) {
     if (!CDN_ASSETS.includes(url.href)) return;
     event.respondWith((async () => {
       const cached = await matchCached(request);
       if (cached) return cached;
-      try {
-        const cache = await cachePromise;
-        return await fetchAndCache(request, cache);
-      } catch (_) {
-        return Response.error();
-      }
+      try { return await fetchAndCache(request, await cachePromise); }
+      catch (_) { return Response.error(); }
     })());
     return;
   }
 
-  // App pages: try the network briefly, then fall back to the saved page.
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       const cached = await matchCached(request);
@@ -128,9 +166,7 @@ self.addEventListener('fetch', (event) => {
           }
           return cached || response;
         });
-        const timeout = new Promise((_, reject) => {
-          timer = setTimeout(() => reject(new Error('navigation timeout')), 1200);
-        });
+        const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('navigation timeout')), 1200); });
         const response = await Promise.race([network, timeout]);
         clearTimeout(timer);
         return response;
@@ -142,8 +178,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cached JSON is returned immediately so a weak connection cannot stall the map.
-  // The cache is refreshed in the background for the next visit.
   if (url.pathname.endsWith('.json')) {
     const cachedPromise = matchCached(request);
     const backgroundRefresh = cachedPromise.then(async (cached) => {
@@ -161,21 +195,15 @@ self.addEventListener('fetch', (event) => {
       try {
         const response = await fetch(request);
         if (response && response.ok) {
-          const cache = await cachePromise;
-          try { await cache.put(request, response.clone()); } catch (_) {}
+          try { await (await cachePromise).put(request, response.clone()); } catch (_) {}
         }
         return response;
-      } catch (_) {
-        return Response.error();
-      }
+      } catch (_) { return Response.error(); }
     })());
     return;
   }
 
-  // For the language-screen photo preloader, let app-boot inspect the image
-  // size before deciding whether to cache it. This avoids silently downloading
-  // and caching multi-megabyte originals during the first launch.
-  const isPreloadImage = url.searchParams.get('__fushimi_preload') === 'v140'
+  const isPreloadImage = url.searchParams.get('__fushimi_preload') === 'v142'
     && /\.(?:jpe?g|png|webp|avif)$/i.test(url.pathname);
   if (sameOrigin && isPreloadImage) {
     event.respondWith((async () => {
@@ -186,17 +214,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Local styles, scripts, icons and images: serve saved files immediately.
-  // The app's next version changes CACHE_NAME, so this cache-first strategy
-  // does not leave an older app shell stuck after an update.
   event.respondWith((async () => {
     const cached = await matchCached(request);
     if (cached) return cached;
-    try {
-      const cache = await cachePromise;
-      return await fetchAndCache(request, cache);
-    } catch (_) {
-      return Response.error();
-    }
+    try { return await fetchAndCache(request, await cachePromise); }
+    catch (_) { return Response.error(); }
   })());
 });

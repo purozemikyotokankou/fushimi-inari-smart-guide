@@ -529,7 +529,7 @@
         }
 
 
-        /* V140: language-selection loading overlay. Hidden until a language is chosen. */
+        /* V142: localized visitor welcome copy for the startup guide overlay. */
         .fushimi-startup-overlay[hidden] { display: none !important; }
         .fushimi-startup-overlay {
             position: fixed;
@@ -677,21 +677,21 @@
         <section class="fushimi-startup-card">
             <div class="fushimi-startup-mark">FUSHIMI INARI SMART GUIDE</div>
             <div class="fushimi-startup-spinner" aria-hidden="true"></div>
-            <h2 class="fushimi-startup-title" id="fushimi-boot-title">ガイドを準備しています</h2>
-            <p class="fushimi-startup-intro" id="fushimi-boot-intro">動画と観光データを読み込んでいます。</p>
-            <div class="fushimi-startup-status" id="fushimi-boot-status">動画を優先して読み込んでいます…</div>
-            <div class="fushimi-startup-progress" id="fushimi-boot-progress" role="progressbar" aria-label="読み込み進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <h2 class="fushimi-startup-title" id="fushimi-boot-title">伏見稲荷の散策ガイドを準備しています</h2>
+            <p class="fushimi-startup-intro" id="fushimi-boot-intro">地図や見どころ情報を準備しています。まもなく、伏見稲荷の魅力を巡る旅が始まります！</p>
+            <div class="fushimi-startup-status" id="fushimi-boot-status">ガイドの画面を準備しています…</div>
+            <div class="fushimi-startup-progress" id="fushimi-boot-progress" role="progressbar" aria-label="ガイドの準備状況" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                 <div class="fushimi-startup-progress-fill" id="fushimi-boot-progress-fill"></div>
             </div>
             <div class="fushimi-startup-count" id="fushimi-boot-count">準備中…</div>
-            <button class="fushimi-startup-retry" id="fushimi-boot-retry" type="button" hidden>再読み込み</button>
+            <button class="fushimi-startup-retry" id="fushimi-boot-retry" type="button" hidden>もう一度試す</button>
         </section>
     </div>
 
     <script src="js/liquid-cursor.js?v=94" defer></script>
 
     <script src="js/language.js?v=140" defer></script>
-    <script src="js/app-boot-v140.js?v=140" defer></script>
+    <script src="js/app-boot-v142.js?v=142" defer></script>
 
 </body>
 
