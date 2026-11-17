@@ -1,9 +1,9 @@
-/* Fushimi Inari Smart Guide — offline support (v142) */
+/* Fushimi Inari Smart Guide — offline support (v143) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v142';
+const CACHE_NAME = 'fushimi-smart-guide-v143';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 142;
+const WORKER_VERSION = 143;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
@@ -203,7 +203,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isPreloadImage = url.searchParams.get('__fushimi_preload') === 'v142'
+  const isPreloadImage = url.searchParams.get('__fushimi_preload') === 'v143'
     && /\.(?:jpe?g|png|webp|avif)$/i.test(url.pathname);
   if (sameOrigin && isPreloadImage) {
     event.respondWith((async () => {

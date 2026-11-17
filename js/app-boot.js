@@ -1,361 +1,432 @@
-/* Index startup: begin offline preparation before the visitor chooses a language. */
+/* Fushimi Inari Smart Guide V143 — prepare guide data first; video is optional background work. */
 (() => {
-  'use strict';
+    'use strict';
 
-  const CACHE_NAME = 'fushimi-smart-guide-v135';
-  const REQUIRED_ASSETS = [
-    './index.html',
-    './home.html',
-    './planner.html',
-    './spots.html',
-    './css/style.css',
-    './css/planner.css',
-    './js/language.js',
-    './js/home.js',
-    './js/planner.js',
-    './js/spots.js',
-    './js/map.js',
-    './js/liquid-cursor.js',
-    './js/app-boot.js',
-    './js/offline.js',
-    './service-worker.js',
-    './js/carto-config.js',
-    './data/spots.json',
-    './data/routes.json',
-    './noicon.svg',
-    './shop.svg',
-    './eat.svg',
-    './images/icons/category-all.svg',
-    './images/icons/category-back.svg',
-    './images/icons/category-buy.svg',
-    './images/icons/category-facilities.svg',
-    './images/icons/category-food-shop.svg',
-    './images/icons/category-food.svg',
-    './images/icons/category-sightseeing.svg',
-    './images/icons/category-transport.svg',
-    './images/icons/current-location.svg',
-    './images/icons/diaper-changing-gray.svg',
-    './images/icons/diaper-changing.svg',
-    './images/icons/ostomate-gray.svg',
-    './images/icons/ostomate.svg',
-    './images/icons/search.svg',
-    './images/icons/station-jr-gray.svg',
-    './images/icons/station-jr.svg',
-    './images/icons/station-keihan-gray.svg',
-    './images/icons/station-keihan.svg',
-    './images/icons/toilet-female-gray.svg',
-    './images/icons/toilet-female.svg',
-    './images/icons/toilet-gray.svg',
-    './images/icons/toilet-japanese-gray.svg',
-    './images/icons/toilet-japanese.svg',
-    './images/icons/toilet-male-gray.svg',
-    './images/icons/toilet-male.svg',
-    './images/icons/toilet-western-gray.svg',
-    './images/icons/toilet-western.svg',
-    './images/icons/toilet.svg',
-    './images/icons/washlet-gray.svg',
-    './images/icons/washlet.svg',
-    './images/icons/wheelchair-gray.svg',
-    './images/icons/wheelchair.svg',
-    'https://unpkg.com/leaflet/dist/leaflet.js',
-    'https://unpkg.com/leaflet/dist/leaflet.css'
-  ];
+    const CACHE_NAME = 'fushimi-smart-guide-v143';
+    const VIDEO_URL = './videos/fushimi.mp4';
+    const CORE_ASSETS = [
+        './index.html', './home.html', './planner.html', './spots.html',
+        './css/style.css', './css/planner.css',
+        './js/language.js', './js/home-ui.js', './js/home-boot.js',
+        './js/planner.js', './js/planner-weather.js', './js/planner-ambient-light.js',
+        './js/spots.js', './js/carto-config.js', './js/liquid-cursor.js',
+        './js/app-boot.js', './service-worker.js',
+        'https://unpkg.com/leaflet/dist/leaflet.js',
+        'https://unpkg.com/leaflet/dist/leaflet.css'
+    ];
+    const ICON_ASSETS = [
+        './noicon.svg', './shop.svg', './eat.svg',
+        './images/icons/category-all.svg', './images/icons/category-back.svg',
+        './images/icons/category-buy.svg', './images/icons/category-facilities.svg',
+        './images/icons/category-food-shop.svg', './images/icons/category-food.svg',
+        './images/icons/category-sightseeing.svg', './images/icons/category-transport.svg',
+        './images/icons/current-location.svg', './images/icons/diaper-changing-gray.svg',
+        './images/icons/diaper-changing.svg', './images/icons/ostomate-gray.svg',
+        './images/icons/ostomate.svg', './images/icons/search.svg',
+        './images/icons/station-jr-gray.svg', './images/icons/station-jr.svg',
+        './images/icons/station-keihan-gray.svg', './images/icons/station-keihan.svg',
+        './images/icons/toilet-female-gray.svg', './images/icons/toilet-female.svg',
+        './images/icons/toilet-gray.svg', './images/icons/toilet-japanese-gray.svg',
+        './images/icons/toilet-japanese.svg', './images/icons/toilet-male-gray.svg',
+        './images/icons/toilet-male.svg', './images/icons/toilet-western-gray.svg',
+        './images/icons/toilet-western.svg', './images/icons/toilet.svg',
+        './images/icons/washlet-gray.svg', './images/icons/washlet.svg',
+        './images/icons/wheelchair-gray.svg', './images/icons/wheelchair.svg'
+    ];
+    const DATA_ASSETS = ['./data/spots.json', './data/routes.json'];
+    const IMAGE_ASSETS = ['./images/hero2.jpg', './images/hero3.jpg', './images/hero4.jpg'];
+    const MAX_PRELOAD_IMAGE_BYTES = 600 * 1024;
+    const WORKER_VERSION = 143;
 
-  // Small photos are best-effort assets. The Leaflet library is essential
-  // for the map and is included in the required list above. Large original
-  // photos and the 9 MB hero video are intentionally excluded.
-  const OPTIONAL_ASSETS = [
-    './images/hero2.jpg',
-    './images/hero3.jpg',
-    './images/hero4.jpg',
-    './images/honden.jpg',
-    './images/summit.jpg',
-    './images/toire.jpg'
-  ];
+    // Visitor-facing messages, translated for every language offered on the language screen.
+    const COPY = {
+        ja: {
+            title: '伏見稲荷の散策ガイドを準備しています',
+            intro: '地図や見どころ情報を準備しています。まもなく、伏見稲荷の魅力を巡る旅が始まります！',
+            shell: 'ガイドの画面を準備しています…',
+            spots: '観光スポットの情報を準備しています…',
+            routes: '参道ルートを準備しています…',
+            images: '写真やアイコンを準備しています…',
+            video: 'ホーム画面の映像は、準備完了後もバックグラウンドで読み込みます。',
+            ready: '準備ができました。ホーム画面へ移動します。',
+            failed: 'ガイドを開けませんでした',
+            partial: '基本のガイド情報を準備しました。一部の写真は表示後に読み込みます。',
+            retry: 'ガイドの準備が完了しませんでした。通信状況を確認して、もう一度お試しください。',
+            count: (done, total) => `準備状況 ${done} / ${total}`,
+            progressLabel: 'ガイドの準備状況', retryButton: 'もう一度試す'
+        },
+        en: {
+            title: 'Getting Your Fushimi Inari Guide Ready',
+            intro: 'We’re preparing your map and sightseeing information. Get ready to explore the beauty of Fushimi Inari!',
+            shell: 'Preparing your guide…',
+            spots: 'Preparing sightseeing information…',
+            routes: 'Preparing walking routes…',
+            images: 'Preparing photos and icons…',
+            video: 'The home-screen video will continue loading in the background.',
+            ready: 'You’re all set. Opening the home screen…',
+            failed: 'The guide could not be opened',
+            partial: 'The essential guide information is ready. Some photos will load later.',
+            retry: 'The guide could not finish preparing. Check your connection and try again.',
+            count: (done, total) => `Preparation ${done} / ${total}`,
+            progressLabel: 'Guide preparation progress', retryButton: 'Try again'
+        },
+        zh: {
+            title: '正在为您准备伏见稻荷导览',
+            intro: '正在准备地图和景点介绍。马上就可以开启您的伏见稻荷探索之旅！',
+            shell: '正在准备导览页面…',
+            spots: '正在准备景点信息…',
+            routes: '正在准备参道路线…',
+            images: '正在准备照片和图标…',
+            video: '主页视频将在后台继续加载。',
+            ready: '准备完成，正在进入主页…',
+            failed: '无法打开导览',
+            partial: '基本导览信息已准备完成，部分照片将在之后加载。',
+            retry: '导览准备未能完成。请检查网络连接后重试。',
+            count: (done, total) => `准备进度 ${done} / ${total}`,
+            progressLabel: '导览准备进度', retryButton: '重试'
+        },
+        ko: {
+            title: '후시미 이나리 여행 가이드를 준비하고 있어요',
+            intro: '지도와 주요 명소 정보를 준비하고 있습니다. 곧 후시미 이나리의 매력을 만나보세요!',
+            shell: '가이드 화면을 준비하는 중…',
+            spots: '관광 명소 정보를 준비하는 중…',
+            routes: '참배길 경로를 준비하는 중…',
+            images: '사진과 아이콘을 준비하는 중…',
+            video: '홈 화면 동영상은 백그라운드에서 계속 불러옵니다.',
+            ready: '준비가 완료되었습니다. 홈 화면으로 이동합니다…',
+            failed: '가이드를 열 수 없습니다',
+            partial: '기본 가이드 정보가 준비되었습니다. 일부 사진은 나중에 불러옵니다.',
+            retry: '가이드 준비를 완료하지 못했습니다. 연결 상태를 확인하고 다시 시도해 주세요.',
+            count: (done, total) => `준비 상태 ${done} / ${total}`,
+            progressLabel: '가이드 준비 진행 상황', retryButton: '다시 시도'
+        }
+    };
 
-  const COPY = {
-    ja: {
-      title: 'ガイドを準備しています',
-      intro: 'オフラインでも使えるように、必要なデータを保存しています。',
-      required: 'アプリと観光データを保存中…',
-      optional: '追加の画像を保存中…',
-      ready: '準備が完了しました',
-      issue: '一部のデータを保存できませんでした。オンラインで続行します。',
-      offline: '接続できません。保存済みのデータで起動します。',
-      count: (done, total) => `${done} / ${total} 項目を確認`,
-      note: '初回の準備が終わると、次回からオフラインでも一部の機能を利用できます。'
-    },
-    en: {
-      title: 'Preparing your guide',
-      intro: 'Saving the essential files so the guide can work offline.',
-      required: 'Saving the app and guide data…',
-      optional: 'Saving additional images…',
-      ready: 'You’re all set',
-      issue: 'Some files could not be saved. Continuing online.',
-      offline: 'No connection. Starting with previously saved files.',
-      count: (done, total) => `${done} / ${total} items checked`,
-      note: 'After this first setup, some features will remain available offline.'
-    },
-    zh: {
-      title: '正在准备导览',
-      intro: '正在保存必要文件，以便离线使用。',
-      required: '正在保存应用和景点数据…',
-      optional: '正在保存补充图片…',
-      ready: '准备完成',
-      issue: '部分文件未能保存，将继续在线打开。',
-      offline: '目前无法连接网络，将使用已保存的数据启动。',
-      count: (done, total) => `已检查 ${done} / ${total} 项`,
-      note: '首次准备完成后，部分功能可在离线时继续使用。'
-    },
-    ko: {
-      title: '가이드를 준비하고 있어요',
-      intro: '오프라인에서도 사용할 수 있도록 필요한 데이터를 저장하고 있습니다.',
-      required: '앱과 관광 데이터를 저장하는 중…',
-      optional: '추가 이미지를 저장하는 중…',
-      ready: '준비가 완료되었습니다',
-      issue: '일부 파일을 저장하지 못했습니다. 온라인으로 계속합니다.',
-      offline: '인터넷에 연결할 수 없습니다. 저장된 데이터로 시작합니다.',
-      count: (done, total) => `${done} / ${total}개 항목 확인`,
-      note: '첫 준비가 끝나면 일부 기능을 오프라인에서도 사용할 수 있습니다.'
-    }
-  };
+    const state = {
+        language: 'ja', phase: 'shell', done: 0,
+        total: CORE_ASSETS.length + DATA_ASSETS.length + ICON_ASSETS.length + IMAGE_ASSETS.length,
+        failures: [], started: false, promise: null, cache: null, workerRegistration: null
+    };
 
-  const state = {
-    done: 0,
-    total: REQUIRED_ASSETS.length + OPTIONAL_ASSETS.length,
-    requiredDone: 0,
-    requiredTotal: REQUIRED_ASSETS.length,
-    requiredFailures: [],
-    optionalFailures: [],
-    phase: 'required',
-    started: false,
-    completed: false,
-    result: null,
-    preparation: null
-  };
-
-  const byId = (id) => document.getElementById(id);
-
-  function getCopy() {
-    const selected = localStorage.getItem('language') || 'ja';
-    return COPY[selected] || COPY.ja;
-  }
-
-  function updateOverlay() {
-    const copy = getCopy();
-    const status = byId('fushimi-boot-status');
-    const count = byId('fushimi-boot-count');
-    const bar = byId('fushimi-boot-progress');
-    const fill = byId('fushimi-boot-progress-fill');
-    const title = byId('fushimi-boot-title');
-    const intro = byId('fushimi-boot-intro');
-    if (!status || !count || !bar || !fill || !title || !intro) return;
-
-    title.textContent = copy.title;
-    intro.textContent = copy.intro;
-    status.textContent = state.phase === 'required' ? copy.required : copy.optional;
-    const percent = state.total ? Math.round((state.done / state.total) * 100) : 100;
-    fill.style.width = `${percent}%`;
-    bar.setAttribute('aria-valuenow', String(percent));
-    count.textContent = copy.count(state.done, state.total);
-  }
-
-  function showOverlay() {
+    const byId = (id) => document.getElementById(id);
     const overlay = byId('fushimi-startup-overlay');
-    if (!overlay) return;
-    overlay.hidden = false;
-    overlay.setAttribute('aria-hidden', 'false');
-    updateOverlay();
-    requestAnimationFrame(() => overlay.classList.add('is-visible'));
-  }
+    const retryButton = byId('fushimi-boot-retry');
+    const copy = () => COPY[state.language] || COPY.ja;
 
-  function updateTaskProgress(required, success, url) {
-    state.done += 1;
-    if (required) {
-      state.requiredDone += 1;
-      if (!success) state.requiredFailures.push(url);
-      if (state.requiredDone >= state.requiredTotal) state.phase = 'optional';
-    } else if (!success) {
-      state.optionalFailures.push(url);
+    function progressPercent() {
+        return state.total ? Math.min(100, Math.round(state.done / state.total * 100)) : 0;
     }
-    updateOverlay();
-  }
 
-  async function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) return { ok: false, reason: 'unsupported' };
-    if (!/^https?:$/.test(location.protocol)) return { ok: false, reason: 'protocol' };
-    try {
-      const registration = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
-      window.FushimiServiceWorkerRegistration = registration;
-      let becameReady = false;
-      await Promise.race([
-        navigator.serviceWorker.ready.then(() => { becameReady = true; }),
-        new Promise((resolve) => setTimeout(resolve, 7000))
-      ]);
-      return { ok: becameReady && Boolean(registration.active) };
-    } catch (error) {
-      console.warn('Service Worker registration failed:', error);
-      return { ok: false, reason: 'registration' };
+    function updateOverlay() {
+        if (!overlay) return;
+        const t = copy();
+        const title = byId('fushimi-boot-title');
+        const intro = byId('fushimi-boot-intro');
+        const status = byId('fushimi-boot-status');
+        const count = byId('fushimi-boot-count');
+        const bar = byId('fushimi-boot-progress');
+        const fill = byId('fushimi-boot-progress-fill');
+        if (title) title.textContent = t.title;
+        if (intro) intro.textContent = state.phase === 'complete' && state.failures.length ? t.partial : t.intro;
+        if (status) status.textContent = state.phase === 'shell' ? t.shell
+            : state.phase === 'spots' ? t.spots
+            : state.phase === 'routes' ? t.routes
+            : state.phase === 'images' ? t.images
+            : state.phase === 'video' ? t.video
+            : state.phase === 'complete' ? t.ready : t.retry;
+        if (count) count.textContent = t.count(state.done, state.total);
+        const percent = progressPercent();
+        if (fill) fill.style.width = `${percent}%`;
+        if (bar) {
+            bar.setAttribute('aria-valuenow', String(percent));
+            bar.setAttribute('aria-label', t.progressLabel);
+        }
+        if (retryButton) retryButton.textContent = t.retryButton;
     }
-  }
 
-  async function cacheOne(cache, path, required) {
-    const absoluteUrl = new URL(path, document.baseURI).href;
-    try {
-      const cached = await cache.match(absoluteUrl, { ignoreSearch: true });
-      if (cached) {
-        updateTaskProgress(required, true, path);
-        return true;
-      }
+    function setPhase(phase) {
+        state.phase = phase;
+        updateOverlay();
+    }
 
-      const isExternal = /^https?:\/\//i.test(path) && new URL(path).origin !== location.origin;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), isExternal ? 8000 : 10000);
-      let response;
-      // Add a one-time query token to same-origin preload requests. This avoids
-      // an older active service worker returning its previous cached copy while
-      // the v135 cache is being warmed during an update.
-      const fetchUrl = new URL(absoluteUrl);
-      if (!isExternal) fetchUrl.searchParams.set('__fushimi_preload', 'v135');
-      try {
-        response = await fetch(fetchUrl.href, {
-          cache: 'reload',
-          signal: controller.signal,
-          ...(isExternal ? { mode: 'no-cors' } : {})
+    function showOverlay() {
+        if (!overlay) return;
+        overlay.hidden = false;
+        overlay.setAttribute('aria-hidden', 'false');
+        updateOverlay();
+        requestAnimationFrame(() => overlay.classList.add('is-visible'));
+    }
+
+    async function askWorkerVersion(worker) {
+        if (!worker || typeof MessageChannel === 'undefined') return null;
+        return new Promise((resolve) => {
+            const channel = new MessageChannel();
+            const timer = setTimeout(() => { channel.port1.close(); resolve(null); }, 500);
+            channel.port1.onmessage = (event) => {
+                clearTimeout(timer);
+                channel.port1.close();
+                resolve(event.data && event.data.version ? Number(event.data.version) : null);
+            };
+            try { worker.postMessage({ type: 'FUSHIMI_GET_VERSION' }, [channel.port2]); }
+            catch (_) { clearTimeout(timer); channel.port1.close(); resolve(null); }
         });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-      if (!response || (!response.ok && response.type !== 'opaque')) {
-        throw new Error(`HTTP ${response ? response.status : 'no response'}`);
-      }
-      await cache.put(absoluteUrl, response.clone());
-      updateTaskProgress(required, true, path);
-      return true;
-    } catch (error) {
-      updateTaskProgress(required, false, path);
-      return false;
-    }
-  }
-
-  async function runInBatches(cache, items, required, batchSize) {
-    for (let index = 0; index < items.length; index += batchSize) {
-      const batch = items.slice(index, index + batchSize);
-      await Promise.all(batch.map((path) => cacheOne(cache, path, required)));
-    }
-  }
-
-  const serviceWorkerPromise = registerServiceWorker();
-  window.FushimiServiceWorkerReady = serviceWorkerPromise;
-
-  async function prepareOfflineAssets() {
-    const worker = await serviceWorkerPromise;
-    let cache;
-    try {
-      if (!('caches' in window)) throw new Error('Cache Storage is unavailable');
-      cache = await caches.open(CACHE_NAME);
-    } catch (error) {
-      console.warn('Offline cache is unavailable:', error);
-      state.requiredFailures.push('Cache Storage');
-      state.done = state.total;
-      state.phase = 'optional';
-      updateOverlay();
-      return { ok: false, worker, requiredFailures: state.requiredFailures.slice(), optionalFailures: [] };
     }
 
-    // Essential local files are completed first. Small photos and the Leaflet
-    // CDN are best-effort and never prevent the visitor from entering the app.
-    await runInBatches(cache, REQUIRED_ASSETS, true, 5);
-    await runInBatches(cache, OPTIONAL_ASSETS, false, 3);
+    function waitForWorkerControl(timeoutMs = 1800) {
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) return Promise.resolve();
+        return new Promise((resolve) => {
+            let timer;
+            const done = () => {
+                if (timer) clearTimeout(timer);
+                navigator.serviceWorker?.removeEventListener('controllerchange', done);
+                resolve();
+            };
+            navigator.serviceWorker?.addEventListener('controllerchange', done, { once: true });
+            timer = setTimeout(done, timeoutMs);
+        });
+    }
 
-    state.completed = true;
-    state.result = {
-      ok: state.requiredFailures.length === 0 && worker.ok,
-      worker,
-      requiredFailures: state.requiredFailures.slice(),
-      optionalFailures: state.optionalFailures.slice()
+    async function registerWorker() {
+        if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return false;
+        try {
+            const registration = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
+            state.workerRegistration = registration;
+            window.FushimiServiceWorkerRegistration = registration;
+            registration.update().catch(() => {});
+            const deadline = Date.now() + 12000;
+            while (Date.now() < deadline) {
+                const worker = navigator.serviceWorker.controller || registration.active;
+                if (await askWorkerVersion(worker) === WORKER_VERSION) {
+                    await waitForWorkerControl();
+                    window.FushimiServiceWorkerReady = Promise.resolve(registration);
+                    return true;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 300));
+            }
+            console.warn('[Fushimi] V143 Service Worker did not become active before preparation.');
+            return false;
+        } catch (error) {
+            console.warn('[Fushimi] Service Worker registration failed:', error);
+            return false;
+        }
+    }
+
+    async function getCache() {
+        if (!('caches' in window)) throw new Error('Cache Storage is unavailable');
+        return caches.open(CACHE_NAME);
+    }
+
+    function isExternal(path) {
+        return /^https?:\/\//i.test(path) && new URL(path).origin !== location.origin;
+    }
+
+    async function storeAsset(path, required = false) {
+        const url = new URL(path, document.baseURI).href;
+        const cached = await state.cache.match(url, { ignoreSearch: true });
+        if (cached) { state.done += 1; updateOverlay(); return true; }
+        const external = isExternal(path);
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 10000);
+        try {
+            const requestUrl = new URL(url);
+            if (!external) requestUrl.searchParams.set('__fushimi_preload', 'v143');
+            const response = await fetch(requestUrl.href, {
+                cache: 'reload', signal: controller.signal,
+                ...(external ? { mode: 'no-cors' } : {})
+            });
+            if (!response || (!response.ok && response.type !== 'opaque')) {
+                throw new Error(`HTTP ${response ? response.status : 'no response'}: ${path}`);
+            }
+            await state.cache.put(url, response.clone());
+            state.done += 1;
+            updateOverlay();
+            return true;
+        } catch (error) {
+            state.failures.push({ path, required, message: error.message });
+            state.done += 1;
+            updateOverlay();
+            console.debug('[Fushimi] Preload skipped:', path, error);
+            return false;
+        } finally {
+            window.clearTimeout(timeout);
+        }
+    }
+
+    async function storeImageIfSmall(path) {
+        const url = new URL(path, document.baseURI).href;
+        const cached = await state.cache.match(url, { ignoreSearch: true });
+        if (cached) { state.done += 1; updateOverlay(); return true; }
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 4500);
+        try {
+            const fetchUrl = new URL(url);
+            fetchUrl.searchParams.set('__fushimi_preload', 'v143');
+            const response = await fetch(fetchUrl.href, { cache: 'reload', signal: controller.signal });
+            if (!response.ok) throw new Error(`Image HTTP ${response.status}: ${path}`);
+            const declaredSize = Number(response.headers.get('content-length')) || 0;
+            if (declaredSize > MAX_PRELOAD_IMAGE_BYTES) {
+                await response.body?.cancel();
+                state.done += 1;
+                updateOverlay();
+                return false;
+            }
+            const blob = await response.blob();
+            if (!blob.size || blob.size > MAX_PRELOAD_IMAGE_BYTES) {
+                state.done += 1;
+                updateOverlay();
+                return false;
+            }
+            await state.cache.put(url, new Response(blob, {
+                status: 200,
+                headers: { 'Content-Type': response.headers.get('content-type') || 'image/jpeg', 'Content-Length': String(blob.size) }
+            }));
+            state.done += 1;
+            updateOverlay();
+            return true;
+        } catch (error) {
+            state.failures.push({ path, required: false, message: error.message });
+            state.done += 1;
+            updateOverlay();
+            console.debug('[Fushimi] Optional photo skipped:', path, error);
+            return false;
+        } finally {
+            window.clearTimeout(timeout);
+        }
+    }
+
+    async function getSpotImagePaths() {
+        try {
+            const dataUrl = new URL(DATA_ASSETS[0], document.baseURI).href;
+            const cached = await state.cache.match(dataUrl, { ignoreSearch: true });
+            if (!cached) return [];
+            const payload = await cached.json();
+            if (!Array.isArray(payload)) return [];
+            return payload
+                .map((spot) => spot && typeof spot.image === 'string' ? spot.image.trim() : '')
+                .filter((image) => image && !/^https?:\/\//i.test(image) && !image.includes('..') && /\.(?:jpe?g|png|webp|avif)$/i.test(image))
+                .map((image) => `./images/${image.replace(/^\/+/, '')}`);
+        } catch (_) { return []; }
+    }
+
+    async function runGroup(items, concurrency = 4, required = false) {
+        let allSucceeded = true;
+        for (let index = 0; index < items.length; index += concurrency) {
+            const results = await Promise.all(items.slice(index, index + concurrency)
+                .map((path) => storeAsset(path, required)));
+            if (required && results.some((success) => !success)) allSucceeded = false;
+        }
+        return allSucceeded;
+    }
+
+    // Ask the active Service Worker to cache the large video last. The worker's
+    // message event uses waitUntil(), so this download can continue after we
+    // navigate away from the language page. It is deliberately not awaited.
+    function startVideoPreloadInBackground() {
+        const registration = state.workerRegistration;
+        const worker = navigator.serviceWorker?.controller || registration?.active || registration?.waiting;
+        if (!worker) {
+            console.info('[Fushimi] Video will load normally from the home page; no active worker.');
+            return false;
+        }
+        try {
+            worker.postMessage({ type: 'FUSHIMI_PRELOAD_VIDEO_LAST', url: new URL(VIDEO_URL, document.baseURI).href });
+            return true;
+        } catch (error) {
+            console.warn('[Fushimi] Could not schedule background video preload:', error);
+            return false;
+        }
+    }
+
+    async function prepare() {
+        state.failures = [];
+        state.done = 0;
+        state.total = CORE_ASSETS.length + DATA_ASSETS.length + ICON_ASSETS.length + IMAGE_ASSETS.length;
+        await registerWorker();
+        state.cache = await getCache();
+
+        setPhase('shell');
+        const appAssetsReady = await runGroup(CORE_ASSETS, 5, true);
+        if (!appAssetsReady) throw new Error('Some essential app files could not be saved.');
+
+        setPhase('spots');
+        if (!await storeAsset(DATA_ASSETS[0], true)) throw new Error('spots.json could not be saved.');
+
+        setPhase('routes');
+        if (!await storeAsset(DATA_ASSETS[1], true)) throw new Error('routes.json could not be saved.');
+
+        setPhase('images');
+        await runGroup(ICON_ASSETS, 5, false);
+        const spotImages = await getSpotImagePaths();
+        const images = Array.from(new Set([...IMAGE_ASSETS, ...spotImages]));
+        state.total = CORE_ASSETS.length + DATA_ASSETS.length + ICON_ASSETS.length + images.length;
+        updateOverlay();
+        for (let index = 0; index < images.length; index += 3) {
+            await Promise.all(images.slice(index, index + 3).map(storeImageIfSmall));
+        }
+
+        // This is intentionally the final preload step, and it must never hold
+        // up navigation to the home screen.
+        setPhase('video');
+        startVideoPreloadInBackground();
+        setPhase('complete');
+        return { guideReady: true, failures: state.failures.slice() };
+    }
+
+    async function start(language) {
+        if (state.started) return;
+        state.started = true;
+        state.language = COPY[language] ? language : 'ja';
+        try { localStorage.setItem('language', state.language); } catch (_) {}
+        document.querySelectorAll('.language-box button').forEach((button) => {
+            button.disabled = true;
+            button.setAttribute('aria-disabled', 'true');
+        });
+        if (retryButton) retryButton.hidden = true;
+        showOverlay();
+        const minimumDisplay = new Promise((resolve) => setTimeout(resolve, 650));
+
+        try {
+            if (!state.promise) state.promise = prepare();
+            const result = await state.promise;
+            if (!result || !result.guideReady) throw new Error('Guide assets are not ready');
+            await minimumDisplay;
+            await waitForWorkerControl();
+            setPhase('complete');
+            await new Promise((resolve) => setTimeout(resolve, 180));
+            // Do not wait for fushimi.mp4. It is being cached by the Service Worker
+            // in the background and the home page may stream it as needed.
+            location.href = 'home.html';
+        } catch (error) {
+            console.error('[Fushimi] Startup preparation failed:', error);
+            state.promise = null;
+            state.started = false;
+            if (byId('fushimi-boot-title')) byId('fushimi-boot-title').textContent = copy().failed;
+            if (byId('fushimi-boot-intro')) byId('fushimi-boot-intro').textContent = copy().retry;
+            if (byId('fushimi-boot-status')) byId('fushimi-boot-status').textContent = copy().retry;
+            if (retryButton) {
+                retryButton.textContent = copy().retryButton;
+                retryButton.hidden = false;
+            }
+            document.querySelectorAll('.language-box button').forEach((button) => {
+                button.disabled = false;
+                button.removeAttribute('aria-disabled');
+            });
+        }
+    }
+
+    retryButton?.addEventListener('click', () => start(state.language));
+
+    window.FushimiAppBoot = {
+        start,
+        getStatus: () => ({ phase: state.phase, done: state.done, total: state.total, failures: state.failures.slice() })
     };
-    return state.result;
-  }
+    window.selectLanguage = start;
 
-  state.preparation = prepareOfflineAssets().catch((error) => {
-    console.warn('Offline preparation failed:', error);
-    state.requiredFailures.push('preparation');
-    state.completed = true;
-    state.result = {
-      ok: false,
-      worker: { ok: false },
-      requiredFailures: state.requiredFailures.slice(),
-      optionalFailures: state.optionalFailures.slice()
-    };
-    return state.result;
-  });
-
-  async function start(language) {
-    if (state.started) return;
-    state.started = true;
-    if (language) localStorage.setItem('language', language);
-
-    document.querySelectorAll('.language-box button').forEach((button) => {
-      button.disabled = true;
-      button.setAttribute('aria-disabled', 'true');
+    // Prewarm app data and images silently while the visitor is choosing a language.
+    // The video is only scheduled after everything else and never blocks the home page.
+    state.promise = prepare().catch((error) => {
+        console.warn('[Fushimi] Background preparation could not start:', error);
+        state.promise = null;
+        return null;
     });
-
-    showOverlay();
-    const minimumDisplay = new Promise((resolve) => setTimeout(resolve, 500));
-    const maxWait = new Promise((resolve) => setTimeout(() => resolve({
-      ok: false,
-      timedOut: true,
-      requiredFailures: state.requiredFailures.slice(),
-      optionalFailures: state.optionalFailures.slice()
-    }), 25000));
-    const result = await Promise.race([state.preparation, maxWait]);
-    await minimumDisplay;
-
-    const copy = getCopy();
-    const status = byId('fushimi-boot-status');
-    const intro = byId('fushimi-boot-intro');
-    const title = byId('fushimi-boot-title');
-    const fill = byId('fushimi-boot-progress-fill');
-    const bar = byId('fushimi-boot-progress');
-    const count = byId('fushimi-boot-count');
-
-    if (result && result.ok) {
-      state.phase = 'complete';
-      if (title) title.textContent = copy.ready;
-      if (status) status.textContent = copy.ready;
-      if (intro) intro.textContent = copy.note;
-      if (fill) fill.style.width = '100%';
-      if (bar) bar.setAttribute('aria-valuenow', '100');
-      if (count) count.textContent = copy.count(state.total, state.total);
-    } else {
-      const message = !navigator.onLine ? copy.offline : copy.issue;
-      if (title) title.textContent = copy.title;
-      if (status) status.textContent = message;
-      if (intro) intro.textContent = copy.note;
-      if (count && result && result.timedOut) count.textContent = '';
-    }
-
-    // A short completion hold makes the status readable without adding an
-    // unnecessary long splash screen after the files are already cached.
-    await new Promise((resolve) => setTimeout(resolve, result && result.ok ? 550 : 700));
-    location.href = 'home.html';
-  }
-
-  window.FushimiAppBoot = {
-    start,
-    getStatus: () => ({
-      done: state.done,
-      total: state.total,
-      requiredDone: state.requiredDone,
-      requiredTotal: state.requiredTotal,
-      complete: state.completed,
-      result: state.result
-    })
-  };
-
-  // Expose progress even before the loading panel is opened, then initialize
-  // the hidden overlay once the HTML has finished parsing.
-  document.addEventListener('DOMContentLoaded', updateOverlay, { once: true });
 })();
