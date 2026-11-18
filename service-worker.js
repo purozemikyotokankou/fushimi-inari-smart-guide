@@ -1,16 +1,16 @@
-/* Fushimi Inari Smart Guide — offline support (v147) */
+/* Fushimi Inari Smart Guide — offline support (v148) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v147';
+const CACHE_NAME = 'fushimi-smart-guide-v148';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 147;
+const WORKER_VERSION = 148;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
   'https://unpkg.com/leaflet/dist/leaflet.css',
-  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
   'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css',
-  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
   'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.css'
 ];
 
@@ -93,9 +93,9 @@ const PRELOAD_CORE = [
   './service-worker.js',
   'https://unpkg.com/leaflet/dist/leaflet.js',
   'https://unpkg.com/leaflet/dist/leaflet.css',
-  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
   'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css',
-  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
   'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.css'
 ];
 const PRELOAD_DATA = ['./data/spots.json', './data/routes.json'];

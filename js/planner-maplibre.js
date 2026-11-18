@@ -1,4 +1,4 @@
-/* Fushimi Inari Smart Guide — MapLibre navigation (V147) */
+/* Fushimi Inari Smart Guide — MapLibre navigation (V148) */
 (function () {
   'use strict';
 
@@ -1994,33 +1994,31 @@ const SPOT_TEXT_TRANSLATIONS = {
     '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
     '© <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
 
-  function loadScriptOnce(src) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.onload = () => window.maplibregl ? resolve() : reject(new Error('MapLibre script loaded but did not initialize.'));
-      script.onerror = () => { script.remove(); reject(new Error('Could not load ' + new URL(src).hostname)); };
-      document.head.appendChild(script);
-    });
-  }
-
   async function ensureMapLibreLoaded() {
-    if (window.maplibregl) return;
-    const cdnUrls = [
-      'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js',
-      'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.js'
+    if (window.maplibregl && window.maplibregl.Map) return;
+
+    // MapLibre GL JS v6 is ESM-only: the old maplibre-gl.js UMD bundle
+    // does not exist and returns 404. Import the official .mjs module instead.
+    const moduleUrls = [
+      'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
+      'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.mjs'
     ];
     const failures = [];
-    for (const url of cdnUrls) {
+    for (const url of moduleUrls) {
       try {
-        await loadScriptOnce(url);
-        if (window.maplibregl) return;
+        const module = await import(url);
+        if (!module || typeof module.Map !== 'function' || typeof module.Marker !== 'function') {
+          throw new Error('MapLibre module is missing required exports.');
+        }
+        // Existing navigation code uses the global namespace. Expose the
+        // imported module without changing the rest of the application.
+        window.maplibregl = module;
+        return;
       } catch (error) {
-        failures.push(error.message);
+        failures.push(new URL(url).hostname + ': ' + String(error && error.message || error));
       }
     }
-    throw new Error('地図ライブラリを読み込めませんでした。通信制限やコンテンツブロッカーを確認してください。');
+    throw new Error('MapLibre GL JS v6のESモジュールを読み込めませんでした。通信制限・CDNブロックを確認してください。' + (failures.length ? ' (' + failures.join(' / ') + ')' : ''));
   }
 
   function describeMapError(error) {
