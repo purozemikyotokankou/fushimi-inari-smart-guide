@@ -1,9 +1,9 @@
-/* Fushimi Inari Smart Guide — offline support (v148) */
+/* Fushimi Inari Smart Guide — offline support (v151 — one planner page) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v148';
+const CACHE_NAME = 'fushimi-smart-guide-v151';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 148;
+const WORKER_VERSION = 151;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
@@ -15,13 +15,10 @@ const CDN_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  // The language page warms the cache after the worker takes control.
   event.waitUntil(self.skipWaiting());
 });
 
 async function migrateCachedVideo(newCache) {
-  // Keep a previously downloaded video when upgrading from V140, avoiding a
-  // needless full download just because the application cache version changed.
   const canonicalUrl = new URL(`.${VIDEO_PATH}`, self.registration.scope).href;
   if (await newCache.match(canonicalUrl, { ignoreSearch: true })) return;
   const oldNames = (await caches.keys()).filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME);
@@ -78,17 +75,15 @@ async function preloadVideoLast(client) {
   }
   const response = await fetch(new Request(url, { method: 'GET', cache: 'reload' }));
   if (!response || !response.ok) throw new Error(`Video HTTP ${response ? response.status : 'no response'}`);
-  // Cache.put consumes a clone, leaving the original response stream independent.
   await cache.put(url, response.clone());
   client?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'cached' });
 }
 
 const PRELOAD_CORE = [
-  './index.html', './home.html', './planner.html', './planner-next.html', './spots.html',
-  './css/style.css', './css/planner.css', './css/planner-maplibre.css',
+  './index.html', './home.html', './planner.html', './spots.html',
+  './css/style.css', './css/planner.css',
   './js/language.js', './js/home-ui.js', './js/home-boot.js',
   './js/planner.js', './js/planner-weather.js', './js/planner-ambient-light.js',
-  './js/planner-maplibre.js',
   './js/spots.js', './js/carto-config.js', './js/liquid-cursor.js', './js/app-boot.js',
   './service-worker.js',
   'https://unpkg.com/leaflet/dist/leaflet.js',
@@ -159,7 +154,6 @@ async function cacheGroup(paths, concurrency = 4, options = {}) {
 }
 
 async function preloadAllSilently(client) {
-  // App shell and map data first; the visitor is already free to use the site.
   await cacheGroup(PRELOAD_CORE, 5);
   await cacheGroup(PRELOAD_DATA, 2, { refresh: true });
   const cache = await caches.open(CACHE_NAME);
@@ -178,8 +172,6 @@ async function preloadAllSilently(client) {
   const allImages = Array.from(new Set([...PRELOAD_HERO_IMAGES, ...spotImages]));
   await cacheGroup(PRELOAD_ICONS, 5);
   await cacheGroup(allImages, 3, { imageLimit: MAX_BACKGROUND_IMAGE_BYTES });
-
-  // Large video is deliberately last and never blocks page navigation.
   await preloadVideoLast(client);
   client?.postMessage({ type: 'FUSHIMI_SILENT_PRELOAD_RESULT', status: 'finished' });
 }
@@ -194,7 +186,6 @@ self.addEventListener('message', (event) => {
     const task = preloadAllSilently(event.source).catch((error) => {
       console.warn('[Fushimi SW] Silent offline preparation stopped; normal online loading remains available:', error);
     });
-    // Keep the worker alive for the full background cache task, including after navigation.
     event.waitUntil(task);
     return;
   }
@@ -203,8 +194,6 @@ self.addEventListener('message', (event) => {
       console.warn('[Fushimi SW] Background video preload failed; home playback can still stream:', error);
       event.source?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'failed' });
     });
-    // Extend the worker lifetime through the full download, even after the
-    // language page navigates to home.html.
     event.waitUntil(task);
   }
 });
@@ -217,7 +206,6 @@ self.addEventListener('fetch', (event) => {
   const sameOrigin = url.origin === self.location.origin;
   const cachePromise = caches.open(CACHE_NAME);
 
-  // Serve byte ranges from a fully cached MP4 for offline seeking and playback.
   if (sameOrigin && url.pathname.endsWith('.mp4') && request.headers.has('range')) {
     event.respondWith((async () => {
       const cached = await caches.match(new URL(request.url).href, { ignoreSearch: true });
@@ -254,7 +242,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache only the exact Leaflet and MapLibre CDN assets; CARTO raster map tiles remain online.
   if (!sameOrigin) {
     if (!CDN_ASSETS.includes(url.href)) return;
     event.respondWith((async () => {
@@ -315,7 +302,6 @@ self.addEventListener('fetch', (event) => {
     })());
     return;
   }
-
 
   event.respondWith((async () => {
     const cached = await matchCached(request);
