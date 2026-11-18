@@ -1,13 +1,15 @@
-/* Fushimi Inari Smart Guide — offline support (v144) */
+/* Fushimi Inari Smart Guide — offline support (v145) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v144';
+const CACHE_NAME = 'fushimi-smart-guide-v145';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 144;
+const WORKER_VERSION = 145;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
-  'https://unpkg.com/leaflet/dist/leaflet.css'
+  'https://unpkg.com/leaflet/dist/leaflet.css',
+  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css'
 ];
 
 self.addEventListener('install', (event) => {
@@ -80,14 +82,17 @@ async function preloadVideoLast(client) {
 }
 
 const PRELOAD_CORE = [
-  './index.html', './home.html', './planner.html', './spots.html',
-  './css/style.css', './css/planner.css',
+  './index.html', './home.html', './planner.html', './planner-next.html', './spots.html',
+  './css/style.css', './css/planner.css', './css/planner-maplibre.css',
   './js/language.js', './js/home-ui.js', './js/home-boot.js',
   './js/planner.js', './js/planner-weather.js', './js/planner-ambient-light.js',
+  './js/planner-maplibre.js', './js/planner-map-config.js',
   './js/spots.js', './js/carto-config.js', './js/liquid-cursor.js', './js/app-boot.js',
   './service-worker.js',
   'https://unpkg.com/leaflet/dist/leaflet.js',
-  'https://unpkg.com/leaflet/dist/leaflet.css'
+  'https://unpkg.com/leaflet/dist/leaflet.css',
+  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css'
 ];
 const PRELOAD_DATA = ['./data/spots.json', './data/routes.json'];
 const PRELOAD_ICONS = [
@@ -245,7 +250,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache only Leaflet cross-origin assets; CARTO tiles and live APIs remain online.
+  // Cache only the exact Leaflet and MapLibre CDN assets; CARTO style, vector tiles and live APIs remain online.
   if (!sameOrigin) {
     if (!CDN_ASSETS.includes(url.href)) return;
     event.respondWith((async () => {
