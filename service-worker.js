@@ -1,9 +1,9 @@
-/* Fushimi Inari Smart Guide — offline support (v152 — one planner page) */
+/* Fushimi Inari Smart Guide — offline support (v153 — MapLibre alignment + single planner route) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v152';
+const CACHE_NAME = 'fushimi-smart-guide-v153';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 152;
+const WORKER_VERSION = 153;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
@@ -63,6 +63,84 @@ async function fetchAndCache(request, cache) {
     try { await cache.put(request, response.clone()); } catch (_) { /* quota or opaque restrictions */ }
   }
   return response;
+}
+
+/*
+ * Repair old navigation markup at delivery time as a safety net. The canonical
+ * route page is planner.html; old planner-next.html links are rewritten even
+ * when an older copy of home.html or spots.html is served from offline cache.
+ * The map itself is still authored in planner.html; only the known scale-sync
+ * constants are adjusted in its delivered HTML so Leaflet's 256px world and
+ * MapLibre's 512px world use the same on-screen scale.
+ */
+async function rewriteNavigationResponse(response, url) {
+  if (!response || !response.ok) return response;
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.toLowerCase().includes('text/html')) return response;
+
+  let html;
+  try { html = await response.clone().text(); }
+  catch (_) { return response; }
+
+  const originalHtml = html;
+  let changed = false;
+  const replaceOnce = (before, after) => {
+    if (!html.includes(before)) return false;
+    html = html.replace(before, after);
+    changed = true;
+    return true;
+  };
+
+  // Any remaining navigation link to the retired page now points to planner.html.
+  html = html.replace(/planner-next\.html/gi, 'planner.html');
+  if (html !== originalHtml) changed = true;
+
+  if (/\/planner\.html$/i.test(url.pathname)) {
+    // MapLibre's world is 512px at zoom 0; Leaflet's EPSG:3857 world is 256px.
+    // A Leaflet zoom of 16 therefore corresponds to MapLibre zoom 15.
+    replaceOnce(
+      'center: [135.7743, 34.96705],\n    zoom: 16,\n    minZoom: 0,\n    maxZoom: 18,',
+      'center: [135.7743, 34.96705],\n    zoom: 15,\n    minZoom: -1,\n    maxZoom: 17,\n    zoomSnap: 1,'
+    );
+
+    replaceOnce(
+      'const zoom = Math.max(0, Math.min(18, leafletMap.getZoom()));',
+      'const zoom = Math.max(-1, Math.min(17, leafletMap.getZoom() - 1));'
+    );
+    replaceOnce(
+      'const zoom = Math.max(0, Math.min(18, baseMap.getZoom()));',
+      'const zoom = Math.max(0, Math.min(18, baseMap.getZoom() + 1));'
+    );
+
+    replaceOnce(
+      'const resizeObserver = window.ResizeObserver ? new ResizeObserver(() => baseMap.resize()) : null;\n    resizeObserver?.observe(baseContainer);',
+      'const syncOverlaySize = () => {\n' +
+      '      requestAnimationFrame(() => {\n' +
+      '        baseMap.resize();\n' +
+      '        leafletMap.invalidateSize({ pan: false, debounceMoveend: true });\n' +
+      '        syncMapLibreFromLeaflet();\n' +
+      '      });\n' +
+      '    };\n' +
+      '    const resizeObserver = window.ResizeObserver ? new ResizeObserver(syncOverlaySize) : null;\n' +
+      '    resizeObserver?.observe(baseContainer);\n' +
+      '    resizeObserver?.observe(leafContainer);\n' +
+      '    window.addEventListener("orientationchange", syncOverlaySize, { passive: true });'
+    );
+  }
+
+  if (!changed) return response;
+
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.delete('content-encoding');
+  headers.delete('etag');
+  headers.delete('last-modified');
+  headers.set('x-fushimi-page-repair', '153');
+  return new Response(html, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 async function preloadVideoLast(client) {
@@ -253,6 +331,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Old bookmarks and external links to the retired page are also redirected.
+  if (request.mode === 'navigate' && /\/planner-next\.html$/i.test(url.pathname)) {
+    event.respondWith(Response.redirect(new URL('./planner.html' + url.search, self.registration.scope), 302));
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       const cached = await matchCached(request);
@@ -261,10 +345,11 @@ self.addEventListener('fetch', (event) => {
       try {
         const network = fetch(request).then(async (response) => {
           if (response && response.ok) {
-            try { await cache.put(request, response.clone()); } catch (_) {}
-            return response;
+            const rewritten = await rewriteNavigationResponse(response, url);
+            try { await cache.put(request, rewritten.clone()); } catch (_) {}
+            return rewritten;
           }
-          return cached || response;
+          return cached ? await rewriteNavigationResponse(cached, url) : response;
         });
         const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('navigation timeout')), 1200); });
         const response = await Promise.race([network, timeout]);
@@ -272,7 +357,10 @@ self.addEventListener('fetch', (event) => {
         return response;
       } catch (_) {
         clearTimeout(timer);
-        return cached || await matchCached(new URL('./index.html', self.registration.scope).href) || Response.error();
+        if (cached) return await rewriteNavigationResponse(cached, url);
+        const fallbackUrl = new URL('./index.html', self.registration.scope);
+        const fallback = await matchCached(fallbackUrl.href);
+        return fallback ? await rewriteNavigationResponse(fallback, fallbackUrl) : Response.error();
       }
     })());
     return;
