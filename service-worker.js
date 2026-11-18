@@ -1,24 +1,23 @@
-/* Fushimi Inari Smart Guide — offline support (v154 — Plan C MapLibre map + legacy category bar) */
+/* Fushimi Inari Smart Guide — offline support (v144) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v154';
+const CACHE_NAME = 'fushimi-smart-guide-v144';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 154;
+const WORKER_VERSION = 144;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
-  'https://unpkg.com/leaflet/dist/leaflet.css',
-  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
-  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css',
-  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
-  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.css'
+  'https://unpkg.com/leaflet/dist/leaflet.css'
 ];
 
 self.addEventListener('install', (event) => {
+  // The language page warms the cache after the worker takes control.
   event.waitUntil(self.skipWaiting());
 });
 
 async function migrateCachedVideo(newCache) {
+  // Keep a previously downloaded video when upgrading from V140, avoiding a
+  // needless full download just because the application cache version changed.
   const canonicalUrl = new URL(`.${VIDEO_PATH}`, self.registration.scope).href;
   if (await newCache.match(canonicalUrl, { ignoreSearch: true })) return;
   const oldNames = (await caches.keys()).filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME);
@@ -65,84 +64,6 @@ async function fetchAndCache(request, cache) {
   return response;
 }
 
-/*
- * Repair old navigation markup at delivery time as a safety net. The canonical
- * route page is planner.html; old planner-next.html links are rewritten even
- * when an older copy of home.html or spots.html is served from offline cache.
- * The map itself is still authored in planner.html; only the known scale-sync
- * constants are adjusted in its delivered HTML so Leaflet's 256px world and
- * MapLibre's 512px world use the same on-screen scale.
- */
-async function rewriteNavigationResponse(response, url) {
-  if (!response || !response.ok) return response;
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.toLowerCase().includes('text/html')) return response;
-
-  let html;
-  try { html = await response.clone().text(); }
-  catch (_) { return response; }
-
-  const originalHtml = html;
-  let changed = false;
-  const replaceOnce = (before, after) => {
-    if (!html.includes(before)) return false;
-    html = html.replace(before, after);
-    changed = true;
-    return true;
-  };
-
-  // Any remaining navigation link to the retired page now points to planner.html.
-  html = html.replace(/planner-next\.html/gi, 'planner.html');
-  if (html !== originalHtml) changed = true;
-
-  if (/\/planner\.html$/i.test(url.pathname)) {
-    // MapLibre's world is 512px at zoom 0; Leaflet's EPSG:3857 world is 256px.
-    // A Leaflet zoom of 16 therefore corresponds to MapLibre zoom 15.
-    replaceOnce(
-      'center: [135.7743, 34.96705],\n    zoom: 16,\n    minZoom: 0,\n    maxZoom: 18,',
-      'center: [135.7743, 34.96705],\n    zoom: 15,\n    minZoom: -1,\n    maxZoom: 17,\n    zoomSnap: 1,'
-    );
-
-    replaceOnce(
-      'const zoom = Math.max(0, Math.min(18, leafletMap.getZoom()));',
-      'const zoom = Math.max(-1, Math.min(17, leafletMap.getZoom() - 1));'
-    );
-    replaceOnce(
-      'const zoom = Math.max(0, Math.min(18, baseMap.getZoom()));',
-      'const zoom = Math.max(0, Math.min(18, baseMap.getZoom() + 1));'
-    );
-
-    replaceOnce(
-      'const resizeObserver = window.ResizeObserver ? new ResizeObserver(() => baseMap.resize()) : null;\n    resizeObserver?.observe(baseContainer);',
-      'const syncOverlaySize = () => {\n' +
-      '      requestAnimationFrame(() => {\n' +
-      '        baseMap.resize();\n' +
-      '        leafletMap.invalidateSize({ pan: false, debounceMoveend: true });\n' +
-      '        syncMapLibreFromLeaflet();\n' +
-      '      });\n' +
-      '    };\n' +
-      '    const resizeObserver = window.ResizeObserver ? new ResizeObserver(syncOverlaySize) : null;\n' +
-      '    resizeObserver?.observe(baseContainer);\n' +
-      '    resizeObserver?.observe(leafContainer);\n' +
-      '    window.addEventListener("orientationchange", syncOverlaySize, { passive: true });'
-    );
-  }
-
-  if (!changed) return response;
-
-  const headers = new Headers(response.headers);
-  headers.delete('content-length');
-  headers.delete('content-encoding');
-  headers.delete('etag');
-  headers.delete('last-modified');
-  headers.set('x-fushimi-page-repair', '154');
-  return new Response(html, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
-  });
-}
-
 async function preloadVideoLast(client) {
   const cache = await caches.open(CACHE_NAME);
   const url = new URL(`.${VIDEO_PATH}`, self.registration.scope).href;
@@ -153,23 +74,20 @@ async function preloadVideoLast(client) {
   }
   const response = await fetch(new Request(url, { method: 'GET', cache: 'reload' }));
   if (!response || !response.ok) throw new Error(`Video HTTP ${response ? response.status : 'no response'}`);
+  // Cache.put consumes a clone, leaving the original response stream independent.
   await cache.put(url, response.clone());
   client?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'cached' });
 }
 
 const PRELOAD_CORE = [
   './index.html', './home.html', './planner.html', './spots.html',
-  './css/style.css', './css/planner.css', './css/planner-maplibre.css',
+  './css/style.css', './css/planner.css',
   './js/language.js', './js/home-ui.js', './js/home-boot.js',
-  './js/planner.js', './js/planner-maplibre.js', './js/planner-weather.js', './js/planner-ambient-light.js',
+  './js/planner.js', './js/planner-weather.js', './js/planner-ambient-light.js',
   './js/spots.js', './js/carto-config.js', './js/liquid-cursor.js', './js/app-boot.js',
   './service-worker.js',
   'https://unpkg.com/leaflet/dist/leaflet.js',
-  'https://unpkg.com/leaflet/dist/leaflet.css',
-  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
-  'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css',
-  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.mjs',
-  'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.css'
+  'https://unpkg.com/leaflet/dist/leaflet.css'
 ];
 const PRELOAD_DATA = ['./data/spots.json', './data/routes.json'];
 const PRELOAD_ICONS = [
@@ -232,6 +150,7 @@ async function cacheGroup(paths, concurrency = 4, options = {}) {
 }
 
 async function preloadAllSilently(client) {
+  // App shell and map data first; the visitor is already free to use the site.
   await cacheGroup(PRELOAD_CORE, 5);
   await cacheGroup(PRELOAD_DATA, 2, { refresh: true });
   const cache = await caches.open(CACHE_NAME);
@@ -250,6 +169,8 @@ async function preloadAllSilently(client) {
   const allImages = Array.from(new Set([...PRELOAD_HERO_IMAGES, ...spotImages]));
   await cacheGroup(PRELOAD_ICONS, 5);
   await cacheGroup(allImages, 3, { imageLimit: MAX_BACKGROUND_IMAGE_BYTES });
+
+  // Large video is deliberately last and never blocks page navigation.
   await preloadVideoLast(client);
   client?.postMessage({ type: 'FUSHIMI_SILENT_PRELOAD_RESULT', status: 'finished' });
 }
@@ -264,6 +185,7 @@ self.addEventListener('message', (event) => {
     const task = preloadAllSilently(event.source).catch((error) => {
       console.warn('[Fushimi SW] Silent offline preparation stopped; normal online loading remains available:', error);
     });
+    // Keep the worker alive for the full background cache task, including after navigation.
     event.waitUntil(task);
     return;
   }
@@ -272,6 +194,8 @@ self.addEventListener('message', (event) => {
       console.warn('[Fushimi SW] Background video preload failed; home playback can still stream:', error);
       event.source?.postMessage({ type: 'FUSHIMI_VIDEO_PRELOAD_RESULT', status: 'failed' });
     });
+    // Extend the worker lifetime through the full download, even after the
+    // language page navigates to home.html.
     event.waitUntil(task);
   }
 });
@@ -284,6 +208,7 @@ self.addEventListener('fetch', (event) => {
   const sameOrigin = url.origin === self.location.origin;
   const cachePromise = caches.open(CACHE_NAME);
 
+  // Serve byte ranges from a fully cached MP4 for offline seeking and playback.
   if (sameOrigin && url.pathname.endsWith('.mp4') && request.headers.has('range')) {
     event.respondWith((async () => {
       const cached = await caches.match(new URL(request.url).href, { ignoreSearch: true });
@@ -320,6 +245,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Cache only Leaflet cross-origin assets; CARTO tiles and live APIs remain online.
   if (!sameOrigin) {
     if (!CDN_ASSETS.includes(url.href)) return;
     event.respondWith((async () => {
@@ -331,12 +257,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Old bookmarks and external links to the retired page are also redirected.
-  if (request.mode === 'navigate' && /\/planner-next\.html$/i.test(url.pathname)) {
-    event.respondWith(Response.redirect(new URL('./planner.html' + url.search, self.registration.scope), 302));
-    return;
-  }
-
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       const cached = await matchCached(request);
@@ -345,11 +265,10 @@ self.addEventListener('fetch', (event) => {
       try {
         const network = fetch(request).then(async (response) => {
           if (response && response.ok) {
-            const rewritten = await rewriteNavigationResponse(response, url);
-            try { await cache.put(request, rewritten.clone()); } catch (_) {}
-            return rewritten;
+            try { await cache.put(request, response.clone()); } catch (_) {}
+            return response;
           }
-          return cached ? await rewriteNavigationResponse(cached, url) : response;
+          return cached || response;
         });
         const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('navigation timeout')), 1200); });
         const response = await Promise.race([network, timeout]);
@@ -357,10 +276,7 @@ self.addEventListener('fetch', (event) => {
         return response;
       } catch (_) {
         clearTimeout(timer);
-        if (cached) return await rewriteNavigationResponse(cached, url);
-        const fallbackUrl = new URL('./index.html', self.registration.scope);
-        const fallback = await matchCached(fallbackUrl.href);
-        return fallback ? await rewriteNavigationResponse(fallback, fallbackUrl) : Response.error();
+        return cached || await matchCached(new URL('./index.html', self.registration.scope).href) || Response.error();
       }
     })());
     return;
@@ -390,6 +306,7 @@ self.addEventListener('fetch', (event) => {
     })());
     return;
   }
+
 
   event.respondWith((async () => {
     const cached = await matchCached(request);
