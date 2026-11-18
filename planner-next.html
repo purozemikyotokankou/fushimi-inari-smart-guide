@@ -6,12 +6,11 @@
   <meta name="theme-color" content="#f7f8fa">
   <meta name="description" content="伏見稲荷スマートガイドの新しい地図・徒歩ナビゲーション">
   <title>新しい地図・ナビ | 伏見稲荷スマートガイド</title>
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="css/planner-maplibre.css?v=145">
-  <script src="js/carto-config.js?v=113-carto-official-endpoint" defer></script>
-  <script src="js/planner-map-config.js?v=145" defer></script>
-  <script src="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js" defer></script>
-  <script src="js/planner-maplibre.js?v=145" defer></script>
+  <link rel="preconnect" href="https://basemaps.cartocdn.com" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.css';">
+  <link rel="stylesheet" href="css/planner-maplibre.css?v=146">
+  <script src="js/carto-config.js?v=146-carto-key" defer></script>
+  <script src="js/planner-maplibre.js?v=146" defer></script>
 </head>
 <body class="maplibre-page">
   <main class="maplibre-shell">
@@ -61,6 +60,15 @@
 
     <div id="maplibreStatus" class="maplibre-status" role="status" aria-live="polite">地図を準備しています…</div>
 
+    <section id="maplibreMapFailure" class="maplibre-map-failure" role="alert" hidden>
+      <strong>地図を表示できませんでした</strong>
+      <p id="maplibreMapFailureText">通信状況を確認して、もう一度お試しください。</p>
+      <div class="maplibre-map-failure-actions">
+        <button id="retryMapLoad" type="button">もう一度読み込む</button>
+        <a href="planner.html">従来の地図を開く</a>
+      </div>
+    </section>
+
     <section id="guidanceCard" class="guidance-card" hidden aria-live="polite">
       <div class="guidance-kicker" id="guidanceKicker">次の案内</div>
       <strong id="guidanceInstruction">ルートに沿って進んでください</strong>
@@ -92,7 +100,6 @@
           <div class="spot-panel-actions">
             <button id="routeToSpot" class="primary-action" type="button">ここへ行く</button>
             <button id="saveSpotButton" class="secondary-action save-spot-action" type="button" aria-pressed="false">☆ 保存</button>
-            <a id="openGoogleMaps" class="secondary-action" href="#" target="_blank" rel="noopener">Googleマップ</a>
           </div>
         </section>
 
@@ -111,7 +118,6 @@
           <p id="routeEtaDisclaimer" class="route-eta-disclaimer">到着予定は標準的な徒歩速度から算出した目安です。階段・坂道・混雑・休憩時間は反映されません。</p>
           <div class="route-panel-actions">
             <button id="startNavigation" class="primary-action" type="button">ナビを開始</button>
-            <button id="googleDirections" class="secondary-action" type="button">Googleマップで案内</button>
           </div>
         </section>
 
@@ -121,7 +127,6 @@
             <button id="toggleVoice" class="secondary-action" type="button" aria-pressed="true">音声案内 ON</button>
             <button id="stopNavigation" class="stop-action" type="button">ナビを終了</button>
           </div>
-          <a id="openGoogleNav" class="google-nav-fallback" href="#" target="_blank" rel="noopener">Googleマップで案内を続ける</a>
           <p id="navStatusText" class="nav-status-text" role="status"></p>
         </section>
 

@@ -1,4 +1,4 @@
-/* Fushimi Inari Smart Guide — MapLibre navigation (V145) */
+/* Fushimi Inari Smart Guide — MapLibre navigation (V146) */
 (function () {
   'use strict';
 
@@ -6,50 +6,50 @@
     ja: {
       search: 'スポット・場所を検索', all: 'すべて', sightseeing: '見どころ', food: '食べる', buy: '買う', transport: '交通', toilet: 'トイレ',
       explore: '伏見稲荷を探索', intro: 'スポットを選ぶと、参道に沿った徒歩ルートを検索できます。', near: '周辺のスポット',
-      go: 'ここへ行く', google: 'Googleマップ', walking: '徒歩ルート', start: 'ナビを開始', end: 'ナビを終了', distance: '距離', arrival: '到着予定', remaining: '残り距離',
+      go: 'ここへ行く', walking: '徒歩ルート', start: 'ナビを開始', end: 'ナビを終了', distance: '距離', arrival: '到着予定', remaining: '残り距離',
       voiceOn: '音声案内 ON', voiceOff: '音声案内 OFF', routeLine: '参道に沿って進んでください', turnLeft: '左へ曲がる', turnRight: '右へ曲がる', straight: 'そのまま進む',
       locationWait: '現在地を取得しています…', locationDenied: '現在地を取得できません。位置情報を許可してください。', ready: '地図の準備ができました', loading: '地図とスポットを読み込んでいます…',
-      noRoute: 'この出発地点から目的地まで、参道データ上で安全な連続ルートを見つけられませんでした。Googleマップで確認できます。',
-      offRoute: 'ルートから離れています。再検索しています…', rerouteFailed: '安全な再ルートを見つけられませんでした。Googleマップで確認してください。', arrived: '目的地に到着しました',
+      noRoute: '登録済みの参道データ内で、安全につながるルートが見つかりませんでした。出発地点を少し変えて再検索してください。',
+      offRoute: 'ルートから離れています。再検索しています…', rerouteFailed: '安全な代替ルートを見つけられませんでした。参道上の位置から再検索してください。', arrived: '目的地に到着しました',
       next: '次の案内', routeNote: '伏見稲荷の登録済み参道データを優先して案内します。参道の未登録区間は推測でつなぎません。', distanceUnit: 'm', min: '分', km: 'km',
       permission: '位置情報を許可すると、現在地からナビを開始できます。', routeUnavailable: '経路を検索できませんでした。', altSenbon: '千本鳥居経由', altYotsutsuji: '四ツ辻経由', fastest: '参道ルート',
-      directions: 'Googleマップで徒歩ナビを開く', heading: '進行方向に追従中', north: '北を上に固定', location: '現在地', via: '経由', category: 'カテゴリー', googleNav: 'Googleマップで案内を続ける', save: '保存', saved: '保存済み', etaApprox: '到着予定は標準的な徒歩速度から算出した目安です。階段・坂道・混雑・休憩時間は反映されません。'
+      heading: '進行方向に追従中', north: '北を上に固定', location: '現在地', via: '経由', category: 'カテゴリー', save: '保存', saved: '保存済み', etaApprox: '到着予定は標準的な徒歩速度から算出した目安です。階段・坂道・混雑・休憩時間は反映されません。'
     },
     en: {
       search: 'Search places', all: 'All', sightseeing: 'Attractions', food: 'Food', buy: 'Shopping', transport: 'Transport', toilet: 'Restrooms',
       explore: 'Explore Fushimi Inari', intro: 'Choose a place to find a walking route along the shrine paths.', near: 'Nearby places',
-      go: 'Directions', google: 'Google Maps', walking: 'Walking route', start: 'Start navigation', end: 'End navigation', distance: 'Distance', arrival: 'Arrival', remaining: 'Remaining',
+      go: 'Directions', walking: 'Walking route', start: 'Start navigation', end: 'End navigation', distance: 'Distance', arrival: 'Arrival', remaining: 'Remaining',
       voiceOn: 'Voice ON', voiceOff: 'Voice OFF', routeLine: 'Continue along the path', turnLeft: 'Turn left', turnRight: 'Turn right', straight: 'Continue straight',
       locationWait: 'Getting your location…', locationDenied: 'Could not get your location. Please allow location access.', ready: 'Map is ready', loading: 'Loading map and places…',
-      noRoute: 'No safe continuous route was found in the mapped shrine paths. You can check Google Maps instead.',
-      offRoute: 'You are off route. Trying to recalculate…', rerouteFailed: 'No safe alternative route was found. Please check Google Maps.', arrived: 'You have arrived',
+      noRoute: 'No safe continuous route was found in the mapped shrine paths. Try a different starting point.',
+      offRoute: 'You are off route. Trying to recalculate…', rerouteFailed: 'No safe alternative route was found. Try again from a mapped path.', arrived: 'You have arrived',
       next: 'Next instruction', routeNote: 'Navigation prioritizes mapped shrine paths. Missing path sections are never guessed or connected.', distanceUnit: 'm', min: 'min', km: 'km',
       permission: 'Allow location access to start navigation from your position.', routeUnavailable: 'Could not find a route.', altSenbon: 'Via Senbon Torii', altYotsutsuji: 'Via Yotsutsuji', fastest: 'Shrine path',
-      directions: 'Open walking directions in Google Maps', heading: 'Following heading', north: 'North up', location: 'My location', via: 'Via', category: 'Category', googleNav: 'Continue in Google Maps', save: 'Save', saved: 'Saved', etaApprox: 'Arrival time is an estimate based on a typical walking speed. Stairs, slopes, crowds and breaks are not included.'
+      heading: 'Following heading', north: 'North up', location: 'My location', via: 'Via', category: 'Category', save: 'Save', saved: 'Saved', etaApprox: 'Arrival time is an estimate based on a typical walking speed. Stairs, slopes, crowds and breaks are not included.'
     },
     zh: {
       search: '搜索景点或地点', all: '全部', sightseeing: '景点', food: '餐饮', buy: '购物', transport: '交通', toilet: '洗手间',
       explore: '探索伏见稻荷', intro: '选择地点，即可搜索沿参道行走的路线。', near: '附近景点',
-      go: '前往这里', google: 'Google地图', walking: '步行路线', start: '开始导航', end: '结束导航', distance: '距离', arrival: '预计到达', remaining: '剩余距离',
+      go: '前往这里', walking: '步行路线', start: '开始导航', end: '结束导航', distance: '距离', arrival: '预计到达', remaining: '剩余距离',
       voiceOn: '语音 ON', voiceOff: '语音 OFF', routeLine: '沿参道继续前进', turnLeft: '向左转', turnRight: '向右转', straight: '继续直行',
       locationWait: '正在获取当前位置…', locationDenied: '无法获取当前位置，请允许使用位置信息。', ready: '地图已准备就绪', loading: '正在加载地图和景点…',
-      noRoute: '在已登记的参道数据中找不到安全连续的路线。您也可以使用 Google 地图确认。',
-      offRoute: '您已偏离路线，正在重新搜索…', rerouteFailed: '找不到安全的替代路线，请使用 Google 地图确认。', arrived: '已到达目的地',
+      noRoute: '在已登记的参道数据中找不到安全连续的路线。请稍微调整出发位置后重试。',
+      offRoute: '您已偏离路线，正在重新搜索…', rerouteFailed: '找不到安全的替代路线，请从已登记的参道位置重新搜索。', arrived: '已到达目的地',
       next: '下一步', routeNote: '优先使用已登记的伏见稻荷参道数据，不会猜测或连接未登记的道路。', distanceUnit: '米', min: '分钟', km: '公里',
       permission: '允许位置信息后，即可从当前位置开始导航。', routeUnavailable: '无法搜索路线。', altSenbon: '经千本鸟居', altYotsutsuji: '经四之辻', fastest: '参道路线',
-      directions: '在 Google 地图中打开步行导航', heading: '正在跟随前进方向', north: '北向上', location: '当前位置', via: '经由', category: '类别', googleNav: '在 Google 地图中继续导航', save: '收藏', saved: '已收藏', etaApprox: '预计到达时间根据一般步行速度估算，未计入台阶、坡道、人流和休息时间。'
+      heading: '正在跟随前进方向', north: '北向上', location: '当前位置', via: '经由', category: '类别', save: '收藏', saved: '已收藏', etaApprox: '预计到达时间根据一般步行速度估算，未计入台阶、坡道、人流和休息时间。'
     },
     ko: {
       search: '장소 검색', all: '전체', sightseeing: '명소', food: '음식', buy: '쇼핑', transport: '교통', toilet: '화장실',
       explore: '후시미 이나리 둘러보기', intro: '장소를 선택하면 참배길을 따라 걷는 경로를 검색합니다.', near: '주변 장소',
-      go: '여기로 안내', google: 'Google 지도', walking: '도보 경로', start: '내비게이션 시작', end: '내비게이션 종료', distance: '거리', arrival: '도착 예정', remaining: '남은 거리',
+      go: '여기로 안내', walking: '도보 경로', start: '내비게이션 시작', end: '내비게이션 종료', distance: '거리', arrival: '도착 예정', remaining: '남은 거리',
       voiceOn: '음성 안내 ON', voiceOff: '음성 안내 OFF', routeLine: '참배길을 따라 계속 이동하세요', turnLeft: '왼쪽으로 회전', turnRight: '오른쪽으로 회전', straight: '계속 직진',
       locationWait: '현재 위치를 확인하고 있습니다…', locationDenied: '현재 위치를 가져올 수 없습니다. 위치 권한을 허용해 주세요.', ready: '지도가 준비되었습니다', loading: '지도와 장소를 불러오는 중…',
-      noRoute: '등록된 참배길 데이터에서 안전하게 연결된 경로를 찾지 못했습니다. Google 지도로 확인할 수 있습니다.',
-      offRoute: '경로를 벗어났습니다. 다시 검색하고 있습니다…', rerouteFailed: '안전한 대체 경로를 찾지 못했습니다. Google 지도로 확인해 주세요.', arrived: '목적지에 도착했습니다',
+      noRoute: '등록된 참배길 데이터에서 안전하게 연결된 경로를 찾지 못했습니다. 출발 위치를 조금 바꾸어 다시 검색해 주세요.',
+      offRoute: '경로를 벗어났습니다. 다시 검색하고 있습니다…', rerouteFailed: '안전한 대체 경로를 찾지 못했습니다. 등록된 참배길에서 다시 검색해 주세요.', arrived: '목적지에 도착했습니다',
       next: '다음 안내', routeNote: '등록된 후시미 이나리 참배길을 우선 안내하며, 등록되지 않은 구간을 임의로 연결하지 않습니다.', distanceUnit: 'm', min: '분', km: 'km',
       permission: '위치 권한을 허용하면 현재 위치에서 내비게이션을 시작할 수 있습니다.', routeUnavailable: '경로를 찾지 못했습니다.', altSenbon: '센본 도리이 경유', altYotsutsuji: '요쓰쓰지 경유', fastest: '참배길 경로',
-      directions: 'Google 지도에서 도보 내비게이션 열기', heading: '이동 방향을 따라가는 중', north: '북쪽을 위로', location: '현재 위치', via: '경유', category: '분류', googleNav: 'Google 지도에서 안내 계속하기', save: '저장', saved: '저장됨', etaApprox: '도착 예정 시간은 일반적인 보행 속도로 계산한 예상치이며 계단, 경사, 혼잡 및 휴식 시간은 반영되지 않습니다.'
+      heading: '이동 방향을 따라가는 중', north: '북쪽을 위로', location: '현재 위치', via: '경유', category: '분류', save: '저장', saved: '저장됨', etaApprox: '도착 예정 시간은 일반적인 보행 속도로 계산한 예상치이며 계단, 경사, 혼잡 및 휴식 시간은 반영되지 않습니다.'
     }
   };
 
@@ -91,8 +91,10 @@
   let lastSpokenStep = -1;
   let navStartedAt = 0;
   let mapLoaded = false;
+  let attributionResizeObserver = null;
+  let attributionMutationObserver = null;
+  let firstMapLoadTimer = 0;
   const markerRecords = new Map();
-  const ROUTING_PROXY_URL = String(window.FUSHIMI_ROUTING_PROXY_URL || '').trim().replace(/\/$/, '');
 
   const t = (key) => LANGS[language][key] || LANGS.ja[key] || key;
   const getLocalized = (value) => {
@@ -322,14 +324,12 @@ const SPOT_TEXT_TRANSLATIONS = {
     $('exploreHeading').textContent = t('explore');
     $('exploreIntro').textContent = t('intro');
     $('routeToSpot').textContent = t('go');
-    $('openGoogleMaps').textContent = t('google');
     $('routeKicker').textContent = t('walking');
     $('startNavigation').textContent = t('start');
     $('stopNavigation').textContent = t('end');
     $('navRemainingLabel').textContent = t('remaining');
     $('navArrivalTimeLabel').textContent = t('arrival');
     $('toggleVoice').textContent = voiceEnabled ? t('voiceOn') : t('voiceOff');
-    $('openGoogleNav').textContent = t('googleNav');
     const labels = {all:'all',sightseeing:'sightseeing',food:'food',buy:'buy',transport:'transport',toilet:'toilet'};
     document.querySelectorAll('[data-label]').forEach(el => { el.textContent = t(labels[el.dataset.label] || el.dataset.label); });
     if (selectedSpot) renderSpotPanel(selectedSpot);
@@ -388,10 +388,6 @@ const SPOT_TEXT_TRANSLATIONS = {
     try { localStorage.setItem(SAVED_SPOTS_STORAGE_KEY, JSON.stringify(Array.from(ids))); } catch (error) { console.warn('[Fushimi MapLibre] Could not save spot:', error); }
     updateSaveSpotButton();
   }
-  function makeGoogleUrl(spot) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${spot.lat},${spot.lng}`)}&travelmode=walking`;
-  }
-
   function showPanel(name) {
     $('explorePanel').hidden = name !== 'explore';
     $('spotPanel').hidden = name !== 'spot';
@@ -399,6 +395,7 @@ const SPOT_TEXT_TRANSLATIONS = {
     $('activeNavigationPanel').hidden = name !== 'nav';
     sheet.classList.remove('is-collapsed');
     $('sheetHandle').setAttribute('aria-expanded','true');
+    positionMapAttribution();
   }
 
   function renderNearbyList() {
@@ -445,7 +442,6 @@ const SPOT_TEXT_TRANSLATIONS = {
     const photo=$('spotPhoto');
     if (spot.image) { photo.src=`images/${String(spot.image).replace(/^\/+/, '')}`; photo.hidden=false; photo.onerror=()=>{photo.hidden=true;}; }
     else photo.hidden=true;
-    $('openGoogleMaps').href=makeGoogleUrl(spot);
     updateSaveSpotButton();
   }
 
@@ -1703,11 +1699,6 @@ const SPOT_TEXT_TRANSLATIONS = {
     routeAnimationFrame=requestAnimationFrame(tick);
   }
 
-  function googleRouteUrl(destination) {
-    const origin=currentLocation?`&origin=${encodeURIComponent(`${currentLocation[0]},${currentLocation[1]}`)}`:'';
-    return `https://www.google.com/maps/dir/?api=1${origin}&destination=${encodeURIComponent(`${destination.lat},${destination.lng}`)}&travelmode=walking`;
-  }
-
   function makeRouteCandidate(label, route, viaLabel='') {
     if (!route || !validatePaths(route.paths)) return null;
     const distance=pathDistance(route.paths);
@@ -1730,17 +1721,6 @@ const SPOT_TEXT_TRANSLATIONS = {
     const pseudo={id:'__current_user__',name:'Current location',lat:startCoords[0],lng:startCoords[1],category:'guide'};
     prepareGraph([pseudo]);
     return findGraphRoute(pseudo.id,destination.id);
-  }
-
-  async function requestORSConnector(start,end) {
-    if (!ROUTING_PROXY_URL) return null;
-    const response=await fetch(`${ROUTING_PROXY_URL}/walking-route`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({start:[start[1],start[0]],end:[end[1],end[0]],language})});
-    if(!response.ok) throw new Error(`Routing service ${response.status}`);
-    const data=await response.json();
-    const feature=data.features?.[0] || data;
-    const coords=feature.geometry?.coordinates;
-    if(!Array.isArray(coords)||coords.length<2) throw new Error('No route geometry');
-    return coords.map(c=>[Number(c[1]),Number(c[0])]).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
   }
 
   async function calculateRoute(destination, startCoords=currentLocation) {
@@ -1769,23 +1749,6 @@ const SPOT_TEXT_TRANSLATIONS = {
       if(candidate && (!directCandidate || candidate.distanceMeters>directCandidate.distanceMeters*1.015) && (!directCandidate || candidate.distanceMeters<directCandidate.distanceMeters*1.65)) candidates.push(candidate);
     }
 
-    if(!candidates.length && ROUTING_PROXY_URL){
-      // Use ORS only as an outside connector to an entrance/station. The mountain route itself
-      // must still come from the project's hand-curated routes.json graph.
-      const accessIds=['9','7','8','15'];
-      const access=accessIds.map(id=>getSpotById(id)).filter(Boolean).filter(s=>findGraphRoute(s.id,destination.id)).sort((a,b)=>haversine(startCoords,[a.lat,a.lng])-haversine(startCoords,[b.lat,b.lng]));
-      for(const node of access.slice(0,3)){
-        try{
-          const connector=await requestORSConnector(startCoords,[node.lat,node.lng]);
-          const local=findGraphRoute(node.id,destination.id);
-          if(!connector||!local) continue;
-          const paths=[connector,...local.paths];
-          const candidate=makeRouteCandidate(t('fastest'),{paths});
-          if(candidate){candidate.source='ors+local';candidates.push(candidate);break;}
-        }catch(error){console.warn('[Fushimi MapLibre] External walking connector unavailable:',error);}
-      }
-    }
-
     if(!candidates.length){
       showError(t('noRoute'));
       $('startNavigation').disabled = true;
@@ -1793,7 +1756,6 @@ const SPOT_TEXT_TRANSLATIONS = {
       $('routeEta').textContent = '--';
       $('routeDistance').textContent = '--';
       $('routeArrival').textContent = '--:--';
-      $('googleDirections').onclick=()=>window.open(googleRouteUrl(destination),'_blank','noopener');
       showPanel('route');
       return;
     }
@@ -1802,7 +1764,6 @@ const SPOT_TEXT_TRANSLATIONS = {
     activeRoute=routeCandidates[0];destinationSpot=destination;
     $('startNavigation').disabled = false;
     renderRouteSummary(activeRoute);drawRoute(activeRoute);showPanel('route');
-    $('googleDirections').onclick=()=>window.open(googleRouteUrl(destination),'_blank','noopener');
   }
 
   function renderRouteSummary(route) {
@@ -1814,9 +1775,8 @@ const SPOT_TEXT_TRANSLATIONS = {
     $('routeDistanceLabel').textContent=t('distance');
     $('routeArrival').textContent=formatTime(new Date(Date.now()+mins*60000));
     $('routeArrivalLabel').textContent=t('arrival');
-    $('routeQualityNote').textContent=route.source==='ors+local' ? `${t('routeNote')} · © OpenStreetMap contributors, openrouteservice / HeiGIT` : t('routeNote');
+    $('routeQualityNote').textContent = t('routeNote');
     $('routeEtaDisclaimer').textContent=t('etaApprox');
-    $('openGoogleNav').href = googleRouteUrl(destinationSpot);
     const host=$('routeOptions');host.innerHTML='';
     routeCandidates.forEach((candidate,index)=>{
       const btn=document.createElement('button');btn.type='button';btn.className=`route-option${candidate===route?' is-active':''}`;btn.textContent=candidate.label;
@@ -2023,22 +1983,176 @@ const SPOT_TEXT_TRANSLATIONS = {
     else showPanel('explore');
   }
 
-  async function initMap() {
-    if(!window.maplibregl){throw new Error('MapLibre GL JS failed to load.');}
-    const key=String(window.FUSHIMI_CARTO_BASEMAP_API_KEY||'').trim();
-    if(!key)throw new Error('CARTO map key is not configured.');
-    const style=`https://basemaps.cartocdn.com/gl/positron-gl-style/style.json?key=${encodeURIComponent(key)}`;
-    map=new maplibregl.Map({container:'smartMap',style,center:[135.7743,34.96705],zoom:16.2,minZoom:13,maxZoom:20,maxBounds:[[135.759,34.9502],[135.809,34.9862]],pitch:0,bearing:0,attributionControl:false,cooperativeGestures:false,dragRotate:true,touchPitch:true,fadeDuration:150});
-    map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'© OpenStreetMap contributors, © CARTO'}),'bottom-right');
-    map.addControl(new maplibregl.ScaleControl({unit:'metric',maxWidth:100}),'bottom-left');
-    map.on('load',()=>{
-      mapLoaded=true;addRouteLayers();applyBasemapLanguage();ensure3DBuildings();renderMarkers();clearError();setStatus(t('ready'));
-      if(currentLocation)updateUserMarker(currentLocation);
-      setTimeout(()=>{if(statusEl.textContent===t('ready'))setStatus('');},3500);
+  const CARTO_ATTRIBUTION_HTML =
+    '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>, ' +
+    '© <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a>';
+
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => window.maplibregl ? resolve() : reject(new Error('MapLibre script loaded but did not initialize.'));
+      script.onerror = () => { script.remove(); reject(new Error('Could not load ' + new URL(src).hostname)); };
+      document.head.appendChild(script);
     });
-    map.on('error',event=>{const message=event?.error?.message||'';console.warn('[Fushimi MapLibre]',message);if(!mapLoaded&&message){setStatus('');showError(`地図データを読み込めませんでした: ${message}`);}});
-    map.on('dragstart',()=>{if(followMode){followMode=false;$('locateMap').classList.remove('is-active');}});
-    map.on('rotate',()=>{ $('compassMap').style.transform=`rotate(${-map.getBearing()}deg)`; if(locationMarker&&Number.isFinite(compassHeading)){const dot=locationMarker.getElement().querySelector('.user-location-marker');if(dot)dot.style.transform=`rotate(${compassHeading-map.getBearing()}deg)`;} });
+  }
+
+  async function ensureMapLibreLoaded() {
+    if (window.maplibregl) return;
+    const cdnUrls = [
+      'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.js',
+      'https://cdn.jsdelivr.net/npm/maplibre-gl@6.18.0/dist/maplibre-gl.js'
+    ];
+    const failures = [];
+    for (const url of cdnUrls) {
+      try {
+        await loadScriptOnce(url);
+        if (window.maplibregl) return;
+      } catch (error) {
+        failures.push(error.message);
+      }
+    }
+    throw new Error('地図ライブラリを読み込めませんでした。通信制限やコンテンツブロッカーを確認してください。');
+  }
+
+  function describeMapError(error) {
+    const status = Number(error?.status || error?.statusCode || 0);
+    const raw = String(error?.message || error || 'Unknown map error');
+    if (status === 401 || status === 403) {
+      return 'CARTOがAPIキーを受け付けていません（HTTP ' + status + '）。js/carto-config.jsのキーと、CARTOダッシュボードの参照元制限に「purozemikyotokankou.github.io」が登録されているか確認してください。キー自体はこの画面に表示しません。';
+    }
+    if (status === 429) {
+      return 'CARTOの利用上限またはリクエスト制限に達した可能性があります（HTTP 429）。CARTOダッシュボードの利用状況を確認してください。';
+    }
+    if (/webgl|context creation|gpu/i.test(raw)) {
+      return 'このブラウザーまたは端末でWebGLを利用できません。ハードウェアアクセラレーションを有効にするか、従来の地図を開いてください。';
+    }
+    if (/failed to fetch|network|load failed|timeout|cors/i.test(raw)) {
+      return '地図タイルへの通信に失敗しました。インターネット接続、広告・通信ブロッカー、学校や公共Wi-Fiの接続制限を確認してください。';
+    }
+    const safe = raw.replace(/([?&]key=)[^&\s]+/gi, '$1[非表示]');
+    return safe.slice(0, 220);
+  }
+
+  function showMapFailure(message) {
+    const panel = $('maplibreMapFailure');
+    const detail = $('maplibreMapFailureText');
+    if (detail) detail.textContent = message || '通信状況を確認して、もう一度お試しください。';
+    if (panel) panel.hidden = false;
+    setStatus('');
+  }
+
+  function positionMapAttribution() {
+    const control = document.querySelector('.maplibregl-ctrl-bottom-right');
+    if (!control || !sheet) return;
+    if (sheet.classList.contains('is-collapsed')) {
+      control.style.bottom = 'calc(136px + env(safe-area-inset-bottom, 0px))';
+    } else {
+      control.style.bottom = `${Math.ceil(sheet.getBoundingClientRect().height + 8)}px`;
+    }
+    if (!attributionResizeObserver && window.ResizeObserver) {
+      attributionResizeObserver = new ResizeObserver(positionMapAttribution);
+      attributionResizeObserver.observe(sheet);
+    }
+    if (!attributionMutationObserver && window.MutationObserver) {
+      attributionMutationObserver = new MutationObserver(positionMapAttribution);
+      attributionMutationObserver.observe(sheet, { attributes: true, attributeFilter: ['class'] });
+    }
+  }
+
+  async function initMap() {
+    await ensureMapLibreLoaded();
+    if (!window.maplibregl) throw new Error('MapLibre GL JS failed to load.');
+    const key = String(window.FUSHIMI_CARTO_BASEMAP_API_KEY || '').trim();
+    if (!key) throw new Error('js/carto-config.jsにCARTO APIキーが設定されていません。');
+
+    // Use the same official CARTO Positron raster endpoint already used by the working Leaflet map.
+    // This avoids depending on the vector-style JSON and its separate tile/glyph/sprite requests.
+    const tileUrl = 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=' + encodeURIComponent(key);
+    const cartoStyle = {
+      version: 8,
+      name: 'CARTO Positron',
+      sources: {
+        'carto-positron': {
+          type: 'raster',
+          tiles: [tileUrl],
+          tileSize: 256,
+          minzoom: 0,
+          maxzoom: 18
+        }
+      },
+      layers: [
+        { id: 'background', type: 'background', paint: { 'background-color': '#f5f6f8' } },
+        { id: 'carto-positron', type: 'raster', source: 'carto-positron', minzoom: 0, maxzoom: 22, paint: { 'raster-opacity': 1 } }
+      ]
+    };
+
+    let cartoTileErrorCount = 0;
+    map = new maplibregl.Map({
+      container: 'smartMap',
+      style: cartoStyle,
+      center: [135.7743, 34.96705],
+      zoom: 16.2,
+      minZoom: 13,
+      maxZoom: 20,
+      maxBounds: [[135.759, 34.9502], [135.809, 34.9862]],
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false,
+      cooperativeGestures: false,
+      dragRotate: true,
+      touchPitch: true,
+      fadeDuration: 150
+    });
+    map.addControl(new maplibregl.AttributionControl({ compact: false, customAttribution: CARTO_ATTRIBUTION_HTML }), 'bottom-right');
+    map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 100 }), 'bottom-left');
+    positionMapAttribution();
+    if (firstMapLoadTimer) clearTimeout(firstMapLoadTimer);
+    firstMapLoadTimer = window.setTimeout(() => {
+      if (!mapLoaded) showMapFailure('地図の初回読み込みが時間内に完了しませんでした。ネットワーク制限を確認して再読み込みしてください。');
+    }, 12000);
+
+    map.on('load', () => {
+      if (firstMapLoadTimer) clearTimeout(firstMapLoadTimer);
+      firstMapLoadTimer = 0;
+      mapLoaded = true;
+      addRouteLayers();
+      applyBasemapLanguage();
+      ensure3DBuildings();
+      renderMarkers();
+      clearError();
+      if (!cartoTileErrorCount) $('maplibreMapFailure').hidden = true;
+      setStatus(t('ready'));
+      if (currentLocation) updateUserMarker(currentLocation);
+      setTimeout(() => { if (statusEl.textContent === t('ready')) setStatus(''); }, 3500);
+    });
+
+    map.on('error', event => {
+      const error = event?.error || event;
+      const status = Number(error?.status || error?.statusCode || 0);
+      const message = String(error?.message || '');
+      const isCartoError = event?.sourceId === 'carto-positron' || /basemaps\.cartocdn\.com/i.test(message) || status === 401 || status === 403 || status === 429;
+      if (!isCartoError) {
+        console.warn('[Fushimi MapLibre]', describeMapError(error));
+        return;
+      }
+      cartoTileErrorCount += 1;
+      console.warn('[Fushimi CARTO tile error]', describeMapError(error));
+      if ([401, 403, 429].includes(status) || cartoTileErrorCount >= 3) {
+        showMapFailure(describeMapError(error));
+      }
+    });
+    map.on('dragstart', () => {
+      if (followMode) { followMode = false; $('locateMap').classList.remove('is-active'); }
+    });
+    map.on('rotate', () => {
+      $('compassMap').style.transform = `rotate(${-map.getBearing()}deg)`;
+      if (locationMarker && Number.isFinite(compassHeading)) {
+        const dot = locationMarker.getElement().querySelector('.user-location-marker');
+        if (dot) dot.style.transform = `rotate(${compassHeading - map.getBearing()}deg)`;
+      }
+    });
   }
 
   function applyBasemapLanguage() {
@@ -2092,13 +2206,25 @@ const SPOT_TEXT_TRANSLATIONS = {
     $('destinationSearch').addEventListener('input',e=>{clearTimeout(searchDebounce);searchDebounce=setTimeout(()=>showSearchResults(e.target.value),120);$('clearSearch').hidden=!e.target.value;} );
     $('destinationSearch').addEventListener('keydown',e=>{if(e.key==='Escape'){$('searchResults').hidden=true;e.target.blur();}if(e.key==='Enter'){const first=$('searchResults').querySelector('button');first?.click();}});
     $('clearSearch').addEventListener('click',()=>{$('destinationSearch').value='';$('searchResults').hidden=true;$('clearSearch').hidden=true;});
-    $('sheetHandle').addEventListener('click',()=>{const collapsed=sheet.classList.toggle('is-collapsed');$('sheetHandle').setAttribute('aria-expanded',String(!collapsed));});
+    $('sheetHandle').addEventListener('click',()=>{const collapsed=sheet.classList.toggle('is-collapsed');$('sheetHandle').setAttribute('aria-expanded',String(!collapsed));positionMapAttribution();});
     $('closeSpotPanel').addEventListener('click',()=>{selectedSpot=null;renderMarkers();showPanel('explore');});
     $('closeRoutePanel').addEventListener('click',()=>{stopRouteAnimation();if(mapLoaded&&map.getSource('active-route'))map.getSource('active-route').setData(coordsToGeoJSON([]));activeRoute=null;routeCandidates=[];showPanel('explore');});
     $('routeToSpot').addEventListener('click',()=>{if(selectedSpot){destinationSpot=selectedSpot;calculateRoute(selectedSpot).catch(e=>showError(e.message||t('routeUnavailable')));}});
     $('saveSpotButton').addEventListener('click',toggleSavedSpot);
     $('startNavigation').addEventListener('click',startNavigation);
-    $('openGoogleNav').href = '#';
+    $('retryMapLoad').addEventListener('click', async () => {
+      $('maplibreMapFailure').hidden = true;
+      setStatus(t('loading'));
+      if (firstMapLoadTimer) clearTimeout(firstMapLoadTimer);
+      firstMapLoadTimer = 0;
+      if (attributionResizeObserver) { attributionResizeObserver.disconnect(); attributionResizeObserver = null; }
+      if (attributionMutationObserver) { attributionMutationObserver.disconnect(); attributionMutationObserver = null; }
+      if (map) { try { map.remove(); } catch (_) {} map = null; }
+      mapLoaded = false;
+      markerRecords.clear();
+      locationMarker = null;
+      try { await initMap(); } catch (error) { console.error('[Fushimi MapLibre] Retry failed:', error); showMapFailure(describeMapError(error)); }
+    });
     $('stopNavigation').addEventListener('click',()=>stopNavigation(true));
     $('toggleVoice').addEventListener('click',()=>{voiceEnabled=!voiceEnabled;$('toggleVoice').textContent=voiceEnabled?t('voiceOn'):t('voiceOff');$('toggleVoice').setAttribute('aria-pressed',String(voiceEnabled));if(!voiceEnabled&&window.speechSynthesis)window.speechSynthesis.cancel();});
     $('locateMap').addEventListener('click',async()=>{try{const compassPermission=requestCompassPermission();await getCurrentPositionOnce();await compassPermission;followMode=true;$('locateMap').classList.add('is-active');focusCamera(currentLocation,true);scheduleCompassCameraUpdate();}catch(e){showError(e.message);}});
@@ -2120,7 +2246,7 @@ const SPOT_TEXT_TRANSLATIONS = {
       prepareGraph();
       renderNearbyList();
       await initMap();
-    }catch(error){console.error('[Fushimi MapLibre] Initialization failed:',error);setStatus('');showError(`${error.message||'Map initialization failed'} — ${t('noRoute')}`);}
+    }catch(error){console.error('[Fushimi MapLibre] Initialization failed:', error);showMapFailure(describeMapError(error));showError(error.message||'Map initialization failed');}
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
