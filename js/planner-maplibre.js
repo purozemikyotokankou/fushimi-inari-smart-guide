@@ -1,4 +1,4 @@
-/* Fushimi Inari Smart Guide — MapLibre navigation (V146) */
+/* Fushimi Inari Smart Guide — MapLibre navigation (V147) */
 (function () {
   'use strict';
 
@@ -109,8 +109,9 @@
     const translated = translateSpotText(raw, language);
     return translated || raw;
   };
-  const setStatus = (message) => { statusEl.textContent = message || ''; };
-  const showError = (message) => { errorEl.textContent = message || ''; errorEl.hidden = !message; };
+  const setStatus = (message) => { if (statusEl) statusEl.textContent = message || ''; };
+  const showError = (message) => { if (!errorEl) return; errorEl.textContent = message || ''; errorEl.hidden = !message; };
+  const setText = (id, value) => { const element = $(id); if (element) element.textContent = value; };
   const clearError = () => showError('');
 
 const SPOT_TEXT_TRANSLATIONS = {
@@ -317,19 +318,25 @@ const SPOT_TEXT_TRANSLATIONS = {
 
   function setLanguage(next) {
     language = LANGS[next] ? next : 'ja';
-    localStorage.setItem('language', language);
-    document.documentElement.lang = language;
-    $('destinationSearch').placeholder = t('search');
-    $('destinationSearch').setAttribute('aria-label', t('search'));
-    $('exploreHeading').textContent = t('explore');
-    $('exploreIntro').textContent = t('intro');
-    $('routeToSpot').textContent = t('go');
-    $('routeKicker').textContent = t('walking');
-    $('startNavigation').textContent = t('start');
-    $('stopNavigation').textContent = t('end');
-    $('navRemainingLabel').textContent = t('remaining');
-    $('navArrivalTimeLabel').textContent = t('arrival');
-    $('toggleVoice').textContent = voiceEnabled ? t('voiceOn') : t('voiceOff');
+    try { localStorage.setItem('language', language); } catch (_) { /* Storage may be disabled; language still works for this page. */ }
+    if (document.documentElement) document.documentElement.lang = language;
+
+    // Text-only labels are optional so a cached/older HTML shell cannot stop the
+    // whole map script just because one paragraph or label is absent.
+    const search = $('destinationSearch');
+    if (search) {
+      search.placeholder = t('search');
+      search.setAttribute('aria-label', t('search'));
+    }
+    setText('exploreHeading', t('explore'));
+    setText('exploreIntro', t('intro'));
+    setText('routeToSpot', t('go'));
+    setText('routeKicker', t('walking'));
+    setText('startNavigation', t('start'));
+    setText('stopNavigation', t('end'));
+    setText('navRemainingLabel', t('remaining'));
+    setText('navArrivalTimeLabel', t('arrival'));
+    setText('toggleVoice', voiceEnabled ? t('voiceOn') : t('voiceOff'));
     const labels = {all:'all',sightseeing:'sightseeing',food:'food',buy:'buy',transport:'transport',toilet:'toilet'};
     document.querySelectorAll('[data-label]').forEach(el => { el.textContent = t(labels[el.dataset.label] || el.dataset.label); });
     if (selectedSpot) renderSpotPanel(selectedSpot);
@@ -2199,6 +2206,32 @@ const SPOT_TEXT_TRANSLATIONS = {
     }
   }
 
+  function validateMapPage() {
+    const requiredIds = [
+      'smartMap', 'maplibreStatus', 'maplibreSheet', 'mapLanguage',
+      'destinationSearch', 'clearSearch', 'searchResults', 'sheetHandle',
+      'nearbySpotList', 'explorePanel', 'spotPanel', 'routePanel',
+      'activeNavigationPanel', 'guidanceCard', 'guidanceKicker',
+      'guidanceInstruction', 'guidanceDistance', 'guidanceRoad',
+      'navRemaining', 'navArrivalTime', 'navRemainingLabel',
+      'navArrivalTimeLabel', 'navStatusText', 'closeSpotPanel',
+      'closeRoutePanel', 'spotPanelName', 'spotPanelDescription',
+      'spotCategoryLabel', 'spotPhoto', 'routeToSpot', 'saveSpotButton',
+      'routeKicker', 'routeDestinationTitle', 'routeOptions', 'routeEta',
+      'routeEtaLabel', 'routeDistance', 'routeDistanceLabel', 'routeArrival',
+      'routeArrivalLabel', 'routeQualityNote', 'routeEtaDisclaimer',
+      'startNavigation', 'stopNavigation', 'toggleVoice', 'locateMap',
+      'compassMap', 'zoomInMap', 'zoomOutMap', 'tiltMap', 'retryMapLoad'
+    ];
+    const missing = requiredIds.filter(id => !$(id));
+    if (!missing.length) return true;
+    const message = `地図画面のHTMLとJavaScriptの版が一致していません。不足している要素: ${missing.join(', ')}。planner-next.html と js/planner-maplibre.js を同じ版のファイルで上書きしてください。`;
+    console.error('[Fushimi MapLibre] Page/script version mismatch:', missing);
+    showMapFailure(message);
+    setStatus(message);
+    return false;
+  }
+
   function bindUI() {
     $('mapLanguage').value=language;
     $('mapLanguage').addEventListener('change',e=>setLanguage(e.target.value));
@@ -2235,6 +2268,7 @@ const SPOT_TEXT_TRANSLATIONS = {
   }
 
   async function boot() {
+    if (!validateMapPage()) return;
     setLanguage(language);bindUI();setStatus(t('loading'));
     try{
       const [spotsResponse,routesResponse]=await Promise.all([fetch('data/spots.json',{cache:'no-cache'}),fetch('data/routes.json',{cache:'no-cache'})]);
