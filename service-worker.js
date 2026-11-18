@@ -1,9 +1,9 @@
-/* Fushimi Inari Smart Guide — offline support (v153 — MapLibre alignment + single planner route) */
+/* Fushimi Inari Smart Guide — offline support (v154 — Plan C MapLibre map + legacy category bar) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v153';
+const CACHE_NAME = 'fushimi-smart-guide-v154';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 153;
+const WORKER_VERSION = 154;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.js',
@@ -135,7 +135,7 @@ async function rewriteNavigationResponse(response, url) {
   headers.delete('content-encoding');
   headers.delete('etag');
   headers.delete('last-modified');
-  headers.set('x-fushimi-page-repair', '153');
+  headers.set('x-fushimi-page-repair', '154');
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,
@@ -159,9 +159,9 @@ async function preloadVideoLast(client) {
 
 const PRELOAD_CORE = [
   './index.html', './home.html', './planner.html', './spots.html',
-  './css/style.css', './css/planner.css',
+  './css/style.css', './css/planner.css', './css/planner-maplibre.css',
   './js/language.js', './js/home-ui.js', './js/home-boot.js',
-  './js/planner.js', './js/planner-weather.js', './js/planner-ambient-light.js',
+  './js/planner.js', './js/planner-maplibre.js', './js/planner-weather.js', './js/planner-ambient-light.js',
   './js/spots.js', './js/carto-config.js', './js/liquid-cursor.js', './js/app-boot.js',
   './service-worker.js',
   'https://unpkg.com/leaflet/dist/leaflet.js',
