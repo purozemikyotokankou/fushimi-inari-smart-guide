@@ -387,7 +387,7 @@ document.addEventListener("DOMContentLoaded", function () {
             zoomSnap: 1,
             zoomDelta: 1
         }).setView(
-            [34.96705, 135.7743],
+            [34.96788994013442, 135.77865108489644],
             17
         );
 
