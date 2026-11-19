@@ -251,5 +251,16 @@
         "time": "-",
         "image": "nezameya.jpg",
         "url": "https://nezameya.com/"
+    },
+    {
+        "id": 26,
+        "name": "加美屋 稲荷店",
+        "category": "買う",
+        "lat": 34.966477122003994,
+        "lng": 135.7710744050855,
+        "description": "京都産あぶらとり紙をはじめ、練り香水やハンドクリームなど、お土産にぴったりな和コスメが揃っています。",
+        "time": "-",
+        "image": "kamiyainariten.jpg",
+        "url": "https://kami-ya.jp/"
     }
 ]
