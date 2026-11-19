@@ -230,5 +230,15 @@
         "description": "伏見稲荷駅すぐの酒類・お土産店。伏見の地酒や京都名産品、乾物などの食品が揃います。",
         "time": "-",
         "image": "daieishoten.jpg"
+    },
+    {
+        "id": 24,
+        "name": "おうすソフトの店 いなりのイーナ",
+        "category": "飲食店",
+        "lat": 34.967336212619685,
+        "lng": 135.77105429977084,
+        "description": "濃厚な抹茶ソフトが人気です",
+        "time": "-",
+        "image": "oususofutonomiseinarinoina.jpg"
     }
 ]
