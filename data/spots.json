@@ -240,5 +240,16 @@
         "description": "濃厚な抹茶ソフトが人気です",
         "time": "-",
         "image": "oususofutonomiseinarinoina.jpg"
+    },
+    {
+        "id": 25,
+        "name": "祢ざめ家",
+        "category": "飲食店",
+        "lat": 34.96785540432588,
+        "lng": 135.77081295528865,
+        "description": "麻の実が入ったプチプチ触感の名物稲荷寿司が有名です",
+        "time": "-",
+        "image": "nezameya.jpg",
+        "url": "https://nezameya.com/"
     }
 ]
