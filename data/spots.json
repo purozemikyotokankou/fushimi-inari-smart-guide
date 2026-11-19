@@ -220,5 +220,15 @@
         "description": "稲荷山の景色を一望できる見晴らしスポットです",
         "time": "-",
         "image": "kojinmineviewingpoint.jpg"
+    },
+    {
+        "id": 23,
+        "name": "大栄商店",
+        "category": "飲食店",
+        "lat": 34.96770969427922,
+        "lng": 135.77087623469953,
+        "description": "伏見の日本酒や京都名産品、乾物などを扱うお土産・酒類販売店です。",
+        "time": "-",
+        "image": "daieishoten.jpg"
     }
 ]
