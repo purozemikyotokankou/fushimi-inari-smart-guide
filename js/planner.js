@@ -215,6 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let markers = [];
     let markerMap = new Map();
+    let spotQuickPalette = null;
 
     let routeLine = null;
     let routeSegments = [];
@@ -5262,129 +5263,288 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ============================================================
-    // マーカー
+    // マーカー / 密集スポット用フローティングパレット
     // ============================================================
 
-    function createMarkers(
-        list
-    ) {
-
-        markers.forEach(
-            function (marker) {
-
-                map.removeLayer(
-                    marker
-                );
+    function getSpotQuickPaletteText(key) {
+        const language = getCurrentLanguage();
+        const messages = {
+            title: {
+                ja: "近くのスポット",
+                en: "Nearby places",
+                zh: "附近地点",
+                ko: "주변 장소"
+            },
+            hint: {
+                ja: "選びたいスポットをタップ",
+                en: "Tap a place to select it",
+                zh: "轻触要选择的地点",
+                ko: "원하는 장소를 탭하세요"
+            },
+            close: {
+                ja: "閉じる",
+                en: "Close",
+                zh: "关闭",
+                ko: "닫기"
             }
-        );
+        };
+        return messages[key]?.[language] || messages[key]?.ja || "";
+    }
+
+    function closeSpotQuickPalette() {
+        if (!spotQuickPalette) return;
+        spotQuickPalette.classList.remove("is-open", "is-below");
+        spotQuickPalette.hidden = true;
+        spotQuickPalette.style.left = "";
+        spotQuickPalette.style.top = "";
+        spotQuickPalette.style.visibility = "";
+        spotQuickPalette.innerHTML = "";
+    }
+
+    function ensureSpotQuickPalette() {
+        if (spotQuickPalette) return spotQuickPalette;
+
+        const mapContainer = map.getContainer();
+        if (!mapContainer) return null;
+
+        const palette = document.createElement("div");
+        palette.className = "spot-quick-palette";
+        palette.id = "spotQuickPalette";
+        palette.hidden = true;
+        palette.setAttribute("role", "dialog");
+        palette.setAttribute("aria-label", getSpotQuickPaletteText("title"));
+
+        palette.addEventListener("click", function (event) {
+            const closeButton = event.target.closest("[data-quick-palette-close]");
+            if (closeButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeSpotQuickPalette();
+                return;
+            }
+
+            const choice = event.target.closest("[data-quick-spot-id]");
+            if (!choice) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const selectedSpot = spots.find(function (item) {
+                return String(item.id) === String(choice.dataset.quickSpotId);
+            });
+            closeSpotQuickPalette();
+            if (selectedSpot) handleSpotMarkerTap(selectedSpot);
+        });
+
+        mapContainer.appendChild(palette);
+        if (window.L?.DomEvent) {
+            L.DomEvent.disableClickPropagation(palette);
+            L.DomEvent.disableScrollPropagation(palette);
+        }
+        spotQuickPalette = palette;
+        return palette;
+    }
+
+    function getNearbyMarkerSpots(anchorSpot, radiusPx = 58) {
+        const anchorMarker = markerMap.get(String(anchorSpot?.id));
+        if (!anchorMarker) return [];
+
+        const anchorPoint = map.latLngToContainerPoint(anchorMarker.getLatLng());
+        const nearby = [];
+        markerMap.forEach(function (marker, id) {
+            const point = map.latLngToContainerPoint(marker.getLatLng());
+            const dx = point.x - anchorPoint.x;
+            const dy = point.y - anchorPoint.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > radiusPx) return;
+
+            const spot = spots.find(function (item) {
+                return String(item.id) === String(id);
+            });
+            if (spot) nearby.push({ spot: spot, distance: distance });
+        });
+
+        nearby.sort(function (a, b) {
+            return a.distance - b.distance;
+        });
+        return nearby.map(function (entry) { return entry.spot; });
+    }
+
+    function openSpotQuickPalette(anchorSpot, nearbySpots) {
+        if (!Array.isArray(nearbySpots) || nearbySpots.length < 2) return false;
+        const palette = ensureSpotQuickPalette();
+        const anchorMarker = markerMap.get(String(anchorSpot?.id));
+        if (!palette || !anchorMarker) return false;
+
+        const title = getSpotQuickPaletteText("title");
+        const hint = getSpotQuickPaletteText("hint");
+        const closeLabel = getSpotQuickPaletteText("close");
+        const listMarkup = nearbySpots.map(function (spot) {
+            const name = getLocalizedValue(spot.name);
+            const category = getSpotDisplayCategoryLabel(spot);
+            return `
+                <button type="button" class="spot-quick-palette-choice" data-quick-spot-id="${escapeHTML(String(spot.id))}" aria-label="${escapeHTML(name)}">
+                    <span class="spot-quick-palette-icon" aria-hidden="true">${getMarkerGlyphMarkup(spot)}</span>
+                    <span class="spot-quick-palette-copy">
+                        <strong>${escapeHTML(name)}</strong>
+                        <small>${escapeHTML(category)}</small>
+                    </span>
+                    <svg class="spot-quick-palette-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5.5 5.5-5.5 5.5"/></svg>
+                </button>
+            `;
+        }).join("");
+
+        palette.innerHTML = `
+            <div class="spot-quick-palette-head">
+                <span class="spot-quick-palette-mark" aria-hidden="true"><span></span></span>
+                <span class="spot-quick-palette-heading">
+                    <strong>${escapeHTML(title)}</strong>
+                    <small>${escapeHTML(hint)}</small>
+                </span>
+                <button type="button" class="spot-quick-palette-close" data-quick-palette-close aria-label="${escapeHTML(closeLabel)}">×</button>
+            </div>
+            <div class="spot-quick-palette-list">${listMarkup}</div>
+        `;
+        palette.setAttribute("aria-label", title);
+        palette.hidden = false;
+        palette.style.visibility = "hidden";
+        palette.classList.remove("is-open", "is-below");
+
+        const mapSize = map.getSize();
+        const anchorPoint = map.latLngToContainerPoint(anchorMarker.getLatLng());
+        const paletteRect = palette.getBoundingClientRect();
+        const paletteWidth = Math.min(paletteRect.width || 286, mapSize.x - 20);
+        const paletteHeight = paletteRect.height || 180;
+        const left = Math.max(paletteWidth / 2 + 10, Math.min(mapSize.x - paletteWidth / 2 - 10, anchorPoint.x));
+        const placeAbove = anchorPoint.y > paletteHeight + 28 || anchorPoint.y > mapSize.y * 0.56;
+        const top = placeAbove
+            ? Math.max(12, anchorPoint.y - 18)
+            : Math.min(mapSize.y - paletteHeight - 12, anchorPoint.y + 18);
+
+        palette.classList.toggle("is-below", !placeAbove);
+        palette.style.left = `${left}px`;
+        palette.style.top = `${Math.max(12, top)}px`;
+        palette.style.visibility = "";
+        window.requestAnimationFrame(function () {
+            if (!palette.hidden) palette.classList.add("is-open");
+        });
+        return true;
+    }
+
+    // A background tap, map movement or zoom dismisses the contextual palette.
+    map.on("click", closeSpotQuickPalette);
+    map.on("movestart zoomstart resize", closeSpotQuickPalette);
+    window.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closeSpotQuickPalette();
+    });
+
+    function handleSpotMarkerTap(spot) {
+        if (!spot) return;
+
+        // When the route planner is open, a pin still chooses the route origin.
+        const plannerState = activeRoutePlannerState;
+        if (plannerState && plannerState.destinationSpot) {
+            if (String(spot.id) === String(plannerState.destinationSpot.id)) {
+                showSpotOnMap(spot);
+                return;
+            }
+            plannerState.originMode = "spot";
+            plannerState.startSpotId = String(spot.id);
+            plannerState.startSpot = spot;
+            createRoute({
+                destinationSpot: plannerState.destinationSpot,
+                originMode: "spot",
+                startSpot: spot,
+                travelMode: plannerState.travelMode || "walking",
+                routeMode: plannerState.routeMode || "shortest",
+                viaSpotIds: Array.isArray(plannerState.viaSpotIds) ? plannerState.viaSpotIds.slice() : []
+            }).catch(function (error) {
+                console.error("地図からの自動ルート作成に失敗しました:", error);
+            });
+            return;
+        }
+
+        const sameId = String(spot.id);
+
+        // 選択済みスポットは、マーカーをもう一度タップすると選択解除できる。
+        if (isSpotSelected(spot)) {
+            // The drawn route must not keep pointing to a waypoint that has just been removed.
+            if (navigationActive) {
+                stopNavigation();
+            } else if (routeLine) {
+                clearRouteVisuals();
+                hideNavCard();
+            }
+            selectedSpots = selectedSpots.filter(function (selected) {
+                return String(selected.id) !== sameId;
+            });
+            saveSelectedIDs();
+            updateSelected();
+            updateInfo();
+            updateCardSelection();
+            updateMarkerSelection(spot.id);
+            updateRoutePreviewState();
+
+            if (String(activeViewedSpotId ?? "") === sameId) {
+                if (currentDetailSpot && String(currentDetailSpot.id) === sameId) {
+                    hideSpotDetail();
+                } else {
+                    activeViewedSpotId = null;
+                    filterSpots();
+                }
+            }
+            return;
+        }
+
+        // Tapping the currently highlighted pin again closes its detail sheet.
+        if (String(activeViewedSpotId ?? "") === sameId) {
+            if (currentDetailSpot && String(currentDetailSpot.id) === sameId) {
+                hideSpotDetail();
+            } else {
+                activeViewedSpotId = null;
+                filterSpots();
+            }
+            return;
+        }
+
+        showSpotOnMap(spot);
+    }
+
+    function createMarkers(list) {
+        closeSpotQuickPalette();
+        markers.forEach(function (marker) {
+            map.removeLayer(marker);
+        });
 
         markers = [];
         markerMap = new Map();
 
-        list.forEach(
-            function (spot) {
+        list.forEach(function (spot) {
+            const isViewing = String(activeViewedSpotId ?? "") === String(spot.id);
+            const marker = L.marker(
+                [Number(spot.lat), Number(spot.lng)],
+                {
+                    icon: createMarkerIcon(spot, isSpotSelected(spot), isViewing),
+                    keyboard: true,
+                    title: getLocalizedValue(spot.name),
+                    zIndexOffset: isViewing ? 12000 : getMarkerZIndexOffset(spot)
+                }
+            );
 
-                const isViewing = String(activeViewedSpotId ?? "") === String(spot.id);
-                const marker =
-                    L.marker(
-                        [
-                            Number(spot.lat),
-                            Number(spot.lng)
-                        ],
-                        {
-                            icon: createMarkerIcon(spot, isSpotSelected(spot), isViewing),
-                            keyboard: true,
-                            title: getLocalizedValue(spot.name),
-                            zIndexOffset: isViewing ? 12000 : getMarkerZIndexOffset(spot)
-                        }
-                    );
+            marker.on("click", function () {
+                // Keep route-planner taps unchanged. The palette is only for normal map browsing.
+                if (!activeRoutePlannerState) {
+                    const nearbySpots = getNearbyMarkerSpots(spot);
+                    if (nearbySpots.length > 1 && openSpotQuickPalette(spot, nearbySpots)) return;
+                }
+                handleSpotMarkerTap(spot);
+            });
 
-                marker.on("click", function () {
-                    // When the route planner is open, a pin still chooses the route origin.
-                    const plannerState = activeRoutePlannerState;
-                    if (plannerState && plannerState.destinationSpot) {
-                        if (String(spot.id) === String(plannerState.destinationSpot.id)) {
-                            showSpotOnMap(spot);
-                            return;
-                        }
-                        plannerState.originMode = "spot";
-                        plannerState.startSpotId = String(spot.id);
-                        plannerState.startSpot = spot;
-                        createRoute({
-                            destinationSpot: plannerState.destinationSpot,
-                            originMode: "spot",
-                            startSpot: spot,
-                            travelMode: plannerState.travelMode || "walking",
-                            routeMode: plannerState.routeMode || "shortest",
-                            viaSpotIds: Array.isArray(plannerState.viaSpotIds) ? plannerState.viaSpotIds.slice() : []
-                        }).catch(function (error) {
-                            console.error("地図からの自動ルート作成に失敗しました:", error);
-                        });
-                        return;
-                    }
+            marker.addTo(map);
+            const markerElement = marker.getElement?.();
+            if (markerElement) markerElement.classList.toggle("planner-marker-viewing", isViewing);
 
-                    const sameId = String(spot.id);
-
-                    // 選択済みスポットは、マーカーをもう一度タップすると選択解除できる。
-                    if (isSpotSelected(spot)) {
-                        // The drawn route must not keep pointing to a waypoint that has just been removed.
-                        if (navigationActive) {
-                            stopNavigation();
-                        } else if (routeLine) {
-                            clearRouteVisuals();
-                            hideNavCard();
-                        }
-                        selectedSpots = selectedSpots.filter(function (selected) {
-                            return String(selected.id) !== sameId;
-                        });
-                        saveSelectedIDs();
-                        updateSelected();
-                        updateInfo();
-                        updateCardSelection();
-                        updateMarkerSelection(spot.id);
-                        updateRoutePreviewState();
-
-                        if (String(activeViewedSpotId ?? "") === sameId) {
-                            if (currentDetailSpot && String(currentDetailSpot.id) === sameId) {
-                                hideSpotDetail();
-                            } else {
-                                activeViewedSpotId = null;
-                                filterSpots();
-                            }
-                        }
-                        return;
-                    }
-
-                    // Tapping the currently highlighted pin again closes its detail sheet.
-                    if (String(activeViewedSpotId ?? "") === sameId) {
-                        if (currentDetailSpot && String(currentDetailSpot.id) === sameId) {
-                            hideSpotDetail();
-                        } else {
-                            activeViewedSpotId = null;
-                            filterSpots();
-                        }
-                        return;
-                    }
-
-                    showSpotOnMap(spot);
-                });
-
-                marker.addTo(map);
-                const markerElement = marker.getElement?.();
-                if (markerElement) markerElement.classList.toggle("planner-marker-viewing", isViewing);
-
-                markers.push(
-                    marker
-                );
-
-                markerMap.set(
-                    String(
-                        spot.id
-                    ),
-                    marker
-                );
-            }
-        );
+            markers.push(marker);
+            markerMap.set(String(spot.id), marker);
+        });
     }
 
     function updateMarkerSelection(
