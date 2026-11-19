@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V158-ROUTE-MODES-GRAPH";
-    console.log("[Fushimi Inari Smart Guide] planner.js V158-ROUTE-MODES-GRAPH loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V159-INITIAL-MAP-ZOOM";
+    console.log("[Fushimi Inari Smart Guide] planner.js V159-INITIAL-MAP-ZOOM loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", function () {
             zoomDelta: 1
         }).setView(
             [34.96705, 135.7743],
-            16
+            17
         );
 
 
