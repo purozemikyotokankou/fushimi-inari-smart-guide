@@ -376,26 +376,104 @@
         }
 
         .category-pills {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .category-group-pill {
+            min-width: 0;
+            min-height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(0,0,0,.075);
+            border-radius: 16px;
+            background: rgba(255,255,255,.72);
+            color: #343438;
+            cursor: pointer;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 850;
+            transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+        }
+
+        .category-group-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 7px 18px rgba(0,0,0,.06);
+        }
+
+        .category-group-pill.active {
+            border-color: rgba(35,35,40,.30);
+            box-shadow: 0 0 0 2px rgba(35,35,40,.045);
+            background: rgba(255,255,255,.94);
+        }
+
+        .category-group-pill img {
+            width: 29px;
+            height: 29px;
+            flex: 0 0 29px;
+            object-fit: contain;
+        }
+
+        .category-sub-pills {
             display: flex;
             flex-wrap: wrap;
             gap: 7px;
+            margin-top: 2px;
         }
 
-        .category-pill {
-            border: 1px solid rgba(0,0,0,.06);
+        .category-sub-pills[hidden] {
+            display: none;
+        }
+
+        .category-sub-pill {
+            border: 1px solid rgba(0,0,0,.085);
             border-radius: 999px;
-            padding: 8px 11px;
-            background: rgba(255,255,255,.58);
-            color: #5e5e63;
+            padding: 8px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,.62);
+            color: #55555a;
             cursor: pointer;
             font-size: 11px;
             font-weight: 800;
         }
 
-        .category-pill.active {
-            border-color: rgba(255,75,0,.25);
-            background: rgba(255,75,0,.09);
-            color: var(--accent-dark);
+        .category-sub-pill img {
+            width: 19px;
+            height: 19px;
+            object-fit: contain;
+        }
+
+        .category-sub-pill.active {
+            border-color: rgba(0,0,0,.30);
+            background: #fff;
+            color: #202024;
+            box-shadow: 0 2px 8px rgba(0,0,0,.055);
+        }
+
+        .category-hint {
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: rgba(0,0,0,.035);
+        }
+
+        @media (max-width: 420px) {
+            .category-group-pill {
+                min-height: 54px;
+                padding: 9px;
+                gap: 7px;
+                font-size: 11px;
+            }
+            .category-group-pill img {
+                width: 25px;
+                height: 25px;
+                flex-basis: 25px;
+            }
         }
 
         .image-field {
@@ -869,10 +947,6 @@
             }
         }
     
-        .category-select {
-            margin-top: 10px;
-        }
-
         .json-drop-zone {
             margin: 0 20px 18px;
             min-height: 116px;
@@ -1077,7 +1151,8 @@
 
                         <div
                             id="categoryPills"
-                            class="category-pills"
+                            class="category-pills category-group-pills"
+                            aria-label="大カテゴリー"
                         ></div>
 
                         <input
@@ -1086,25 +1161,18 @@
                             value="景観"
                         >
 
-                        <select
-                            id="categorySelect"
-                            class="input category-select"
-                            aria-label="カテゴリーを変更"
-                        >
-                            <option value="景観">景観</option>
-                            <option value="神社">神社</option>
-                            <option value="登山">登山</option>
-                            <option value="飲食店">飲食店</option>
-                            <option value="交通">交通</option>
-                            <option value="トイレ">トイレ</option>
-                            <option value="案内">案内</option>
-                        </select>
+                        <div
+                            id="categorySubPills"
+                            class="category-sub-pills"
+                            aria-label="カテゴリーの詳細"
+                        ></div>
 
                         <div
                             id="categoryHint"
-                            class="field-note"
+                            class="field-note category-hint"
+                            aria-live="polite"
                         >
-                            景色・景観・展望 → viewpoint
+                            見どころ ＞ 景色・展望
                         </div>
                     </div>
 
@@ -1516,43 +1584,48 @@
             const DEFAULT_CENTER = [34.96705, 135.7743];
             const DEFAULT_ZOOM = 16;
 
-            const categoryDefs = [
+            // Keep the manager's category structure aligned with planner.html.
+            // Leaf values are saved to spots.json; the group labels are only UI.
+            const categoryGroups = [
                 {
-                    key: "景観",
-                    label: "景観",
-                    icon: "viewpoint"
+                    key: "sightseeing",
+                    label: "見どころ",
+                    icon: "category-sightseeing.svg",
+                    items: [
+                        { key: "景観", label: "景色・展望" },
+                        { key: "神社", label: "神社" },
+                        { key: "登山", label: "登山" }
+                    ]
                 },
                 {
-                    key: "神社",
-                    label: "神社",
-                    icon: "shrine"
+                    key: "food-shop",
+                    label: "食べる・買う",
+                    icon: "category-food-shop.svg",
+                    items: [
+                        { key: "飲食店", label: "食べる", icon: "category-food.svg" },
+                        { key: "買う", label: "買う", icon: "category-buy.svg" }
+                    ]
                 },
                 {
-                    key: "登山",
-                    label: "登山",
-                    icon: "hiking"
-                },
-                {
-                    key: "飲食店",
-                    label: "グルメ",
-                    icon: "restaurant"
-                },
-                {
-                    key: "交通",
+                    key: "transport",
                     label: "交通",
-                    icon: "station-jr"
+                    icon: "category-transport.svg",
+                    items: [
+                        { key: "交通", label: "交通" }
+                    ]
                 },
                 {
-                    key: "トイレ",
-                    label: "トイレ",
-                    icon: "toilet"
-                },
-                {
-                    key: "案内",
-                    label: "案内",
-                    icon: "guide"
+                    key: "facilities",
+                    label: "施設",
+                    icon: "category-facilities.svg",
+                    items: [
+                        { key: "トイレ", label: "トイレ" },
+                        { key: "案内", label: "案内" }
+                    ]
                 }
             ];
+
+            const BUY_SPOT_PATTERN = /お土産|土産|土みやげ|売店|物販|商店|雑貨|本舗|honpo|専門店|ショップ|買い物|購入|販売|グッズ|みやげ|souvenir|shopping|gift\s*shop|retail|store|shop|merchandise/i;
 
             const $ = id =>
                 document.getElementById(id);
@@ -1574,10 +1647,10 @@
                     $("spotName"),
                 spotCategory:
                     $("spotCategory"),
-                categorySelect:
-                    $("categorySelect"),
                 categoryPills:
                     $("categoryPills"),
+                categorySubPills:
+                    $("categorySubPills"),
                 categoryHint:
                     $("categoryHint"),
 
@@ -1749,131 +1822,123 @@
             }
 
             function normalizeCategory(value) {
-                const raw =
-                    String(value ?? "")
-                        .trim();
+                const raw = String(value ?? "").trim();
+                const lower = raw.toLowerCase();
+                const aliases = {
+                    "景色": "景観", "展望": "景観", "scenery": "景観", "viewpoint": "景観",
+                    "shrine": "神社",
+                    "ハイキング": "登山", "hiking": "登山",
+                    "グルメ": "飲食店", "restaurant": "飲食店", "restaurants": "飲食店",
+                    "buy": "買う", "shop": "買う", "shopping": "買う", "store": "買う",
+                    "souvenir": "買う", "gift": "買う", "retail": "買う",
+                    "transport": "交通",
+                    "toilet": "トイレ",
+                    "guide": "案内"
+                };
+                return aliases[lower] || raw || "案内";
+            }
 
-                if (
-                    ["景色","景観","展望"]
-                        .includes(raw)
-                ) {
-                    return "景観";
-                }
-
-                if (
-                    ["グルメ","飲食店"]
-                        .includes(raw)
-                ) {
-                    return "飲食店";
-                }
-
-                if (
-                    ["登山","ハイキング"]
-                        .includes(raw)
-                ) {
-                    return "登山";
-                }
-
-                return raw || "案内";
+            function categoryGroupFor(value) {
+                const normalized = normalizeCategory(value);
+                return categoryGroups.find(group =>
+                    group.items.some(item => item.key === normalized)
+                ) || categoryGroups[categoryGroups.length - 1];
             }
 
             function categoryInfo(value) {
-                const normalized =
-                    normalizeCategory(value);
+                const normalized = normalizeCategory(value);
+                const group = categoryGroupFor(normalized);
+                return group.items.find(item => item.key === normalized) || {
+                    key: normalized,
+                    label: normalized || "施設"
+                };
+            }
 
-                return (
-                    categoryDefs.find(
-                        item =>
-                            item.key ===
-                            normalized
-                    ) ||
-                    categoryDefs[
-                        categoryDefs.length - 1
-                    ]
-                );
+            function renderCategorySubPills(group, selectedCategory) {
+                const items = [...group.items];
+                if (!items.some(item => item.key === selectedCategory)) {
+                    // Preserve any older/unclassified value instead of silently rewriting it.
+                    items.push({ key: selectedCategory, label: selectedCategory });
+                }
+
+                if (items.length <= 1 && items[0]?.key === selectedCategory) {
+                    els.categorySubPills.innerHTML = "";
+                    els.categorySubPills.hidden = true;
+                    return;
+                }
+
+                els.categorySubPills.hidden = false;
+                els.categorySubPills.innerHTML = "";
+
+                items.forEach(item => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "category-sub-pill";
+                    button.innerHTML = `${item.icon ? `<img src="./images/icons/${item.icon}" alt="" aria-hidden="true">` : ""}<span>${escapeHTML(item.label)}</span>`;
+                    button.dataset.category = item.key;
+                    button.classList.toggle("active", item.key === selectedCategory);
+                    button.setAttribute("aria-pressed", item.key === selectedCategory ? "true" : "false");
+                    button.addEventListener("click", () => setCategory(item.key));
+                    els.categorySubPills.appendChild(button);
+                });
             }
 
             function makeCategoryPills() {
-                els.categoryPills.innerHTML =
-                    "";
+                els.categoryPills.innerHTML = "";
 
-                categoryDefs.forEach(
-                    category => {
-                        const button =
-                            document.createElement(
-                                "button"
-                            );
+                categoryGroups.forEach(group => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "category-group-pill";
+                    button.dataset.group = group.key;
+                    button.innerHTML = `
+                        <img src="./images/icons/${group.icon}" alt="" aria-hidden="true">
+                        <span>${escapeHTML(group.label)}</span>
+                    `;
+                    button.addEventListener("click", () => {
+                        const current = normalizeCategory(els.spotCategory.value);
+                        const preferred = group.items.some(item => item.key === current)
+                            ? current
+                            : group.items[0].key;
+                        setCategory(preferred);
+                    });
+                    els.categoryPills.appendChild(button);
+                });
 
-                        button.type =
-                            "button";
-
-                        button.className =
-                            "category-pill";
-
-                        button.textContent =
-                            category.label;
-
-                        button.dataset.category =
-                            category.key;
-
-                        button.addEventListener(
-                            "click",
-                            () => {
-                                setCategory(
-                                    category.key
-                                );
-                            }
-                        );
-
-                        els.categoryPills.appendChild(
-                            button
-                        );
-                    }
-                );
-
-                setCategory(
-                    els.spotCategory.value ||
-                    "景観"
-                );
+                setCategory(els.spotCategory.value || "景観");
             }
 
-            function setCategory(
-                category
-            ) {
-                const normalized =
-                    normalizeCategory(
-                        category
-                    );
+            function setCategory(category) {
+                const normalized = normalizeCategory(category);
+                const group = categoryGroupFor(normalized);
+                const info = categoryInfo(normalized);
 
-                els.spotCategory.value =
-                    normalized;
+                els.spotCategory.value = normalized;
 
-                if (els.categorySelect) {
-                    els.categorySelect.value =
-                        normalized;
+                els.categoryPills.querySelectorAll(".category-group-pill").forEach(button => {
+                    const active = button.dataset.group === group.key;
+                    button.classList.toggle("active", active);
+                    button.setAttribute("aria-pressed", active ? "true" : "false");
+                });
+
+                renderCategorySubPills(group, normalized);
+                els.categoryHint.textContent = `${group.label} ＞ ${info.label}（spots.jsonには「${normalized}」として保存）`;
+            }
+
+            function categoryForEditing(spot) {
+                const current = normalizeCategory(spot?.category);
+                const classificationText = [spot?.name, spot?.description, spot?.tags, spot?.keywords]
+                    .map(value => typeof value === "object" && value !== null
+                        ? Object.values(value).join(" ")
+                        : String(value ?? ""))
+                    .join(" ");
+
+                // The current planner classifies souvenir shops by their text even
+                // when old spots.json data still says 飲食店 (e.g. ちいかわ本舗).
+                if (current === "飲食店" && BUY_SPOT_PATTERN.test(classificationText)) {
+                    return "買う";
                 }
-
-                els.categoryPills
-                    .querySelectorAll(
-                        ".category-pill"
-                    )
-                    .forEach(
-                        button => {
-                            button.classList.toggle(
-                                "active",
-                                button.dataset.category ===
-                                    normalized
-                            );
-                        }
-                    );
-
-                const info =
-                    categoryInfo(
-                        normalized
-                    );
-
-                els.categoryHint.textContent =
-                    `${info.label} → ${info.icon}`;
+                return current;
             }
 
             function safeURL(value) {
@@ -2303,7 +2368,7 @@
                                         ・
                                         ${escapeHTML(
                                             categoryInfo(
-                                                spot.category
+                                                categoryForEditing(spot)
                                             ).label
                                         )}
                                     </div>
@@ -2556,7 +2621,7 @@
                                         >
                                             ${escapeHTML(
                                                 categoryInfo(
-                                                    spot.category
+                                                    categoryForEditing(spot)
                                                 ).label
                                             )}
                                         </span>
@@ -2766,7 +2831,7 @@
                     spot.name;
 
                 setCategory(
-                    spot.category
+                    categoryForEditing(spot)
                 );
 
                 els.spotLat.value =
@@ -3548,15 +3613,6 @@
                     jsonText()
                 );
             }
-
-            els.categorySelect.addEventListener(
-                "change",
-                () => {
-                    setCategory(
-                        els.categorySelect.value
-                    );
-                }
-            );
 
             els.copyJsonBtn.addEventListener(
                 "click",
