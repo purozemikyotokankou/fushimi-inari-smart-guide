@@ -204,11 +204,21 @@
         "id": 21,
         "name": "荒木神社",
         "category": "神社",
-        "lat": 34.969713179071846,
-        "lng": 135.77582895445488,
+        "lat": 34.96971318,
+        "lng": 135.77582895,
         "description": "縁結びや恋愛成就のほか、仕事や人間関係など、さまざまな良いご縁を願う人々が訪れる神社です。",
         "time": "-",
-        "image": "arakijinja",
+        "image": "arakijinja.jpg",
         "url": "https://arakijinja.jp/"
+    },
+    {
+        "id": 22,
+        "name": "荒神峰見晴台",
+        "category": "神社",
+        "lat": 34.97000077,
+        "lng": 135.78135032,
+        "description": "稲荷山の景色を一望できる見晴らしスポットです",
+        "time": "-",
+        "image": "kojinmineviewingpoint.jpg"
     }
 ]
