@@ -6397,22 +6397,8 @@ body.planner-page .liquid-cursor {
 }
 
 
-/* V122 — steady luminous route: an orange body with a soft static halo/core. */
-.leaflet-plannerRoutePane .planner-route-halo-line,
-.planner-route-halo-line {
-  stroke: #FFB84D !important;
-  stroke-width: 15px !important;
-  stroke-opacity: .22 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-  filter: drop-shadow(0 0 4px rgba(255, 153, 0, .72))
-          drop-shadow(0 0 8px rgba(255, 184, 77, .42)) !important;
-  animation: none !important;
-  transition: none !important;
-  stroke-dasharray: none !important;
-  pointer-events: none !important;
-  vector-effect: non-scaling-stroke;
-}
+/* V158 — low-cost route renderer: stable orange base + one moving white beam.
+   V126 visual identity is retained without the redundant halo/core SVG layers. */
 .leaflet-plannerRoutePane .planner-route-base-line,
 .planner-route-base-line {
   stroke: #FF9900 !important;
@@ -6420,33 +6406,13 @@ body.planner-page .liquid-cursor {
   stroke-opacity: 1 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .92))
-          drop-shadow(0 0 3px rgba(255, 153, 0, .92))
-          drop-shadow(0 0 6px rgba(255, 153, 0, .48)) !important;
+  filter: none !important;
   animation: none !important;
   transition: none !important;
   stroke-dasharray: none !important;
   pointer-events: none !important;
   vector-effect: non-scaling-stroke;
 }
-.leaflet-plannerRoutePane .planner-route-core-line,
-.planner-route-core-line {
-  stroke: #FFF1D6 !important;
-  stroke-width: 1.6px !important;
-  stroke-opacity: .62 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, .86)) !important;
-  animation: none !important;
-  transition: none !important;
-  stroke-dasharray: none !important;
-  pointer-events: none !important;
-  vector-effect: non-scaling-stroke;
-}
-
-
-/* V126 — a short white beam travels along the steady orange route.
-   The orange route remains visible underneath; only this compact beam moves. */
 .leaflet-plannerRoutePane .planner-route-tone-wave-line,
 .planner-route-tone-wave-line {
   stroke: #FFFFFF !important;
@@ -6454,20 +6420,16 @@ body.planner-page .liquid-cursor {
   stroke-opacity: .98 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  /* Short beam: about one tenth of each normalized route path. */
   stroke-dasharray: 105 895 !important;
   stroke-dashoffset: 0;
-  filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, .98))
-          drop-shadow(0 0 4px rgba(255, 255, 255, .82))
-          drop-shadow(0 0 8px rgba(255, 153, 0, .72)) !important;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, .62)) !important;
   animation: fushimi-route-white-beam 3.2s linear infinite !important;
+  transition: none !important;
   pointer-events: none !important;
   vector-effect: non-scaling-stroke;
-  will-change: stroke-dashoffset;
 }
 @keyframes fushimi-route-white-beam {
-  0%   { stroke-dashoffset: 0; }
-  88%  { stroke-dashoffset: -1000; }
+  0% { stroke-dashoffset: 0; }
   100% { stroke-dashoffset: -1000; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -6476,29 +6438,107 @@ body.planner-page .liquid-cursor {
   }
 }
 
-
-/* V135 — animate one beam over the complete ordered journey, not per fragment. */
-.leaflet-plannerRoutePane .planner-route-tone-wave-line,
-.planner-route-tone-wave-line {
-  stroke: #FFFFFF !important;
-  stroke-width: 4.2px !important;
-  stroke-opacity: .98 !important;
-  stroke-linecap: round !important;
-  stroke-linejoin: round !important;
-  stroke-dasharray: 105 895 !important;
-  /* Keep the initial offset as a normal declaration so the keyframe can move it. */
-  stroke-dashoffset: 0;
-  filter: drop-shadow(0 0 1.5px rgba(255,255,255,.98))
-          drop-shadow(0 0 4px rgba(255,255,255,.82))
-          drop-shadow(0 0 8px rgba(255,153,0,.72)) !important;
-  animation: fushimi-route-white-beam 3.2s linear infinite !important;
-  transition: none !important;
-  pointer-events: none !important;
-  vector-effect: non-scaling-stroke;
-  will-change: stroke-dashoffset;
+/* V158 — selectable route strategies and ordered intermediate stops. */
+.map-route-choice-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 2px;
 }
-@keyframes fushimi-route-white-beam {
-  0% { stroke-dashoffset: 0; }
-  88% { stroke-dashoffset: -1000; }
-  100% { stroke-dashoffset: -1000; }
+.map-route-choice-section h3 {
+  margin: 0 !important;
+  color: #353b40 !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  font-weight: 900 !important;
+}
+.map-route-choice-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.map-route-choice-option {
+  display: flex;
+  min-width: 0;
+  min-height: 52px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border: 1px solid rgba(127, 135, 143, .25);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .52);
+  color: #343a40;
+  font-size: 10px;
+  line-height: 1.25;
+  font-weight: 850;
+  text-align: center;
+}
+.map-route-choice-option > span:first-child {
+  font-size: 17px;
+  line-height: 1;
+}
+.map-route-choice-option.is-active {
+  border-color: rgba(217, 74, 67, .48);
+  background: rgba(255, 235, 231, .85);
+  color: #8f1f26;
+  box-shadow: inset 0 0 0 1px rgba(217, 74, 67, .09);
+}
+.map-route-choice-note {
+  margin: 0 !important;
+  color: #626970 !important;
+  font-size: 10px !important;
+  line-height: 1.5 !important;
+}
+.map-route-via-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.map-route-via-picker[hidden] {
+  display: none !important;
+}
+.map-route-via-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  max-height: 150px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+}
+.map-route-via-choice {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 6px;
+  border: 1px solid rgba(127, 135, 143, .20);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .56);
+  color: #343a40;
+  font-size: 10px;
+  line-height: 1.3;
+}
+.map-route-via-choice input {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #d94a43;
+}
+.map-route-via-choice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.map-route-via-order {
+  margin: 0 !important;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .58);
+  color: #50575e !important;
+  font-size: 10px !important;
+  line-height: 1.5 !important;
+  overflow-wrap: anywhere;
 }

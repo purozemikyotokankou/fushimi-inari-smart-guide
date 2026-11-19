@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V138-MODULAR-STARTUP";
-    console.log("[Fushimi Inari Smart Guide] planner.js V138-MODULAR-STARTUP loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V158-ROUTE-MODES-GRAPH";
+    console.log("[Fushimi Inari Smart Guide] planner.js V158-ROUTE-MODES-GRAPH loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -4648,6 +4648,11 @@ document.addEventListener("DOMContentLoaded", function () {
     // a left-side glass panel; on small screens it stays a bottom sheet over the map.
     function renderRoutePlanner(state) {
         if (!state || !mapSpotDetail || !mapSpotDetailContent) return;
+        // Keep the old default behavior (shortest path), while allowing the user
+        // to choose a sightseeing itinerary or ordered intermediate stops.
+        if (!["shortest", "recommended", "via"].includes(state.routeMode)) state.routeMode = "shortest";
+        if (!Array.isArray(state.viaSpotIds)) state.viaSpotIds = [];
+        state.viaSpotIds = state.viaSpotIds.map(String).filter((id, index, all) => all.indexOf(id) === index);
         // Route planning should not leave the spot/category drawer expanded behind the panel.
         setFoodCategorySwitcherOpen(false);
         setPlannerSheetState("collapsed");
@@ -4682,7 +4687,16 @@ document.addEventListener("DOMContentLoaded", function () {
             locationPending: {ja:"ルート検索時に位置情報を確認します。", en:"Location will be requested when you search.", zh:"搜索路线时将请求位置权限。", ko:"경로 검색 시 위치 정보를 확인합니다."},
             locationSuccess: {ja:"現在地を取得しました", en:"Location acquired", zh:"已获取当前位置", ko:"현재 위치를 가져왔습니다"},
             locationError: {ja:"現在地を取得できません。ブラウザの位置情報許可を確認してください。", en:"Could not get location. Check your browser's location permission.", zh:"无法获取当前位置，请检查浏览器位置权限。", ko:"현재 위치를 가져올 수 없습니다. 브라우저 위치 권한을 확인해 주세요."},
-            swapHint: {ja:"入れ替えはスポットを出発地に選ぶと利用できます", en:"Choose a spot as the start to swap endpoints", zh:"选择地点作为出发地后即可交换", ko:"장소를 출발지로 선택하면 바꿀 수 있습니다"}
+            swapHint: {ja:"入れ替えはスポットを出発地に選ぶと利用できます", en:"Choose a spot as the start to swap endpoints", zh:"选择地点作为出发地后即可交换", ko:"장소를 출발지로 선택하면 바꿀 수 있습니다"},
+            routeChoice: {ja:"ルートの選び方", en:"Route style", zh:"路线类型", ko:"경로 유형"},
+            recommended: {ja:"観光おすすめ", en:"Sightseeing", zh:"观光推荐", ko:"관광 추천"},
+            shortest: {ja:"最短ルート", en:"Shortest", zh:"最短路线", ko:"최단 경로"},
+            via: {ja:"経由地を選択", en:"Choose stops", zh:"选择途经点", ko:"경유지 선택"},
+            recommendedNote: {ja:"伏見稲荷入口・千本鳥居・奥社奉拝所・四ツ辻を、つながる参道に合わせて巡ります。", en:"Visit the entrance, Senbon Torii, Okusha, and Yotsutsuji using connected paths.", zh:"根据参道连接情况，游览伏见稻荷入口、千本鸟居、奥社奉拜所和四辻。", ko:"연결된 참도를 따라 입구·센본도리이·오쿠샤·요쓰쓰지를 둘러봅니다."},
+            shortestNote: {ja:"登録済みの参道データを使い、歩く距離が短い経路を探します。", en:"Find the shortest walk using the registered path network.", zh:"使用已登记的参道数据，寻找步行距离较短的路线。", ko:"등록된 참도 데이터를 사용해 도보 거리가 짧은 경로를 찾습니다."},
+            viaNote: {ja:"チェックしたスポットを、選んだ順番に通過します。", en:"Visit checked spots in the order you select them.", zh:"按选择顺序经过勾选的地点。", ko:"선택한 순서대로 체크한 장소를 경유합니다."},
+            viaOrder: {ja:"経由する順番", en:"Stop order", zh:"途经顺序", ko:"경유 순서"},
+            viaNone: {ja:"経由地はまだ選択されていません。", en:"No intermediate stops selected.", zh:"尚未选择途经点。", ko:"경유지를 아직 선택하지 않았습니다."}
         };
         const text = key => t[key]?.[language] || t[key]?.ja || key;
         const startSpot = state.originMode === "spot" ? spots.find(item => String(item.id) === String(state.startSpotId || "")) : null;
@@ -4692,6 +4706,14 @@ document.addEventListener("DOMContentLoaded", function () {
             const selected = id === String(state.startSpotId || "") ? " selected" : "";
             return `<option value="${escapeHTML(id)}"${selected}>${escapeHTML(getLocalizedValue(item.name))}</option>`;
         }).join("");
+        const viaOptions = spots
+            .filter(item => String(item.id) !== String(destination?.id) &&
+                !(state.originMode === "spot" && String(item.id) === String(state.startSpotId || "")))
+            .map(item => {
+                const id = String(item.id);
+                const checked = state.viaSpotIds.includes(id) ? " checked" : "";
+                return `<label class="map-route-via-choice"><input type="checkbox" data-via-spot="${escapeHTML(id)}"${checked}><span>${escapeHTML(getLocalizedValue(item.name))}</span></label>`;
+            }).join("");
         const locationStatus = state.locationStatus || text("locationPending");
         const swapDisabled = !(state.originMode === "spot" && startSpot);
 
@@ -4735,6 +4757,19 @@ document.addEventListener("DOMContentLoaded", function () {
               </label>
               <p class="map-route-location-status" role="status">${escapeHTML(locationStatus)}</p>
             </section>
+            <section class="map-route-choice-section" aria-label="${escapeHTML(text("routeChoice"))}">
+              <h3>${escapeHTML(text("routeChoice"))}</h3>
+              <div class="map-route-choice-options" role="group" aria-label="${escapeHTML(text("routeChoice"))}">
+                <button type="button" class="map-route-choice-option${state.routeMode === "recommended" ? " is-active" : ""}" data-route-mode="recommended" aria-pressed="${state.routeMode === "recommended"}"><span aria-hidden="true">⛩</span><span>${escapeHTML(text("recommended"))}</span></button>
+                <button type="button" class="map-route-choice-option${state.routeMode === "shortest" ? " is-active" : ""}" data-route-mode="shortest" aria-pressed="${state.routeMode === "shortest"}"><span aria-hidden="true">↗</span><span>${escapeHTML(text("shortest"))}</span></button>
+                <button type="button" class="map-route-choice-option${state.routeMode === "via" ? " is-active" : ""}" data-route-mode="via" aria-pressed="${state.routeMode === "via"}"><span aria-hidden="true">◎</span><span>${escapeHTML(text("via"))}</span></button>
+              </div>
+              <p class="map-route-choice-note" data-route-mode-note>${escapeHTML(text(state.routeMode === "recommended" ? "recommendedNote" : state.routeMode === "via" ? "viaNote" : "shortestNote"))}</p>
+              <div class="map-route-via-picker" ${state.routeMode === "via" ? "" : "hidden"}>
+                <div class="map-route-via-list">${viaOptions}</div>
+                <p class="map-route-via-order" data-via-order role="status" aria-live="polite"></p>
+              </div>
+            </section>
             <section class="map-route-mode-section">
               <h3>${escapeHTML(text("method"))}</h3>
               <div class="map-route-mode-options">
@@ -4761,6 +4796,46 @@ document.addEventListener("DOMContentLoaded", function () {
         const errorNode = mapSpotDetailContent.querySelector(".map-route-builder-error");
         const submitButton = mapSpotDetailContent.querySelector(".map-route-builder-submit");
         const cancelButton = mapSpotDetailContent.querySelector(".map-route-builder-cancel");
+        const routeModeButtons = Array.from(mapSpotDetailContent.querySelectorAll("[data-route-mode]"));
+        const routeModeNote = mapSpotDetailContent.querySelector("[data-route-mode-note]");
+        const viaPicker = mapSpotDetailContent.querySelector(".map-route-via-picker");
+        const viaOrder = mapSpotDetailContent.querySelector("[data-via-order]");
+        const viaLabels = {
+            shortest: text("shortestNote"),
+            recommended: text("recommendedNote"),
+            via: text("viaNote")
+        };
+        function refreshViaOrder() {
+            if (!viaOrder) return;
+            const names = state.viaSpotIds.map(findSpotById).filter(Boolean).map(getLocalizedValue);
+            viaOrder.textContent = names.length
+                ? `${text("viaOrder")}: ${names.map((name, index) => `${index + 1}. ${name}`).join(" → ")}`
+                : text("viaNone");
+        }
+        refreshViaOrder();
+        routeModeButtons.forEach(button => button.addEventListener("click", function () {
+            state.routeMode = ["shortest", "recommended", "via"].includes(button.dataset.routeMode)
+                ? button.dataset.routeMode : "shortest";
+            routeModeButtons.forEach(option => {
+                const active = option.dataset.routeMode === state.routeMode;
+                option.classList.toggle("is-active", active);
+                option.setAttribute("aria-pressed", active ? "true" : "false");
+            });
+            if (routeModeNote) routeModeNote.textContent = viaLabels[state.routeMode];
+            if (viaPicker) viaPicker.hidden = state.routeMode !== "via";
+        }));
+        mapSpotDetailContent.querySelectorAll("[data-via-spot]").forEach(input => {
+            input.addEventListener("change", function () {
+                const id = String(input.dataset.viaSpot || "");
+                if (!id) return;
+                if (input.checked) {
+                    if (!state.viaSpotIds.includes(id)) state.viaSpotIds.push(id);
+                } else {
+                    state.viaSpotIds = state.viaSpotIds.filter(value => value !== id);
+                }
+                refreshViaOrder();
+            });
+        });
 
         backButton?.addEventListener("click", function () {
             activeRoutePlannerState = null;
@@ -4784,17 +4859,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             const small = mapSpotDetailContent.querySelector(".map-route-endpoint-start .map-route-endpoint-copy small");
             if (small) small.textContent = newStart ? getCategoryLabel(newStart.category || "") : text("chooseSpot");
-            // V55: both endpoints are now set, so start routing automatically.
-            if (newStart && state.destinationSpot && String(newStart.id) !== String(state.destinationSpot.id)) {
-                createRoute({
-                    destinationSpot: state.destinationSpot,
-                    originMode: "spot",
-                    startSpot: newStart,
-                    travelMode: state.travelMode || "walking"
-                }).catch(function (error) {
-                    console.error("出発地選択後の自動ルート作成に失敗しました:", error);
-                });
-            }
+            // Wait for the explicit search action so the user can choose a route
+            // style and intermediate stops after setting both endpoints.
         });
         swapButton?.addEventListener("click", function () {
             if (state.originMode !== "spot" || !state.startSpotId) return;
@@ -4845,7 +4911,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     destinationSpot: state.destinationSpot,
                     originMode: state.originMode,
                     startSpot: startSpot || null,
-                    travelMode: state.travelMode
+                    travelMode: state.travelMode,
+                    routeMode: state.routeMode || "shortest",
+                    viaSpotIds: state.viaSpotIds.slice()
                 });
             } finally {
                 if (submitButton.isConnected) {
@@ -5246,7 +5314,9 @@ document.addEventListener("DOMContentLoaded", function () {
                             destinationSpot: plannerState.destinationSpot,
                             originMode: "spot",
                             startSpot: spot,
-                            travelMode: plannerState.travelMode || "walking"
+                            travelMode: plannerState.travelMode || "walking",
+                            routeMode: plannerState.routeMode || "shortest",
+                            viaSpotIds: Array.isArray(plannerState.viaSpotIds) ? plannerState.viaSpotIds.slice() : []
                         }).catch(function (error) {
                             console.error("地図からの自動ルート作成に失敗しました:", error);
                         });
@@ -5938,6 +6008,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const ROUTE_ENDPOINT_JOIN_LIMIT_METERS = 4;
     const ROUTE_JUNCTION_CLUSTER_LIMIT_METERS = 1.5;
+    const ROUTE_NEAR_INTERSECTION_LIMIT_METERS = 2.5;
     const ROUTE_INTERSECTION_GRID_CELL_METERS = 12;
 
     function connectRouteNetworkJunctions(inputRoutes) {
@@ -6097,6 +6168,34 @@ document.addEventListener("DOMContentLoaded", function () {
                 point: { x: a.x + rx * safeT, y: a.y + ry * safeT }
             };
         }
+        function projectXYPointToSegment(point, start, end) {
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const lengthSquared = dx * dx + dy * dy;
+            const ratio = lengthSquared > 1e-10
+                ? Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared))
+                : 0;
+            return { ratio, point: { x: start.x + dx * ratio, y: start.y + dy * ratio } };
+        }
+        function getSegmentClosestApproach(a, b, c, d) {
+            const candidates = [];
+            const aToCd = projectXYPointToSegment(a, c, d);
+            candidates.push({ t: 0, u: aToCd.ratio, first: a, second: aToCd.point });
+            const bToCd = projectXYPointToSegment(b, c, d);
+            candidates.push({ t: 1, u: bToCd.ratio, first: b, second: bToCd.point });
+            const cToAb = projectXYPointToSegment(c, a, b);
+            candidates.push({ t: cToAb.ratio, u: 0, first: cToAb.point, second: c });
+            const dToAb = projectXYPointToSegment(d, a, b);
+            candidates.push({ t: dToAb.ratio, u: 1, first: dToAb.point, second: d });
+            candidates.sort((one, two) => Math.hypot(one.first.x - one.second.x, one.first.y - one.second.y) - Math.hypot(two.first.x - two.second.x, two.first.y - two.second.y));
+            const best = candidates[0];
+            return {
+                t: best.t,
+                u: best.u,
+                distanceMeters: Math.hypot(best.first.x - best.second.x, best.first.y - best.second.y),
+                point: { x: (best.first.x + best.second.x) / 2, y: (best.first.y + best.second.y) / 2 }
+            };
+        }
 
         const segments = [];
         workingRoutes.forEach(function (route, routeIndex) {
@@ -6122,10 +6221,13 @@ document.addEventListener("DOMContentLoaded", function () {
         const grid = new Map();
         const cellSize = ROUTE_INTERSECTION_GRID_CELL_METERS;
         segments.forEach(function (segment, segmentId) {
-            const minCellX = Math.floor(segment.minX / cellSize);
-            const maxCellX = Math.floor(segment.maxX / cellSize);
-            const minCellY = Math.floor(segment.minY / cellSize);
-            const maxCellY = Math.floor(segment.maxY / cellSize);
+            // Expand occupied buckets by the near-junction tolerance so a
+            // small GPS offset across a grid-cell boundary is still compared.
+            const gridPadding = ROUTE_NEAR_INTERSECTION_LIMIT_METERS;
+            const minCellX = Math.floor((segment.minX - gridPadding) / cellSize);
+            const maxCellX = Math.floor((segment.maxX + gridPadding) / cellSize);
+            const minCellY = Math.floor((segment.minY - gridPadding) / cellSize);
+            const maxCellY = Math.floor((segment.maxY + gridPadding) / cellSize);
             for (let cellX = minCellX; cellX <= maxCellX; cellX++) {
                 for (let cellY = minCellY; cellY <= maxCellY; cellY++) {
                     const key = `${cellX}:${cellY}`;
@@ -6150,11 +6252,21 @@ document.addEventListener("DOMContentLoaded", function () {
                     const first = segments[firstId];
                     const second = segments[secondId];
                     if (first.routeIndex === second.routeIndex) continue;
-                    if (first.maxX < second.minX || second.maxX < first.minX ||
-                        first.maxY < second.minY || second.maxY < first.minY) continue;
+                    const nearLimit = ROUTE_NEAR_INTERSECTION_LIMIT_METERS;
+                    if (first.maxX + nearLimit < second.minX || second.maxX + nearLimit < first.minX ||
+                        first.maxY + nearLimit < second.minY || second.maxY + nearLimit < first.minY) continue;
 
-                    const intersection = getSegmentIntersection(first.a, first.b, second.a, second.b);
-                    if (!intersection) continue;
+                    let intersection = getSegmentIntersection(first.a, first.b, second.a, second.b);
+                    let junctionSource = "line-intersection";
+                    if (!intersection) {
+                        // GPS traces that describe the same walkable junction can miss
+                        // each other by a small amount after averaging/smoothing. Join
+                        // only a close, clearly crossing pair; parallel paths stay apart.
+                        const near = getSegmentClosestApproach(first.a, first.b, second.a, second.b);
+                        if (!near || near.distanceMeters > ROUTE_NEAR_INTERSECTION_LIMIT_METERS) continue;
+                        intersection = near;
+                        junctionSource = "near-line-intersection";
+                    }
 
                     // 近似・平均化された線が平行に近いまま交差した場合、
                     // GPSの微小な揺れで生じた見かけの交差である可能性が高い。
@@ -6173,16 +6285,22 @@ document.addEventListener("DOMContentLoaded", function () {
                     const crossingAngle = Math.acos(cosine) * 180 / Math.PI;
                     if (crossingAngle < 18) continue;
 
-                    // 線の端同士・端点上の分岐は、4m以内の端点接続で処理する。
-                    // 交差処理で同じ場所に微小な別ノードを重ねない。
-                    if (intersection.t < 0.015 || intersection.t > 0.985 ||
-                        intersection.u < 0.015 || intersection.u > 0.985) continue;
+                    // Route endpoints are handled by the dedicated endpoint join
+                    // pass. Internal sampled vertices are valid junctions, so do
+                    // not reject t/u=0 or 1 unless they are actual route endpoints.
+                    const firstMeasure = first.segmentIndex + intersection.t;
+                    const secondMeasure = second.segmentIndex + intersection.u;
+                    const firstRoute = workingRoutes[first.routeIndex];
+                    const secondRoute = workingRoutes[second.routeIndex];
+                    const firstAtRouteEnd = firstMeasure <= 1e-6 || firstMeasure >= firstRoute.path.length - 1 - 1e-6;
+                    const secondAtRouteEnd = secondMeasure <= 1e-6 || secondMeasure >= secondRoute.path.length - 1 - 1e-6;
+                    if (firstAtRouteEnd || secondAtRouteEnd) continue;
 
                     const point = toLatLng(intersection.point);
                     pushCandidate(point, [
-                        { routeIndex: first.routeIndex, measure: first.segmentIndex + intersection.t, side: null },
-                        { routeIndex: second.routeIndex, measure: second.segmentIndex + intersection.u, side: null }
-                    ], "line-intersection");
+                        { routeIndex: first.routeIndex, measure: firstMeasure, side: null },
+                        { routeIndex: second.routeIndex, measure: secondMeasure, side: null }
+                    ], junctionSource);
                 }
             }
         });
@@ -6630,6 +6748,78 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ============================================================
+    // 観光おすすめルートの経由地選定
+    // ============================================================
+
+    const RECOMMENDED_TOUR_SPOT_IDS = ["9", "1", "3", "4"];
+
+    function chooseRecommendedTourWaypoints(startGraphNodeId, destinationSpot) {
+        const destinationId = String(destinationSpot?.id || "");
+        const orientedIds = [
+            RECOMMENDED_TOUR_SPOT_IDS.slice(),
+            RECOMMENDED_TOUR_SPOT_IDS.slice().reverse()
+        ];
+        const startOnSightseeingSpine = startGraphNodeId && RECOMMENDED_TOUR_SPOT_IDS.includes(String(startGraphNodeId));
+        const candidates = orientedIds.map(function (orderedIds) {
+            const startIndex = startGraphNodeId ? orderedIds.indexOf(String(startGraphNodeId)) : -1;
+            const destinationIndex = orderedIds.indexOf(destinationId);
+            // If the start is on the sightseeing spine, only keep the direction
+            // that actually begins at that point. Otherwise a reverse candidate
+            // could skip all landmarks and silently collapse to a shortest route.
+            if (startOnSightseeingSpine && startIndex < 0) return null;
+            // If both endpoints are on the sightseeing spine, a direction that
+            // would pass the destination and loop back is not an itinerary.
+            if (startIndex >= 0 && destinationIndex >= 0 && destinationIndex < startIndex) return null;
+            // When the start is at the end of this orientation and the destination
+            // is off the spine, this direction has no remaining sightseeing stops.
+            if (startIndex === orderedIds.length - 1 && destinationIndex < 0) return null;
+            const firstIndex = startIndex >= 0 ? startIndex + 1 : 0;
+            const lastIndex = destinationIndex >= 0 ? destinationIndex : orderedIds.length;
+            const sequence = orderedIds.slice(firstIndex, lastIndex);
+            // For an off-spine start and a destination beyond the entrance,
+            // discard the backwards orientation if it offers no sightseeing stop.
+            // The entrance itself is allowed as a direct destination.
+            if (startIndex < 0 && destinationIndex > 0 && sequence.length === 0) return null;
+            return sequence.map(findSpotById).filter(Boolean);
+        }).filter(Array.isArray);
+        if (!startOnSightseeingSpine && destinationId !== RECOMMENDED_TOUR_SPOT_IDS[0] &&
+            candidates.some(sequence => sequence.length > 0)) {
+            // A reverse orientation ending immediately at a late landmark must
+            // not win merely because it is shorter; that would turn sightseeing
+            // mode into an ordinary shortest route and skip the selected tour.
+            for (let index = candidates.length - 1; index >= 0; index--) {
+                if (!candidates[index].length) candidates.splice(index, 1);
+            }
+        }
+
+        function scoreSequence(sequence) {
+            let cursor = startGraphNodeId ? String(startGraphNodeId) : String(sequence[0]?.id || "");
+            let totalKm = 0;
+            const targets = startGraphNodeId ? sequence.concat(destinationSpot) : sequence.slice(1).concat(destinationSpot);
+            for (const target of targets) {
+                if (!target || String(target.id) === cursor) continue;
+                const route = findGraphRoute(cursor, target.id);
+                if (!route || !Array.isArray(route.paths) || !route.paths.some(path => Array.isArray(path) && path.length >= 2)) {
+                    return Infinity;
+                }
+                totalKm += Number(route.distanceKm || 0);
+                cursor = String(target.id);
+            }
+            return totalKm;
+        }
+
+        let best = null;
+        candidates.forEach(sequence => {
+            const score = scoreSequence(sequence);
+            if (Number.isFinite(score) && (!best || score < best.score)) best = { sequence, score };
+        });
+        if (!best) {
+            throw new Error("観光おすすめルートの経由地が、登録済みの参道データでつながっていません。参道データを確認してください。");
+        }
+        return best.sequence;
+    }
+
+    // ============================================================
     // スポット検索
     // ============================================================
 
@@ -6845,6 +7035,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (nearest && nearest.distanceMeters <= 800) {
             const graphRoute = findGraphRoute(nearest.spot.id, target.id);
+            if ((!graphRoute || !Array.isArray(graphRoute.paths) ||
+                !graphRoute.paths.some(path => Array.isArray(path) && path.length >= 2)) &&
+                String(nearest.spot.id) === String(target.id)) {
+                const shortApproach = await getOSRMRoute(
+                    { lat: location.lat, lng: location.lng },
+                    { lat: Number(target.lat), lng: Number(target.lng) }
+                );
+                if (Array.isArray(shortApproach) && shortApproach.length >= 2) {
+                    return { coordinates: shortApproach, paths: [shortApproach], source: "CURRENT-LOCATION-APPROACH", legs: [] };
+                }
+            }
             if (!graphRoute || !Array.isArray(graphRoute.paths) ||
                 !graphRoute.paths.some(path => Array.isArray(path) && path.length >= 2)) {
                 throw new Error(`${getLocalizedValue(target.name)} まで既存の参道データがつながっていません。`);
@@ -6977,11 +7178,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    function renderRouteNumberMarkers() {
+    function renderRouteNumberMarkers(routeStops = selectedSpots) {
 
         clearRouteNumberMarkers();
 
-        selectedSpots.forEach(
+        routeStops.forEach(
             function (
                 spot,
                 index
@@ -7297,6 +7498,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const explicitOriginMode = routeOptions?.originMode || null;
         const explicitStartSpot = explicitOriginMode === "spot" ? routeOptions?.startSpot || null : null;
+        const requestedRouteMode = ["shortest", "recommended", "via"].includes(routeOptions?.routeMode)
+            ? routeOptions.routeMode : "shortest";
+        const destinationSpot = routeOptions?.destinationSpot || selectedSpots[selectedSpots.length - 1] || null;
+        const requestedViaIds = Array.isArray(routeOptions?.viaSpotIds) ? routeOptions.viaSpotIds.map(String) : [];
         if (explicitOriginMode === "spot" && !explicitStartSpot) {
             alert(routeSetupText("selectStartError"));
             return;
@@ -7329,6 +7534,41 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
+        let routeTargets = selectedSpots.slice();
+        if (routeOptions?.destinationSpot && destinationSpot) {
+            if (requestedRouteMode === "via") {
+                const originId = explicitStartSpot ? String(explicitStartSpot.id) : "";
+                const viaSpots = requestedViaIds
+                    .map(findSpotById)
+                    .filter(Boolean)
+                    .filter(spot => String(spot.id) !== String(destinationSpot.id) && String(spot.id) !== originId);
+                routeTargets = viaSpots.concat(destinationSpot);
+            } else if (requestedRouteMode === "recommended") {
+                let startGraphNodeId = explicitStartSpot ? String(explicitStartSpot.id) : "";
+                if (!startGraphNodeId && startLocation) {
+                    const nearestStart = findNearestGraphSpot(startLocation.lat, startLocation.lng);
+                    if (nearestStart && nearestStart.distanceMeters <= 800) startGraphNodeId = String(nearestStart.spot.id);
+                }
+                const recommendedStops = chooseRecommendedTourWaypoints(startGraphNodeId || null, destinationSpot);
+                routeTargets = recommendedStops.concat(destinationSpot);
+            } else {
+                routeTargets = [destinationSpot];
+            }
+        }
+        // Never route through the same spot twice if the user checked the origin
+        // or destination as an intermediate stop.
+        const routeTargetIds = new Set();
+        routeTargets = routeTargets.filter(spot => {
+            const id = String(spot?.id || "");
+            if (!id || routeTargetIds.has(id) || (explicitStartSpot && id === String(explicitStartSpot.id))) return false;
+            routeTargetIds.add(id);
+            return true;
+        });
+        if (!routeTargets.length) {
+            alert("経由地と到着地を確認してください。");
+            return;
+        }
+
         const routePaths = [];
         const legs = [];
         function appendRouteLeg(route, from, to) {
@@ -7359,11 +7599,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         try {
             if (explicitStartSpot) {
-                const firstTarget = selectedSpots[0];
+                const firstTarget = routeTargets[0];
                 const firstRoute = await getWalkingRoute(explicitStartSpot, firstTarget);
                 appendRouteLeg(firstRoute, explicitStartSpot, firstTarget);
             } else if (startLocation) {
-                const firstTarget = selectedSpots[0];
+                const firstTarget = routeTargets[0];
                 const firstRoute = await getLocationToSpotRoute(startLocation, firstTarget);
                 appendRouteLeg(firstRoute, {
                     lat: startLocation.lat,
@@ -7372,9 +7612,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }, firstTarget);
             }
 
-            for (let i = 0; i < selectedSpots.length - 1; i++) {
-                const from = selectedSpots[i];
-                const to = selectedSpots[i + 1];
+            for (let i = 0; i < routeTargets.length - 1; i++) {
+                const from = routeTargets[i];
+                const to = routeTargets[i + 1];
                 const route = await getWalkingRoute(from, to);
                 appendRouteLeg(route, from, to);
             }
@@ -7417,30 +7657,18 @@ document.addEventListener("DOMContentLoaded", function () {
         const completeJourneyPath = stitchedJourney.path;
         const routeLayerStyles = [
             {
-                className: "planner-route-halo-line",
-                color: "#FFB84D",
-                weight: 15,
-                opacity: 0.22
-            },
-            {
+                // Stable orange route body; no extra halo/core layer.
                 className: "planner-route-base-line",
                 color: ROUTE_COLOR,
                 weight: 7,
                 opacity: 1
             },
             {
-                // V126-style compact white beam. It is created exactly once,
-                // over the complete origin-to-destination journey.
+                // V126-style compact white beam, created once over the complete journey.
                 className: "planner-route-tone-wave-line",
                 color: "#FFFFFF",
                 weight: 4.2,
                 opacity: 0.98
-            },
-            {
-                className: "planner-route-core-line",
-                color: "#FFF1D6",
-                weight: 1.6,
-                opacity: 0.62
             }
         ];
 
@@ -7475,7 +7703,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // All visual layers now share exactly one route geometry.
         const routePathsForDisplay = [completeJourneyPath];
         map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
-        renderRouteNumberMarkers();
+        renderRouteNumberMarkers(routeTargets);
 
         const routeDistance = calculateRoutePathsDistance(routePathsForDisplay);
         if (distance) distance.textContent = `${routeDistance.toFixed(2)} km`;
@@ -7488,15 +7716,21 @@ document.addEventListener("DOMContentLoaded", function () {
         showNavCard();
 
         if (navStatus) {
-            navStatus.textContent = explicitStartSpot
-                ? `${getLocalizedValue(explicitStartSpot.name)}から作成`
+            const modeLabel = requestedRouteMode === "recommended"
+                ? "観光おすすめ"
+                : requestedRouteMode === "via"
+                    ? "経由地指定"
+                    : "最短ルート";
+            const originLabel = explicitStartSpot
+                ? `${getLocalizedValue(explicitStartSpot.name)}から`
                 : startLocation
-                    ? "現在地から作成"
-                    : "ルート作成完了";
+                    ? "現在地から"
+                    : "出発地から";
+            navStatus.textContent = `${originLabel}作成・${modeLabel}`;
         }
-        if (navTitle) navTitle.textContent = `次の目的地：${getLocalizedValue(selectedSpots[0].name)}`;
+        if (navTitle) navTitle.textContent = `次の目的地：${getLocalizedValue(routeTargets[0].name)}`;
         setNavMeta([
-            `${selectedSpots.length}スポット`,
+            `${routeTargets.length}スポット`,
             `${routeDistance.toFixed(2)} km`,
             formatTime(walkingMinutes)
         ]);
@@ -7519,7 +7753,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Route direction arrows and moving light are temporarily disabled; keep the route line static.
+    // Route direction arrows are intentionally not used. The compact white beam
+    // animation runs on the single route overlay created above.
 
     // ============================================================
     // ナビ開始
