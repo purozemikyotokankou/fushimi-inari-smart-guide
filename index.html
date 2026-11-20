@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -673,6 +674,7 @@
     function addStyles() {
         const style = document.createElement('style');
         style.textContent = `
+
             .fsg-preparation {
                 display:flex;
                 align-items:center;
@@ -774,9 +776,20 @@
                 opacity:.55;
                 cursor:wait;
             }
-            @media(max-width:430px) {
+                        @media(max-width:430px) {
                 .fsg-card { padding:25px 19px 20px; }
                 .fsg-actions { grid-template-columns:1fr; }
+            }
+
+            /* マウスカーソルを利用上の注意画面より前面に表示 */
+            .liquid-cursor {
+                z-index: 10002 !important;
+                pointer-events: none !important;
+            }
+
+            .cursor-ripple {
+                z-index: 10001 !important;
+                pointer-events: none !important;
             }
         `;
         document.head.appendChild(style);
