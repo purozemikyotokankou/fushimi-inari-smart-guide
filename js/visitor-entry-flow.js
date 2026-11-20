@@ -1,322 +1,479 @@
-/* Fushimi Inari Smart Guide — consent + early startup preparation
- * Load after js/app-boot.js on index.html.
- * Essential data preparation starts while the visitor reads the notice.
- * The Service Worker keeps the large video as the final background task.
- */
+/* Fushimi Inari Smart Guide
+   Visitor entry flow: early preparation -> notice -> home
+*/
 (() => {
-  'use strict';
+    'use strict';
 
-  const NOTICE_VERSION = '2026-11-20-2';
-  const CONSENT_KEY = 'fushimi_smart_guide_consent_version';
-  const LANG_KEY = 'language';
-  const SUPPORTED = ['ja', 'en', 'zh', 'ko'];
+    const NOTICE_VERSION = '2026-11-20-v3';
+    const CONSENT_KEY = 'fushimi_smart_guide_consent_version';
+    const LANGUAGE_KEY = 'language';
+    const SUPPORTED_LANGUAGES = ['ja', 'en', 'zh', 'ko'];
 
-  const COPY = {
-    ja: {
-      title: 'ご利用前の確認',
-      intro: '伏見稲荷スマートガイドをご利用になる前に、以下の内容をご確認ください。',
-      sections: [
-        ['情報について', '掲載情報・施設情報・参道情報は、正確性や最新性、完全性を保証するものではありません。営業時間、通行可否、施設の状況などは現地でご確認ください。'],
-        ['安全について', '境内・山道には階段、坂道、段差、滑りやすい場所があります。足元や周囲に注意し、無理のない行動をしてください。混雑、天候、路面状況にも十分ご注意ください。'],
-        ['ルート・位置情報について', '表示されるルートやGPS位置は、通信環境・端末・地形などにより、実際と異なる場合や利用できない場合があります。必ず現地の案内標識・係員の指示・通行規制を優先してください。'],
-        ['緊急時について', '本アプリは緊急時の通報・救助・安全確認を行うものではありません。緊急時は本アプリに頼らず、周囲の係員や適切な緊急窓口へ連絡してください。'],
-        ['免責について', '本アプリの利用により生じた損害等について、運営者が責任を負わない場合があります。ただし、法令上免責が認められない場合まで責任を免れるものではありません。']
-      ],
-      warning: '安全に関わる判断は、必ず現地の状況と公式な案内を優先してください。',
-      accept: '内容を確認して同意する',
-      decline: '同意しない',
-      declined: 'ご利用には上記内容への同意が必要です。同意しない場合は、アプリを開始できません。',
-      prep: 'ガイドを先に準備しています',
-      prepSub: 'この画面を確認している間に、必要な情報を読み込んでいます。',
-      loadingTitle: 'まもなくご利用いただけます',
-      loadingSub: '最後の準備をしています。',
-      tasks: ['スポット情報', '参道ルート', '画面の準備'],
-      failedTitle: '準備を完了できませんでした',
-      failedBody: '通信環境を確認して、もう一度お試しください。現地の案内を優先してください。',
-      retry: 'もう一度試す',
-      back: '言語選択に戻る',
-      ready: '準備ができました'
-    },
-    en: {
-      title: 'Before You Continue',
-      intro: 'Please review the following information before using Fushimi Inari Smart Guide.',
-      sections: [
-        ['Information', 'Spot, facility and trail information may be inaccurate, incomplete or out of date. Confirm opening hours, access and current conditions on site.'],
-        ['Safety', 'The grounds and mountain paths include stairs, slopes, uneven surfaces and slippery areas. Watch your step, surroundings, crowds, weather and ground conditions. Do not push beyond your ability.'],
-        ['Routes and location', 'Routes and GPS positions may differ from reality or may be unavailable due to your device, terrain or network conditions. Always follow on-site signs, closures and staff instructions.'],
-        ['Emergencies', 'This app does not provide emergency response, rescue or safety monitoring. Do not rely on the app in an emergency; contact on-site staff or the appropriate emergency services.'],
-        ['Limitation of liability', 'The operator may not be liable for certain losses arising from use of this app, to the extent permitted by applicable law. This notice does not exclude liability where the law does not allow it.']
-      ],
-      warning: 'For all safety decisions, follow actual site conditions and official instructions.',
-      accept: 'I have read and agree',
-      decline: 'I do not agree',
-      declined: 'You must agree to the notice to use the app. The app cannot start unless you agree.',
-      prep: 'Preparing your guide in the background',
-      prepSub: 'We are loading essential information while you review this notice.',
-      loadingTitle: 'Almost ready',
-      loadingSub: 'Finishing the final preparations.',
-      tasks: ['Sightseeing spots', 'Walking routes', 'Guide screen'],
-      failedTitle: 'Could not finish preparing',
-      failedBody: 'Please check your connection and try again. Always follow on-site guidance.',
-      retry: 'Try again',
-      back: 'Back to language selection',
-      ready: 'Ready'
-    },
-    zh: {
-      title: '使用前请确认',
-      intro: '使用伏见稻荷智能导览前，请阅读并确认以下内容。',
-      sections: [
-        ['信息说明', '景点、设施及参道信息可能不准确、不完整或未及时更新。营业时间、开放情况及现场状况请以现场信息为准。'],
-        ['安全注意事项', '境内及山路有台阶、坡道、高低差和湿滑路面。请注意脚下及周围环境，并根据自身情况行动，同时留意拥挤、天气和路面状况。'],
-        ['路线与定位', '路线及GPS位置可能因设备、地形或网络状况而与实际情况不同，也可能无法使用。请务必优先遵守现场标识、封闭规定及工作人员指示。'],
-        ['紧急情况', '本应用不提供紧急报警、救援或安全监控服务。发生紧急情况时，请勿仅依赖本应用，请联系现场工作人员或适当的紧急服务机构。'],
-        ['责任限制', '在适用法律允许的范围内，运营方可能不对使用本应用造成的某些损失承担责任。但法律不允许免责的情形不在此限。']
-      ],
-      warning: '涉及安全的判断，请始终以现场情况及官方指引为准。',
-      accept: '已阅读并同意',
-      decline: '不同意',
-      declined: '使用本应用需要同意上述内容。不同意则无法启动应用。',
-      prep: '正在后台提前准备导览',
-      prepSub: '您阅读本说明时，我们正在加载必要信息。',
-      loadingTitle: '即将准备完成',
-      loadingSub: '正在完成最后准备。',
-      tasks: ['景点信息', '参道路线', '导览画面'],
-      failedTitle: '准备未能完成',
-      failedBody: '请检查网络连接后重试。请始终优先遵守现场指引。',
-      retry: '重试',
-      back: '返回语言选择',
-      ready: '准备完成'
-    },
-    ko: {
-      title: '이용 전 확인 사항',
-      intro: '후시미 이나리 스마트 가이드를 이용하기 전에 아래 내용을 확인해 주세요.',
-      sections: [
-        ['정보 안내', '관광지·시설·참배길 정보는 정확성, 최신성 또는 완전성을 보장하지 않습니다. 영업시간, 출입 가능 여부 및 현장 상황은 현장에서 확인해 주세요.'],
-        ['안전 안내', '경내와 산길에는 계단, 경사, 단차 및 미끄러운 구간이 있습니다. 발밑과 주변을 살피고 무리하지 마세요. 혼잡도, 날씨와 노면 상태에도 주의해 주세요.'],
-        ['경로 및 위치 정보', '경로와 GPS 위치는 기기, 지형 또는 통신 상태에 따라 실제와 다르거나 이용할 수 없을 수 있습니다. 현장 안내 표지, 통행 제한 및 직원의 안내를 항상 우선해 주세요.'],
-        ['긴급 상황', '이 앱은 긴급 신고, 구조 또는 안전 확인 서비스를 제공하지 않습니다. 긴급 상황에서는 앱에만 의존하지 말고 현장 직원이나 적절한 긴급 기관에 연락해 주세요.'],
-        ['책임 제한', '관련 법령이 허용하는 범위에서 운영자는 앱 이용으로 발생한 일부 손해에 대해 책임을 지지 않을 수 있습니다. 법률상 면책이 허용되지 않는 경우까지 책임을 면제하는 것은 아닙니다.']
-      ],
-      warning: '안전과 관련된 판단은 반드시 현장 상황과 공식 안내를 우선해 주세요.',
-      accept: '내용을 확인하고 동의합니다',
-      decline: '동의하지 않습니다',
-      declined: '앱을 이용하려면 위 내용에 동의해야 합니다. 동의하지 않으면 앱을 시작할 수 없습니다.',
-      prep: '백그라운드에서 가이드를 미리 준비하고 있습니다',
-      prepSub: '안내 내용을 확인하는 동안 필요한 정보를 불러옵니다.',
-      loadingTitle: '곧 이용할 수 있습니다',
-      loadingSub: '마지막 준비를 진행하고 있습니다.',
-      tasks: ['관광지 정보', '참배길 경로', '안내 화면'],
-      failedTitle: '준비를 완료하지 못했습니다',
-      failedBody: '네트워크 연결을 확인한 후 다시 시도해 주세요. 현장 안내를 항상 우선해 주세요.',
-      retry: '다시 시도',
-      back: '언어 선택으로 돌아가기',
-      ready: '준비 완료'
-    }
-  };
-
-  let preparationPromise = null;
-  let preparedData = null;
-  let preparationError = null;
-
-  const lang = () => {
-    let value = 'ja';
-    try { value = localStorage.getItem(LANG_KEY) || 'ja'; } catch (_) {}
-    return SUPPORTED.includes(value) ? value : 'ja';
-  };
-
-  const styles = `
-    .fsg-entry-layer{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:18px;background:rgba(16,18,22,.46);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#19191b}
-    .fsg-entry-card{width:min(620px,100%);max-height:min(88dvh,900px);overflow:auto;border:1px solid rgba(255,255,255,.72);border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(247,247,245,.93));box-shadow:0 28px 90px rgba(0,0,0,.25);padding:clamp(22px,4vw,34px);overscroll-behavior:contain}
-    .fsg-entry-card h2{margin:0 0 10px;font-size:clamp(23px,4vw,30px);letter-spacing:-.03em}
-    .fsg-entry-intro{margin:0 0 18px;color:#555;line-height:1.65}
-    .fsg-entry-section{padding:13px 0;border-top:1px solid rgba(0,0,0,.08)}
-    .fsg-entry-section h3{margin:0 0 5px;font-size:15px}
-    .fsg-entry-section p{margin:0;color:#555;font-size:14px;line-height:1.72}
-    .fsg-entry-warning{margin:15px 0 18px;padding:12px 14px;border-radius:14px;background:#fff3e8;color:#7a3d08;font-size:13px;line-height:1.6}
-    .fsg-entry-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .fsg-entry-btn{min-height:50px;border:0;border-radius:14px;padding:12px 16px;font:inherit;font-weight:650;cursor:pointer}
-    .fsg-entry-accept{background:#c40018;color:#fff;box-shadow:0 7px 18px rgba(196,0,24,.2)}
-    .fsg-entry-decline{background:#ececee;color:#333}
-    .fsg-entry-error{margin:12px 0 0;color:#a00018;font-size:13px;line-height:1.55}
-    .fsg-prep-strip{display:flex;align-items:center;gap:10px;margin:-3px 0 17px;padding:10px 12px;border-radius:13px;background:#f5f5f6;color:#666;font-size:12px;line-height:1.45}
-    .fsg-prep-wheel{flex:0 0 17px;width:17px;height:17px;border:2px solid rgba(196,0,24,.18);border-top-color:#c40018;border-radius:50%;animation:fsg-spin .75s linear infinite}
-    .fsg-loader-card{text-align:center;padding:34px 26px}
-    .fsg-loader-spinner{width:34px;height:34px;margin:0 auto 20px;border:3px solid rgba(196,0,24,.15);border-top-color:#c40018;border-radius:50%;animation:fsg-spin .75s linear infinite}
-    .fsg-loader-card h2{margin-bottom:8px}
-    .fsg-loader-sub{color:#666;font-size:14px;line-height:1.6}
-    .fsg-loader-task{margin:22px auto 0;max-width:360px;text-align:left;color:#666;font-size:13px;line-height:2}
-    .fsg-loader-task li{list-style:none}
-    .fsg-loader-task li::before{content:"";display:inline-block;width:7px;height:7px;margin:0 10px 1px 0;border-radius:50%;background:#d0d0d0}
-    .fsg-loader-task li.is-done::before{background:#27834b}
-    .fsg-loader-task li.is-active::before{background:#c40018;box-shadow:0 0 0 4px rgba(196,0,24,.1)}
-    @keyframes fsg-spin{to{transform:rotate(360deg)}}
-    @media(max-width:520px){.fsg-entry-actions{grid-template-columns:1fr}.fsg-entry-card{border-radius:23px}}
-    @media(prefers-reduced-motion:reduce){.fsg-loader-spinner,.fsg-prep-wheel{animation:none}}
-  `;
-
-  function addStyles() {
-    if (document.getElementById('fsg-entry-style')) return;
-    const node = document.createElement('style');
-    node.id = 'fsg-entry-style';
-    node.textContent = styles;
-    document.head.appendChild(node);
-  }
-
-  async function getJson(path, timeoutMs = 20000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(path, { cache: 'no-cache', signal: controller.signal });
-      if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-      return await response.json();
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  // Start immediately when the notice appears. Both JSON files are fetched in parallel.
-  function beginPreparation() {
-    if (preparationPromise) return preparationPromise;
-    preparationError = null;
-    preparationPromise = (async () => {
-      const [spots, routes] = await Promise.all([
-        getJson('./data/spots.json'),
-        getJson('./data/routes.json')
-      ]);
-      if (!Array.isArray(spots) && (!spots || typeof spots !== 'object')) throw new Error('Invalid spots data');
-      if (!routes || typeof routes !== 'object') throw new Error('Invalid routes data');
-      preparedData = { spots, routes };
-      return preparedData;
-    })().catch(error => {
-      preparationError = error;
-      preparationPromise = null;
-      throw error;
-    });
-    return preparationPromise;
-  }
-
-  function showNotice(language) {
-    const c = COPY[language];
-    const layer = document.createElement('div');
-    layer.className = 'fsg-entry-layer';
-    layer.setAttribute('role', 'dialog');
-    layer.setAttribute('aria-modal', 'true');
-    layer.setAttribute('aria-labelledby', 'fsg-notice-title');
-
-    const sections = c.sections.map(([heading, body]) =>
-      `<section class="fsg-entry-section"><h3>${heading}</h3><p>${body}</p></section>`
-    ).join('');
-
-    layer.innerHTML = `
-      <div class="fsg-entry-card">
-        <h2 id="fsg-notice-title">${c.title}</h2>
-        <p class="fsg-entry-intro">${c.intro}</p>
-        <div class="fsg-prep-strip"><span class="fsg-prep-wheel" aria-hidden="true"></span><span>${c.prep}<br>${c.prepSub}</span></div>
-        ${sections}
-        <div class="fsg-entry-warning">${c.warning}</div>
-        <div class="fsg-entry-actions">
-          <button type="button" class="fsg-entry-btn fsg-entry-accept">${c.accept}</button>
-          <button type="button" class="fsg-entry-btn fsg-entry-decline">${c.decline}</button>
-        </div>
-        <p class="fsg-entry-error" hidden></p>
-      </div>`;
-    document.body.appendChild(layer);
-
-    const error = layer.querySelector('.fsg-entry-error');
-    layer.querySelector('.fsg-entry-decline').addEventListener('click', () => {
-      error.textContent = c.declined;
-      error.hidden = false;
-    });
-    layer.querySelector('.fsg-entry-accept').addEventListener('click', async () => {
-      try { localStorage.setItem(CONSENT_KEY, NOTICE_VERSION); } catch (_) {}
-      layer.remove();
-      await startLoading(language);
-    });
-    layer.querySelector('.fsg-entry-accept').focus({ preventScroll: true });
-
-    // Begin loading while the visitor reads the terms, not after pressing agree.
-    beginPreparation().catch(error => console.warn('[Fushimi] Early preparation failed; retrying after consent:', error));
-  }
-
-  function showLoader(language) {
-    const c = COPY[language];
-    const layer = document.createElement('div');
-    layer.className = 'fsg-entry-layer';
-    layer.setAttribute('role', 'status');
-    layer.setAttribute('aria-live', 'polite');
-    layer.innerHTML = `
-      <div class="fsg-entry-card fsg-loader-card">
-        <div class="fsg-loader-spinner" aria-hidden="true"></div>
-        <h2 class="fsg-loader-title">${c.loadingTitle}</h2>
-        <p class="fsg-loader-sub">${c.loadingSub}</p>
-        <ul class="fsg-loader-task">${c.tasks.map((task, i) => `<li data-task="${i}">${task}</li>`).join('')}</ul>
-      </div>`;
-    document.body.appendChild(layer);
-    return layer;
-  }
-
-  async function startLoading(language) {
-    const c = COPY[language];
-    const layer = showLoader(language);
-    const tasks = [...layer.querySelectorAll('[data-task]')];
-    const setTask = (index, state) => {
-      if (tasks[index]) tasks[index].classList.add(`is-${state}`);
+    const TEXT = {
+        ja: {
+            preparing: '観光ガイドのデータを準備しています',
+            ready: '基本データの準備ができました',
+            noticeTitle: 'ご利用前の注意事項',
+            notice: [
+                'このアプリは、伏見稲荷周辺の観光情報や参道ルートを案内する参考ツールです。',
+                '掲載情報やルートは、更新状況や現地の状況によって実際と異なる場合があります。通行止め・立入制限・足元の状況を現地で確認し、神社や施設の案内・係員の指示を優先してください。',
+                '歩きスマホを避け、周囲の歩行者や車両に十分注意してご利用ください。',
+                '現在地機能を使う場合、端末の位置情報を利用します。位置情報の精度は端末や周囲の環境によって異なります。',
+                '通信環境やご利用の契約によっては、通信料が発生する場合があります。'
+            ],
+            waiting: '準備が終わるまで、この画面でお待ちください。',
+            agree: '同意して利用を開始',
+            back: '同意しない（戻る）',
+            loadingTitle: 'ガイドを準備しています',
+            retry: 'もう一度試す',
+            error: 'データを読み込めませんでした。通信環境を確認して、もう一度お試しください。'
+        },
+        en: {
+            preparing: 'Preparing the guide data',
+            ready: 'Basic data is ready',
+            noticeTitle: 'Important Information Before Use',
+            notice: [
+                'This app provides tourist information and walking-route guidance around Fushimi Inari for reference.',
+                'Information and routes may differ from actual conditions. Check signs, closures, restricted areas and ground conditions. Follow instructions from shrine and facility staff.',
+                'Please do not use your phone while walking. Watch out for pedestrians and vehicles.',
+                'When you use the current-location feature, the app uses your device location. Accuracy depends on your device and surroundings.',
+                'Mobile data charges may apply depending on your network and service plan.'
+            ],
+            waiting: 'Please wait while the guide data is prepared.',
+            agree: 'Agree and Continue',
+            back: 'Do Not Agree (Back)',
+            loadingTitle: 'Preparing the Guide',
+            retry: 'Try Again',
+            error: 'The data could not be loaded. Check your connection and try again.'
+        },
+        zh: {
+            preparing: '正在准备观光指南数据',
+            ready: '基本数据已准备完成',
+            noticeTitle: '使用前注意事项',
+            notice: [
+                '本应用提供伏见稻荷周边旅游信息和参道路线，仅供参考。',
+                '刊载的信息和路线可能与现场实际情况不同。请确认现场标识、封闭区域、禁止进入区域及路面状况，并遵从神社和设施工作人员的指示。',
+                '请勿边走边看手机，并注意周围行人和车辆。',
+                '使用当前位置功能时，应用会使用设备的位置信息。定位精度取决于设备和周围环境。',
+                '根据网络环境和通信套餐，使用本应用可能产生通信费用。'
+            ],
+            waiting: '正在准备数据，请稍候。',
+            agree: '同意并开始使用',
+            back: '不同意（返回）',
+            loadingTitle: '正在准备观光指南',
+            retry: '重试',
+            error: '无法读取数据。请检查网络连接后重试。'
+        },
+        ko: {
+            preparing: '관광 안내 데이터를 준비하고 있습니다',
+            ready: '기본 데이터 준비가 완료되었습니다',
+            noticeTitle: '이용 전 주의사항',
+            notice: [
+                '이 앱은 후시미이나리 주변의 관광 정보와 참배길 경로를 안내하는 참고용 도구입니다.',
+                '게시된 정보와 경로는 현장 상황에 따라 실제와 다를 수 있습니다. 통행 금지, 출입 제한 구역과 바닥 상태를 확인하고 신사 및 시설 직원의 안내를 따라 주세요.',
+                '걸으면서 휴대전화를 보지 말고 주변 사람과 차량에 주의해 주세요.',
+                '현재 위치 기능을 사용하면 기기의 위치 정보를 이용합니다. 정확도는 기기와 주변 환경에 따라 달라질 수 있습니다.',
+                '네트워크 환경과 요금제에 따라 데이터 통신 요금이 발생할 수 있습니다.'
+            ],
+            waiting: '데이터 준비가 끝날 때까지 잠시 기다려 주세요.',
+            agree: '동의하고 시작하기',
+            back: '동의하지 않음 (뒤로)',
+            loadingTitle: '관광 안내를 준비하고 있습니다',
+            retry: '다시 시도',
+            error: '데이터를 불러오지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.'
+        }
     };
 
-    try {
-      setTask(0, 'active');
-      const data = preparedData || await beginPreparation();
-      setTask(0, 'done');
-      setTask(1, 'done');
-      setTask(2, 'active');
+    let preparedData = null;
+    let preparationPromise = null;
+    let indicatorText = null;
 
-      // The main page itself is checked only after consent; large movie is never awaited.
-      const homeResponse = await fetch('./home.html', { cache: 'no-cache' });
-      if (!homeResponse.ok) throw new Error(`home.html: HTTP ${homeResponse.status}`);
-      setTask(2, 'done');
+    function addStyles() {
+        if (document.getElementById('fsg-entry-styles')) return;
 
-      // Make parsed essential data available for diagnostics only; home loads its own canonical data.
-      window.FushimiStartupPrepared = data;
-      layer.querySelector('.fsg-loader-title').textContent = c.ready;
-      await new Promise(resolve => setTimeout(resolve, 220));
-      location.href = 'home.html';
-    } catch (error) {
-      console.warn('[Fushimi] Startup preparation failed:', error);
-      layer.querySelector('.fsg-loader-spinner').remove();
-      layer.querySelector('.fsg-loader-title').textContent = c.failedTitle;
-      layer.querySelector('.fsg-loader-sub').textContent = c.failedBody;
-      layer.querySelector('.fsg-loader-task').hidden = true;
-      const actions = document.createElement('div');
-      actions.className = 'fsg-entry-actions';
-      actions.style.marginTop = '22px';
-      actions.innerHTML = `<button class="fsg-entry-btn fsg-entry-accept" type="button">${c.retry}</button><button class="fsg-entry-btn fsg-entry-decline" type="button">${c.back}</button>`;
-      layer.querySelector('.fsg-entry-card').appendChild(actions);
-      actions.children[0].addEventListener('click', () => {
-        preparationPromise = null;
-        preparedData = null;
-        layer.remove();
-        startLoading(language);
-      });
-      actions.children[1].addEventListener('click', () => {
-        layer.remove();
-        location.href = 'index.html';
-      });
+        const style = document.createElement('style');
+        style.id = 'fsg-entry-styles';
+        style.textContent = `
+            .fsg-language-prep {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin: 18px auto 0;
+                min-height: 24px;
+                color: rgba(25,25,27,.68);
+                font-size: 12px;
+                line-height: 1.5;
+            }
+
+            .fsg-spinner {
+                display: inline-block;
+                flex: 0 0 auto;
+                width: 17px;
+                height: 17px;
+                border: 2px solid rgba(196,0,24,.16);
+                border-top-color: #c40018;
+                border-radius: 50%;
+                animation: fsgSpin .75s linear infinite;
+            }
+
+            @keyframes fsgSpin {
+                to { transform: rotate(360deg); }
+            }
+
+            .fsg-notice-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 18px;
+                background: rgba(18,18,20,.48);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+            }
+
+            .fsg-notice-card {
+                width: min(560px, 100%);
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 30px 26px 24px;
+                border: 1px solid rgba(255,255,255,.72);
+                border-radius: 25px;
+                background: rgba(255,255,255,.94);
+                color: #19191b;
+                box-shadow: 0 24px 70px rgba(0,0,0,.22);
+                font-family: -apple-system, BlinkMacSystemFont,
+                    "Helvetica Neue", Arial, sans-serif;
+            }
+
+            .fsg-notice-card h2 {
+                margin: 0 0 20px;
+                font-size: 23px;
+                line-height: 1.35;
+                text-align: center;
+            }
+
+            .fsg-notice-copy {
+                margin: 0 0 13px;
+                font-size: 14px;
+                line-height: 1.8;
+                color: rgba(25,25,27,.82);
+            }
+
+            .fsg-notice-status {
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                min-height: 34px;
+                margin: 18px 0 14px;
+                padding: 9px 12px;
+                border-radius: 12px;
+                background: rgba(196,0,24,.055);
+                color: rgba(25,25,27,.72);
+                font-size: 12px;
+                line-height: 1.5;
+            }
+
+            .fsg-notice-actions {
+                display: grid;
+                grid-template-columns: 1fr 1.25fr;
+                gap: 10px;
+                margin-top: 15px;
+            }
+
+            .fsg-notice-actions button {
+                min-height: 48px;
+                margin: 0;
+                padding: 9px 12px;
+                border: 1px solid rgba(0,0,0,.08);
+                border-radius: 13px;
+                font: inherit;
+                font-size: 13px;
+                font-weight: 650;
+                cursor: pointer;
+            }
+
+            .fsg-notice-back {
+                color: #333;
+                background: #f0f0f0;
+            }
+
+            .fsg-notice-agree {
+                color: white;
+                background: #c40018;
+                border-color: #c40018 !important;
+            }
+
+            .fsg-notice-actions button:disabled {
+                opacity: .55;
+                cursor: wait;
+            }
+
+            @media (max-width: 430px) {
+                .fsg-notice-card {
+                    padding: 25px 19px 20px;
+                    border-radius: 21px;
+                }
+
+                .fsg-notice-card h2 {
+                    font-size: 21px;
+                }
+
+                .fsg-notice-copy {
+                    font-size: 13px;
+                }
+
+                .fsg-notice-actions {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .fsg-spinner {
+                    animation-duration: 2s;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     }
-  }
 
-  function chooseLanguage(language) {
-    const selected = SUPPORTED.includes(language) ? language : 'ja';
-    try { localStorage.setItem(LANG_KEY, selected); } catch (_) {}
-    let accepted = false;
-    try { accepted = localStorage.getItem(CONSENT_KEY) === NOTICE_VERSION; } catch (_) {}
-    if (accepted) {
-      beginPreparation().catch(error => console.warn('[Fushimi] Preparation will retry:', error));
-      startLoading(selected);
-    } else {
-      showNotice(selected); // starts preloading immediately
+    function addLanguageIndicator() {
+        const box = document.querySelector('.language-box');
+        if (!box || document.getElementById('fsg-language-prep')) return;
+
+        const indicator = document.createElement('div');
+        indicator.id = 'fsg-language-prep';
+        indicator.className = 'fsg-language-prep';
+        indicator.setAttribute('role', 'status');
+        indicator.setAttribute('aria-live', 'polite');
+
+        const spinner = document.createElement('span');
+        spinner.className = 'fsg-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+
+        indicatorText = document.createElement('span');
+        indicatorText.textContent = TEXT.ja.preparing;
+
+        indicator.append(spinner, indicatorText);
+        box.appendChild(indicator);
     }
-  }
 
-  addStyles();
-  window.selectLanguage = chooseLanguage;
+    function updateIndicator(isReady, hasError = false) {
+        const indicator = document.getElementById('fsg-language-prep');
+        if (!indicator || !indicatorText) return;
+
+        const spinner = indicator.querySelector('.fsg-spinner');
+
+        if (isReady) {
+            if (spinner) spinner.style.display = 'none';
+            indicatorText.textContent = TEXT.ja.ready;
+        } else {
+            if (spinner) spinner.style.display = 'inline-block';
+            indicatorText.textContent = hasError
+                ? 'データの準備に失敗しました。言語選択後に再試行できます。'
+                : TEXT.ja.preparing;
+        }
+    }
+
+    async function fetchJson(path) {
+        const response = await fetch(path, { cache: 'no-cache' });
+
+        if (!response.ok) {
+            throw new Error(`${path}: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data === null || typeof data !== 'object') {
+            throw new Error(`${path}: JSONの形式が正しくありません`);
+        }
+
+        return data;
+    }
+
+    function startPreparation() {
+        if (preparedData) {
+            return Promise.resolve(preparedData);
+        }
+
+        if (preparationPromise) {
+            return preparationPromise;
+        }
+
+        preparationPromise = Promise.all([
+            fetchJson('./data/spots.json'),
+            fetchJson('./data/routes.json')
+        ]).then(([spots, routes]) => {
+            preparedData = { spots, routes };
+            updateIndicator(true);
+            return preparedData;
+        }).catch((error) => {
+            preparationPromise = null;
+            updateIndicator(false, true);
+            console.error('[Fushimi] Startup preparation failed:', error);
+            throw error;
+        });
+
+        return preparationPromise;
+    }
+
+    function hasAccepted(language) {
+        try {
+            return localStorage.getItem(CONSENT_KEY) ===
+                `${NOTICE_VERSION}:${language}`;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function rememberAcceptance(language) {
+        try {
+            localStorage.setItem(
+                CONSENT_KEY,
+                `${NOTICE_VERSION}:${language}`
+            );
+        } catch (error) {
+            console.warn('[Fushimi] Could not save consent:', error);
+        }
+    }
+
+    function createDialog(language, showNotice) {
+        const copy = TEXT[language] || TEXT.ja;
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'fsg-notice-backdrop';
+
+        const card = document.createElement('section');
+        card.className = 'fsg-notice-card';
+        card.setAttribute('role', 'dialog');
+        card.setAttribute('aria-modal', 'true');
+
+        const title = document.createElement('h2');
+        title.textContent = showNotice
+            ? copy.noticeTitle
+            : copy.loadingTitle;
+        card.appendChild(title);
+
+        if (showNotice) {
+            copy.notice.forEach((paragraph) => {
+                const p = document.createElement('p');
+                p.className = 'fsg-notice-copy';
+                p.textContent = paragraph;
+                card.appendChild(p);
+            });
+        }
+
+        const status = document.createElement('div');
+        status.className = 'fsg-notice-status';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+
+        const spinner = document.createElement('span');
+        spinner.className = 'fsg-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+
+        const statusText = document.createElement('span');
+        statusText.textContent = preparedData
+            ? copy.ready
+            : copy.waiting;
+
+        status.append(spinner, statusText);
+        card.appendChild(status);
+
+        const actions = document.createElement('div');
+        actions.className = 'fsg-notice-actions';
+
+        const backButton = document.createElement('button');
+        backButton.type = 'button';
+        backButton.className = 'fsg-notice-back';
+        backButton.textContent = copy.back;
+        backButton.addEventListener('click', () => {
+            backdrop.remove();
+        });
+
+        const agreeButton = document.createElement('button');
+        agreeButton.type = 'button';
+        agreeButton.className = 'fsg-notice-agree';
+        agreeButton.textContent = showNotice
+            ? copy.agree
+            : copy.retry;
+
+        actions.append(backButton, agreeButton);
+        card.appendChild(actions);
+        backdrop.appendChild(card);
+        document.body.appendChild(backdrop);
+
+        async function continueToHome() {
+            agreeButton.disabled = true;
+            backButton.disabled = true;
+            statusText.textContent = copy.waiting;
+            spinner.style.display = 'inline-block';
+
+            try {
+                await startPreparation();
+
+                if (showNotice) {
+                    rememberAcceptance(language);
+                }
+
+                statusText.textContent = copy.ready;
+                window.location.replace('home.html');
+            } catch (error) {
+                statusText.textContent = copy.error;
+                spinner.style.display = 'none';
+                agreeButton.textContent = copy.retry;
+                agreeButton.disabled = false;
+                backButton.disabled = false;
+            }
+        }
+
+        agreeButton.addEventListener('click', () => {
+            if (showNotice) {
+                rememberAcceptance(language);
+            }
+            continueToHome();
+        });
+
+        return { backdrop, continueToHome };
+    }
+
+    function chooseLanguage(language) {
+        const selected = SUPPORTED_LANGUAGES.includes(language)
+            ? language
+            : 'ja';
+
+        try {
+            localStorage.setItem(LANGUAGE_KEY, selected);
+        } catch (_) {}
+
+        document.documentElement.lang = selected;
+
+        if (hasAccepted(selected)) {
+            if (preparedData) {
+                window.location.replace('home.html');
+                return;
+            }
+
+            const dialog = createDialog(selected, false);
+            dialog.continueToHome();
+            return;
+        }
+
+        createDialog(selected, true);
+    }
+
+    // Make sure this runs after app-boot.js so it replaces its direct
+    // language-to-home navigation.
+    addStyles();
+    addLanguageIndicator();
+    window.selectLanguage = chooseLanguage;
+
+    // Begin as soon as the language-selection page opens.
+    // The visitor can read the notice while spots and routes are loading.
+    startPreparation().catch(() => {
+        // The error is shown in the language-page indicator.
+        // The visitor can retry after choosing a language.
+    });
 })();
