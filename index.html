@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -13,7 +12,7 @@
     <style>
         /* =========================================================
            Liquid Glass language screen
-           ========================================================= */
+        ========================================================= */
 
         :root {
             --lg-red: #c40018;
@@ -52,6 +51,7 @@
                 sans-serif;
 
             color: var(--lg-text);
+
             background:
                 radial-gradient(circle at 16% 18%, rgba(255, 86, 109, 0.34), transparent 25%),
                 radial-gradient(circle at 83% 14%, rgba(255, 179, 194, 0.42), transparent 27%),
@@ -59,7 +59,8 @@
                 linear-gradient(135deg, #f7f7f4 0%, #ececea 52%, #e4e4e1 100%);
         }
 
-        /* Soft blurred light blobs behind the glass */
+        /* Soft blurred light blobs */
+
         body.language-page::before,
         body.language-page::after {
             content: "";
@@ -77,7 +78,12 @@
             min-height: 260px;
             left: -10vw;
             top: 45%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0));
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(255, 255, 255, 0.76),
+                    rgba(255, 255, 255, 0)
+                );
             animation: floatLeft 11s ease-in-out infinite alternate;
         }
 
@@ -88,7 +94,12 @@
             min-height: 240px;
             right: -8vw;
             bottom: -8vw;
-            background: radial-gradient(circle, var(--lg-red-soft), rgba(255, 255, 255, 0));
+            background:
+                radial-gradient(
+                    circle,
+                    var(--lg-red-soft),
+                    rgba(255, 255, 255, 0)
+                );
             animation: floatRight 13s ease-in-out infinite alternate;
         }
 
@@ -109,6 +120,8 @@
             backdrop-filter: blur(10px) saturate(1.08);
             -webkit-backdrop-filter: blur(10px) saturate(1.08);
         }
+
+        /* Language card */
 
         .language-box {
             width: min(520px, 100%);
@@ -142,7 +155,6 @@
                 glassFloat 7s ease-in-out 1.1s infinite;
         }
 
-        /* Glass reflection */
         .language-box::before {
             content: "";
             position: absolute;
@@ -252,6 +264,7 @@
             -webkit-backdrop-filter: blur(18px) saturate(1.25);
 
             cursor: pointer;
+
             transition:
                 transform 0.22s ease,
                 box-shadow 0.22s ease,
@@ -285,6 +298,8 @@
                 0 14px 28px rgba(196, 0, 24, 0.12),
                 inset 0 1px 0 rgba(255,255,255,0.86);
         }
+
+        /* Animations */
 
         @keyframes glassIn {
             from {
@@ -324,10 +339,9 @@
             }
         }
 
-
         /* =========================================================
            Liquid Glass Cursor
-           ========================================================= */
+        ========================================================= */
 
         body.language-page,
         body.language-page button {
@@ -365,12 +379,14 @@
 
             transform: translate3d(-50%, -50%, 0) scale(1);
             opacity: 0;
+
             transition:
                 width 0.22s ease,
                 height 0.22s ease,
                 opacity 0.2s ease,
                 box-shadow 0.22s ease,
                 border-color 0.22s ease;
+
             will-change: transform, width, height, opacity;
         }
 
@@ -384,6 +400,7 @@
             border-radius: 50%;
             transform: translate(-50%, -50%);
             background: rgba(196, 0, 24, 0.85);
+
             box-shadow:
                 0 0 10px rgba(196, 0, 24, 0.38),
                 0 0 22px rgba(196, 0, 24, 0.20);
@@ -434,12 +451,15 @@
             z-index: 9998;
 
             border: 1px solid rgba(196, 0, 24, 0.50);
+
             box-shadow:
                 0 0 18px rgba(196, 0, 24, 0.16),
                 inset 0 0 10px rgba(255, 255, 255, 0.25);
 
             transform: translate3d(-50%, -50%, 0) scale(1);
-            animation: cursorRipple 0.62s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+            animation:
+                cursorRipple 0.62s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes cursorRipple {
@@ -476,6 +496,8 @@
             }
         }
 
+        /* Mobile layout */
+
         @media (max-width: 600px) {
             body.language-page {
                 padding: 16px;
@@ -507,7 +529,6 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-            /* The panel itself stays still, but keep the gentle ambient light alive. */
             .language-box {
                 animation: none;
             }
@@ -528,11 +549,6 @@
                 transition: none;
             }
         }
-
-
-        /* V143: localized visitor welcome copy for the startup guide overlay. */
-
-
     </style>
 </head>
 
@@ -574,423 +590,740 @@
 
     </div>
 
-
-
     <script src="js/liquid-cursor.js?v=94" defer></script>
-
     <script src="js/language.js?v=140" defer></script>
     <script src="js/app-boot.js?v=144" defer></script>
-<script>
-(() => {
-    'use strict';
 
-    const VERSION = '2026-11-20-v4';
-    const CONSENT_KEY = 'fushimi_smart_guide_consent_version';
+    <script>
+    (() => {
+        'use strict';
 
-    const TEXT = {
-        ja: {
-            preparing: '観光ガイドのデータを準備しています',
-            ready: '基本データの準備ができました',
-            title: 'ご利用前の注意事項',
-            notice: [
-                'このアプリは、伏見稲荷周辺の観光情報や参道ルートを案内する参考ツールです。',
-                '掲載情報やルートは、現地の状況と異なる場合があります。通行止め・立入制限・足元の状況を現地で確認し、神社や施設の案内・係員の指示を優先してください。',
-                '歩きスマホを避け、周囲の歩行者や車両に十分注意してください。',
-                '現在地機能を利用する場合、端末の位置情報を利用します。位置情報の精度は端末や周囲の環境によって異なります。',
-                '通信環境や契約によっては通信料が発生する場合があります。',
-                '本アプリの利用に関連して生じた事故や損害等について、制作チームは法令上認められる範囲で責任を負いません。安全を最優先に、ご自身の判断でご利用ください。'
-            ],
-            waiting: 'データを準備しています。しばらくお待ちください。',
-            agree: '同意して利用を開始',
-            back: '同意しない（戻る）',
-            loading: 'ガイドを準備しています',
-            retry: 'もう一度試す',
-            error: 'データを読み込めませんでした。通信環境を確認して再試行してください。'
-        },
-        en: {
-            preparing: 'Preparing the guide data',
-            ready: 'Basic data is ready',
-            title: 'Important Information Before Use',
-            notice: [
-                'This app provides tourist information and walking-route guidance around Fushimi Inari for reference.',
-                'Information and routes may differ from actual conditions. Check signs, closures, restricted areas and ground conditions. Follow instructions from shrine and facility staff.',
-                'Do not use your phone while walking. Watch out for pedestrians and vehicles.',
-                'The current-location feature uses your device location. Accuracy depends on your device and surroundings.',
-                'Mobile data charges may apply depending on your network and service plan.',
-                'To the extent permitted by applicable law, the project team is not responsible for accidents or damage arising from use of this app. Please put safety first and use your own judgment.'
-            ],
-            waiting: 'Please wait while the guide data is prepared.',
-            agree: 'Agree and Continue',
-            back: 'Do Not Agree (Back)',
-            loading: 'Preparing the Guide',
-            retry: 'Try Again',
-            error: 'The data could not be loaded. Check your connection and try again.'
-        },
-        zh: {
-            preparing: '正在准备观光指南数据',
-            ready: '基本数据已准备完成',
-            title: '使用前注意事项',
-            notice: [
-                '本应用提供伏见稻荷周边旅游信息和参道路线，仅供参考。',
-                '刊载的信息和路线可能与现场实际情况不同。请确认现场标识、封闭区域、禁止进入区域及路面状况，并遵从神社和设施工作人员的指示。',
-                '请勿边走边看手机，并注意周围行人和车辆。',
-                '使用当前位置功能时，应用会使用设备的位置信息。定位精度取决于设备和周围环境。',
-                '根据网络环境和通信套餐，使用本应用可能产生通信费用。',
-                '在法律允许的范围内，制作团队不对使用本应用所引起的事故或损失承担责任。请将安全放在首位，并自行判断是否使用相关信息。'
-            ],
-            waiting: '正在准备数据，请稍候。',
-            agree: '同意并开始使用',
-            back: '不同意（返回）',
-            loading: '正在准备观光指南',
-            retry: '重试',
-            error: '无法读取数据。请检查网络连接后重试。'
-        },
-        ko: {
-            preparing: '관광 안내 데이터를 준비하고 있습니다',
-            ready: '기본 데이터 준비가 완료되었습니다',
-            title: '이용 전 주의사항',
-            notice: [
-                '이 앱은 후시미이나리 주변의 관광 정보와 참배길 경로를 안내하는 참고용 도구입니다.',
-                '게시된 정보와 경로는 현장 상황에 따라 실제와 다를 수 있습니다. 통행 금지, 출입 제한 구역과 바닥 상태를 확인하고 신사 및 시설 직원의 안내를 따라 주세요.',
-                '걸으면서 휴대전화를 보지 말고 주변 사람과 차량에 주의해 주세요.',
-                '현재 위치 기능을 사용하면 기기의 위치 정보를 이용합니다. 정확도는 기기와 주변 환경에 따라 달라질 수 있습니다.',
-                '네트워크 환경과 요금제에 따라 데이터 통신 요금이 발생할 수 있습니다.',
-                '관련 법령이 허용하는 범위에서, 제작팀은 이 앱의 이용으로 발생한 사고나 손해에 대해 책임을 지지 않습니다. 안전을 최우선으로 하고 스스로 판단하여 이용해 주세요.'
-            ],
-            waiting: '데이터 준비가 끝날 때까지 잠시 기다려 주세요.',
-            agree: '동의하고 시작하기',
-            back: '동의하지 않음 (뒤로)',
-            loading: '관광 안내를 준비하고 있습니다',
-            retry: '다시 시도',
-            error: '데이터를 불러오지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.'
+        const VERSION = '2026-11-20-v5';
+        const CONSENT_KEY = 'fushimi_smart_guide_consent_version';
+
+        const TEXT = {
+            ja: {
+                disclaimerPhrase: '制作チームは一切の責任を取りません。',
+                preparing: '観光ガイドのデータを準備しています',
+                ready: '基本データの準備ができました',
+                title: 'ご利用前の注意事項',
+                notice: [
+                    'このアプリは、伏見稲荷周辺の観光情報や参道ルートを案内する参考ツールです。',
+                    '掲載情報やルートは、現地の状況と異なる場合があります。通行止め・立入制限・足元の状況を現地で確認し、神社や施設の案内・係員の指示を優先してください。',
+                    '歩きスマホを避け、周囲の歩行者や車両に十分注意してください。',
+                    '現在地機能を利用する場合、端末の位置情報を利用します。位置情報の精度は端末や周囲の環境によって異なります。',
+                    '通信環境や契約によっては通信料が発生する場合があります。',
+                    '本アプリの利用に関連して生じた事故や損害等について、制作チームは一切の責任を取りません。'
+                ],
+                waiting: 'データを準備しています。しばらくお待ちください。',
+                agree: '同意して利用を開始',
+                back: '同意しない（戻る）',
+                loading: 'ガイドを準備しています',
+                retry: 'もう一度試す',
+                error: 'データを読み込めませんでした。通信環境を確認して再試行してください。'
+            },
+
+            en: {
+                disclaimerPhrase: 'the project team accepts no responsibility whatsoever.',
+                preparing: 'Preparing the guide data',
+                ready: 'Basic data is ready',
+                title: 'Important Information Before Use',
+                notice: [
+                    'This app provides tourist information and walking-route guidance around Fushimi Inari for reference.',
+                    'Information and routes may differ from actual conditions. Check signs, closures, restricted areas and ground conditions. Follow instructions from shrine and facility staff.',
+                    'Do not use your phone while walking. Watch out for pedestrians and vehicles.',
+                    'The current-location feature uses your device location. Accuracy depends on your device and surroundings.',
+                    'Mobile data charges may apply depending on your network and service plan.',
+                    'For accidents or damage arising from use of this app, the project team accepts no responsibility whatsoever.'
+                ],
+                waiting: 'Please wait while the guide data is prepared.',
+                agree: 'Agree and Continue',
+                back: 'Do Not Agree (Back)',
+                loading: 'Preparing the Guide',
+                retry: 'Try Again',
+                error: 'The data could not be loaded. Check your connection and try again.'
+            },
+
+            zh: {
+                disclaimerPhrase: '制作团队概不承担任何责任。',
+                preparing: '正在准备观光指南数据',
+                ready: '基本数据已准备完成',
+                title: '使用前注意事项',
+                notice: [
+                    '本应用提供伏见稻荷周边旅游信息和参道路线，仅供参考。',
+                    '刊载的信息和路线可能与现场实际情况不同。请确认现场标识、封闭区域、禁止进入区域及路面状况，并遵从神社和设施工作人员的指示。',
+                    '请勿边走边看手机，并注意周围行人和车辆。',
+                    '使用当前位置功能时，应用会使用设备的位置信息。定位精度取决于设备和周围环境。',
+                    '根据网络环境和通信套餐，使用本应用可能产生通信费用。',
+                    '对于因使用本应用而发生的任何事故或损失，制作团队概不承担任何责任。'
+                ],
+                waiting: '正在准备数据，请稍候。',
+                agree: '同意并开始使用',
+                back: '不同意（返回）',
+                loading: '正在准备观光指南',
+                retry: '重试',
+                error: '无法读取数据。请检查网络连接后重试。'
+            },
+
+            ko: {
+                disclaimerPhrase: '제작팀은 어떠한 책임도 지지 않습니다.',
+                preparing: '관광 안내 데이터를 준비하고 있습니다',
+                ready: '기본 데이터 준비가 완료되었습니다',
+                title: '이용 전 주의사항',
+                notice: [
+                    '이 앱은 후시미이나리 주변의 관광 정보와 참배길 경로를 안내하는 참고용 도구입니다.',
+                    '게시된 정보와 경로는 현장 상황에 따라 실제와 다를 수 있습니다. 통행 금지, 출입 제한 구역과 바닥 상태를 확인하고 신사 및 시설 직원의 안내를 따라 주세요.',
+                    '걸으면서 휴대전화를 보지 말고 주변 사람과 차량에 주의해 주세요.',
+                    '현재 위치 기능을 사용하면 기기의 위치 정보를 이용합니다. 정확도는 기기와 주변 환경에 따라 달라질 수 있습니다.',
+                    '네트워크 환경과 요금제에 따라 데이터 통신 요금이 발생할 수 있습니다.',
+                    '본 앱의 이용과 관련하여 발생한 사고나 손해에 대해 제작팀은 어떠한 책임도 지지 않습니다.'
+                ],
+                waiting: '데이터 준비가 끝날 때까지 잠시 기다려 주세요.',
+                agree: '동의하고 시작하기',
+                back: '동의하지 않음 (뒤로)',
+                loading: '관광 안내를 준비하고 있습니다',
+                retry: '다시 시도',
+                error: '데이터를 불러오지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.'
+            }
+        };
+
+        let prepared = false;
+        let preparation = null;
+        let languageIndicator = null;
+        let activeStatus = null;
+
+        /* =====================================================
+           CSS
+        ===================================================== */
+
+        function addStyles() {
+            const style = document.createElement('style');
+
+            style.textContent = `
+
+                /* Language screen preparation */
+
+                .fsg-preparation {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    margin: 18px auto 0;
+                    min-height: 24px;
+                    color: rgba(25,25,27,.68);
+                    font-size: 12px;
+                    line-height: 1.5;
+                }
+
+                /* Spinner */
+
+                .fsg-spinner {
+                    display: inline-block;
+                    width: 17px;
+                    height: 17px;
+                    flex: 0 0 17px;
+                    border: 2px solid rgba(196,0,24,.16);
+                    border-top-color: #c40018;
+                    border-radius: 50%;
+                    animation: fsgSpin .75s linear infinite;
+                }
+
+                @keyframes fsgSpin {
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+
+                /* Notice backdrop */
+
+                .fsg-backdrop {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 2147483645;
+
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+
+                    padding: 18px;
+
+                    background: rgba(18,18,20,.50);
+
+                    backdrop-filter: blur(16px);
+                    -webkit-backdrop-filter: blur(16px);
+                }
+
+                /* Notice card */
+
+                .fsg-card {
+                    position: relative;
+
+                    width: min(560px, 100%);
+                    max-height: 88vh;
+                    overflow-y: auto;
+
+                    padding: 30px 26px 24px;
+
+                    border: 1px solid rgba(255,255,255,.72);
+                    border-radius: 25px;
+
+                    background: rgba(255,255,255,.96);
+                    color: #19191b;
+
+                    box-shadow: 0 24px 70px rgba(0,0,0,.22);
+
+                    font-family:
+                        -apple-system,
+                        BlinkMacSystemFont,
+                        "Helvetica Neue",
+                        Arial,
+                        sans-serif;
+                }
+
+                .fsg-card h2 {
+                    margin: 0 0 20px;
+
+                    font-size: 23px;
+                    line-height: 1.4;
+
+                    font-weight: 700;
+                    text-align: center;
+                }
+
+                /* Notice paragraphs */
+
+                .fsg-copy {
+                    display: block;
+
+                    margin: 0 0 13px;
+
+                    font-size: 14px;
+                    line-height: 1.8;
+
+                    color: rgba(25,25,27,.82);
+
+                    visibility: visible;
+                    opacity: 1;
+                }
+
+                /* Red bold disclaimer */
+
+                .fsg-disclaimer {
+                    color: #c40018 !important;
+                    font-weight: 800 !important;
+                }
+
+                /* Loading status */
+
+                .fsg-status {
+                    display: flex;
+                    align-items: center;
+                    gap: 9px;
+
+                    min-height: 38px;
+
+                    margin: 18px 0 14px;
+                    padding: 10px 12px;
+
+                    border-radius: 12px;
+
+                    background: rgba(196,0,24,.055);
+
+                    font-size: 12px;
+                    line-height: 1.5;
+                }
+
+                /* Buttons */
+
+                .fsg-actions {
+                    display: grid;
+                    grid-template-columns: 1fr 1.25fr;
+                    gap: 10px;
+
+                    margin-top: 15px;
+                }
+
+                .fsg-actions button {
+                    min-height: 48px;
+
+                    margin: 0;
+                    padding: 9px 12px;
+
+                    border: 1px solid rgba(0,0,0,.08);
+                    border-radius: 13px;
+
+                    font: inherit;
+                    font-size: 13px;
+                    font-weight: 650;
+
+                    cursor: pointer;
+                }
+
+                .fsg-back {
+                    color: #333;
+                    background: #f0f0f0;
+                }
+
+                .fsg-agree {
+                    color: white;
+                    background: #c40018;
+                    border-color: #c40018 !important;
+                }
+
+                .fsg-actions button:disabled {
+                    opacity: .55;
+                    cursor: wait;
+                }
+
+                /* Cursor must stay above the notice */
+
+                .liquid-cursor {
+                    position: fixed !important;
+                    z-index: 2147483647 !important;
+                    pointer-events: none !important;
+                }
+
+                .cursor-ripple {
+                    position: fixed !important;
+                    z-index: 2147483646 !important;
+                    pointer-events: none !important;
+                }
+
+                /* Mobile */
+
+                @media (max-width: 430px) {
+                    .fsg-card {
+                        padding: 25px 19px 20px;
+                    }
+
+                    .fsg-card h2 {
+                        font-size: 21px;
+                    }
+
+                    .fsg-copy {
+                        font-size: 13px;
+                    }
+
+                    .fsg-actions {
+                        grid-template-columns: 1fr;
+                    }
+                }
+
+                /* Reduced motion */
+
+                @media (prefers-reduced-motion: reduce) {
+                    .fsg-spinner {
+                        animation-duration: 2s;
+                    }
+                }
+            `;
+
+            document.head.appendChild(style);
         }
-    };
 
-    let prepared = false;
-    let preparation = null;
-    let languageIndicator;
-    let activeStatus;
+        /* =====================================================
+           Language screen rolling indicator
+        ===================================================== */
 
-    function addStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
+        function addIndicator() {
+            const box = document.querySelector('.language-box');
 
-            .fsg-preparation {
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                gap:10px;
-                margin:18px auto 0;
-                min-height:24px;
-                color:rgba(25,25,27,.68);
-                font-size:12px;
-                line-height:1.5;
-            }
-            .fsg-spinner {
-                width:17px;
-                height:17px;
-                flex:0 0 17px;
-                border:2px solid rgba(196,0,24,.16);
-                border-top-color:#c40018;
-                border-radius:50%;
-                animation:fsgSpin .75s linear infinite;
-            }
-            @keyframes fsgSpin {
-                to { transform:rotate(360deg); }
-            }
-            .fsg-backdrop {
-                position:fixed;
-                inset:0;
-                z-index:10000;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                padding:18px;
-                background:rgba(18,18,20,.50);
-                backdrop-filter:blur(16px);
-                -webkit-backdrop-filter:blur(16px);
-            }
-            .fsg-card {
-                width:min(560px,100%);
-                max-height:88vh;
-                overflow-y:auto;
-                padding:30px 26px 24px;
-                border:1px solid rgba(255,255,255,.72);
-                border-radius:25px;
-                background:rgba(255,255,255,.96);
-                color:#19191b;
-                box-shadow:0 24px 70px rgba(0,0,0,.22);
-                font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
-            }
-            .fsg-card h2 {
-                margin:0 0 20px;
-                font-size:23px;
-                line-height:1.4;
-                text-align:center;
-            }
-            .fsg-copy {
-                margin:0 0 13px;
-                font-size:14px;
-                line-height:1.8;
-                color:rgba(25,25,27,.82);
-            }
-            .fsg-status {
-                display:flex;
-                align-items:center;
-                gap:9px;
-                min-height:38px;
-                margin:18px 0 14px;
-                padding:10px 12px;
-                border-radius:12px;
-                background:rgba(196,0,24,.055);
-                font-size:12px;
-                line-height:1.5;
-            }
-            .fsg-actions {
-                display:grid;
-                grid-template-columns:1fr 1.25fr;
-                gap:10px;
-                margin-top:15px;
-            }
-            .fsg-actions button {
-                min-height:48px;
-                margin:0;
-                padding:9px 12px;
-                border:1px solid rgba(0,0,0,.08);
-                border-radius:13px;
-                font:inherit;
-                font-size:13px;
-                font-weight:650;
-                cursor:pointer;
-            }
-            .fsg-back {
-                color:#333;
-                background:#f0f0f0;
-            }
-            .fsg-agree {
-                color:white;
-                background:#c40018;
-                border-color:#c40018 !important;
-            }
-            .fsg-actions button:disabled {
-                opacity:.55;
-                cursor:wait;
-            }
-                        @media(max-width:430px) {
-                .fsg-card { padding:25px 19px 20px; }
-                .fsg-actions { grid-template-columns:1fr; }
+            if (!box) return;
+
+            if (document.getElementById('fsg-language-preparation')) {
+                return;
             }
 
-            /* マウスカーソルを利用上の注意画面より前面に表示 */
-            .liquid-cursor {
-                z-index: 10002 !important;
-                pointer-events: none !important;
-            }
+            const wrapper = document.createElement('div');
+            wrapper.id = 'fsg-language-preparation';
+            wrapper.className = 'fsg-preparation';
 
-            .cursor-ripple {
-                z-index: 10001 !important;
-                pointer-events: none !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
+            wrapper.setAttribute('role', 'status');
+            wrapper.setAttribute('aria-live', 'polite');
 
-    function addIndicator() {
-        const box = document.querySelector('.language-box');
-        if (!box) return;
+            const spinner = document.createElement('span');
+            spinner.className = 'fsg-spinner';
+            spinner.setAttribute('aria-hidden', 'true');
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'fsg-preparation';
-        wrapper.setAttribute('role', 'status');
+            languageIndicator = document.createElement('span');
+            languageIndicator.textContent = TEXT.ja.preparing;
 
-        const spinner = document.createElement('span');
-        spinner.className = 'fsg-spinner';
+            wrapper.append(spinner, languageIndicator);
 
-        languageIndicator = document.createElement('span');
-        languageIndicator.textContent = TEXT.ja.preparing;
-
-        wrapper.append(spinner, languageIndicator);
-        box.appendChild(wrapper);
-    }
-
-    function updateIndicator(message) {
-        if (languageIndicator) {
-            languageIndicator.textContent = message;
-        }
-    }
-
-    async function fetchJson(path) {
-        const response = await fetch(path, { cache: 'no-cache' });
-
-        if (!response.ok) {
-            throw new Error(path + ' HTTP ' + response.status);
+            box.appendChild(wrapper);
         }
 
-        const data = await response.json();
-
-        if (data === null || typeof data !== 'object') {
-            throw new Error('Invalid JSON: ' + path);
-        }
-
-        return data;
-    }
-
-    function startPreparation() {
-        if (prepared) return Promise.resolve();
-
-        if (preparation) return preparation;
-
-        preparation = Promise.all([
-            fetchJson('./data/spots.json'),
-            fetchJson('./data/routes.json')
-        ]).then(([spots, routes]) => {
-            prepared = true;
-            window.FushimiStartupPrepared = { spots, routes };
-
-            updateIndicator(TEXT.ja.ready);
-
-            if (activeStatus) {
-                activeStatus.textContent = (TEXT[localStorage.getItem('language')] || TEXT.ja).ready;
+        function updateIndicator(message) {
+            if (languageIndicator) {
+                languageIndicator.textContent = message;
             }
-        }).catch(error => {
-            preparation = null;
-            console.error('[Fushimi] Preparation error:', error);
-            throw error;
-        });
-
-        return preparation;
-    }
-
-    function accepted(language) {
-        try {
-            return localStorage.getItem(CONSENT_KEY) === VERSION + ':' + language;
-        } catch (_) {
-            return false;
         }
-    }
 
-    function saveAcceptance(language) {
-        try {
-            localStorage.setItem(CONSENT_KEY, VERSION + ':' + language);
-        } catch (error) {
-            console.warn('Consent could not be saved:', error);
+        /* =====================================================
+           Prepare data
+        ===================================================== */
+
+        async function fetchJson(path) {
+            const response = await fetch(path, {
+                cache: 'no-cache'
+            });
+
+            if (!response.ok) {
+                throw new Error(path + ' HTTP ' + response.status);
+            }
+
+            const data = await response.json();
+
+            if (data === null || typeof data !== 'object') {
+                throw new Error('Invalid JSON: ' + path);
+            }
+
+            return data;
         }
-    }
 
-    function showDialog(language, showNotice) {
-        const copy = TEXT[language] || TEXT.ja;
+        function startPreparation() {
+            if (prepared) {
+                return Promise.resolve();
+            }
 
-        const backdrop = document.createElement('div');
-        backdrop.className = 'fsg-backdrop';
+            if (preparation) {
+                return preparation;
+            }
 
-        const card = document.createElement('section');
-        card.className = 'fsg-card';
-        card.setAttribute('role', 'dialog');
-        card.setAttribute('aria-modal', 'true');
+            preparation = Promise.all([
+                fetchJson('./data/spots.json'),
+                fetchJson('./data/routes.json')
+            ]).then(([spots, routes]) => {
 
-        const heading = document.createElement('h2');
-        heading.textContent = showNotice ? copy.title : copy.loading;
-        card.appendChild(heading);
+                prepared = true;
 
-        if (showNotice) {
-            copy.notice.forEach(message => {
-                const paragraph = document.createElement('p');
-                paragraph.className = 'fsg-copy';
-                paragraph.textContent = message;
-                card.appendChild(paragraph);
+                window.FushimiStartupPrepared = {
+                    spots,
+                    routes
+                };
+
+                updateIndicator(TEXT.ja.ready);
+
+                if (activeStatus) {
+                    let currentLanguage = 'ja';
+
+                    try {
+                        currentLanguage = localStorage.getItem('language') || 'ja';
+                    } catch (_) {}
+
+                    const copy = TEXT[currentLanguage] || TEXT.ja;
+                    activeStatus.textContent = copy.ready;
+                }
+
+                return window.FushimiStartupPrepared;
+
+            }).catch(error => {
+
+                preparation = null;
+
+                console.error(
+                    '[Fushimi] Preparation error:',
+                    error
+                );
+
+                throw error;
+            });
+
+            return preparation;
+        }
+
+        /* =====================================================
+           Consent storage
+        ===================================================== */
+
+        function accepted(language) {
+            try {
+                return localStorage.getItem(CONSENT_KEY) ===
+                    VERSION + ':' + language;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function saveAcceptance(language) {
+            try {
+                localStorage.setItem(
+                    CONSENT_KEY,
+                    VERSION + ':' + language
+                );
+            } catch (error) {
+                console.warn(
+                    '[Fushimi] Consent could not be saved:',
+                    error
+                );
+            }
+        }
+
+        /* =====================================================
+           Notice dialog
+        ===================================================== */
+
+        function showDialog(language, showNotice) {
+            const copy = TEXT[language] || TEXT.ja;
+
+            const backdrop = document.createElement('div');
+            backdrop.className = 'fsg-backdrop';
+
+            const card = document.createElement('section');
+            card.className = 'fsg-card';
+
+            card.setAttribute('role', 'dialog');
+            card.setAttribute('aria-modal', 'true');
+            card.setAttribute('aria-labelledby', 'fsg-notice-title');
+
+            /* Title */
+
+            const heading = document.createElement('h2');
+            heading.id = 'fsg-notice-title';
+
+            heading.textContent = showNotice
+                ? copy.title
+                : copy.loading;
+
+            card.appendChild(heading);
+
+            /* Notice text */
+
+            if (showNotice) {
+
+                copy.notice.forEach((message, index) => {
+
+                    const paragraph = document.createElement('p');
+                    paragraph.className = 'fsg-copy';
+
+                    /*
+                     * Only emphasize the disclaimer phrase.
+                     * The rest of the paragraph stays normal.
+                     */
+
+                    if (
+                        index === copy.notice.length - 1 &&
+                        copy.disclaimerPhrase
+                    ) {
+                        const position = message.lastIndexOf(
+                            copy.disclaimerPhrase
+                        );
+
+                        if (position >= 0) {
+
+                            paragraph.appendChild(
+                                document.createTextNode(
+                                    message.slice(0, position)
+                                )
+                            );
+
+                            const emphasis = document.createElement('strong');
+
+                            emphasis.className = 'fsg-disclaimer';
+                            emphasis.textContent = message.slice(position);
+
+                            paragraph.appendChild(emphasis);
+
+                        } else {
+                            paragraph.textContent = message;
+                        }
+
+                    } else {
+                        paragraph.textContent = message;
+                    }
+
+                    card.appendChild(paragraph);
+                });
+            }
+
+            /* Loading status */
+
+            const status = document.createElement('div');
+            status.className = 'fsg-status';
+
+            status.setAttribute('role', 'status');
+            status.setAttribute('aria-live', 'polite');
+
+            const spinner = document.createElement('span');
+            spinner.className = 'fsg-spinner';
+            spinner.setAttribute('aria-hidden', 'true');
+
+            const statusText = document.createElement('span');
+
+            statusText.textContent = prepared
+                ? copy.ready
+                : copy.waiting;
+
+            activeStatus = statusText;
+
+            status.append(spinner, statusText);
+            card.appendChild(status);
+
+            /* Buttons */
+
+            const actions = document.createElement('div');
+            actions.className = 'fsg-actions';
+
+            const back = document.createElement('button');
+
+            back.className = 'fsg-back';
+            back.type = 'button';
+            back.textContent = copy.back;
+
+            back.addEventListener('click', () => {
+                backdrop.remove();
+                activeStatus = null;
+            });
+
+            const agree = document.createElement('button');
+
+            agree.className = 'fsg-agree';
+            agree.type = 'button';
+
+            agree.textContent = showNotice
+                ? copy.agree
+                : copy.retry;
+
+            agree.addEventListener('click', async () => {
+
+                agree.disabled = true;
+                back.disabled = true;
+
+                statusText.textContent = copy.waiting;
+                spinner.style.display = 'inline-block';
+
+                try {
+
+                    /*
+                     * Wait for spots.json and routes.json.
+                     * The large video is not waited on here.
+                     */
+
+                    await startPreparation();
+
+                    /*
+                     * Save consent only after successful preparation.
+                     */
+
+                    if (showNotice) {
+                        saveAcceptance(language);
+                    }
+
+                    statusText.textContent = copy.ready;
+
+                    window.location.href = 'home.html';
+
+                } catch (error) {
+
+                    console.error(
+                        '[Fushimi] Could not continue:',
+                        error
+                    );
+
+                    statusText.textContent = copy.error;
+
+                    spinner.style.display = 'none';
+
+                    agree.textContent = copy.retry;
+
+                    agree.disabled = false;
+                    back.disabled = false;
+                }
+            });
+
+            actions.append(back, agree);
+            card.appendChild(actions);
+
+            backdrop.appendChild(card);
+            document.body.appendChild(backdrop);
+
+            /*
+             * Put keyboard focus on the main action.
+             */
+
+            requestAnimationFrame(() => {
+                agree.focus();
             });
         }
 
-        const status = document.createElement('div');
-        status.className = 'fsg-status';
+        /* =====================================================
+           Language selection
+        ===================================================== */
 
-        const spinner = document.createElement('span');
-        spinner.className = 'fsg-spinner';
+        function chooseLanguage(language) {
 
-        const statusText = document.createElement('span');
-        statusText.textContent = prepared ? copy.ready : copy.waiting;
-        activeStatus = statusText;
-
-        status.append(spinner, statusText);
-        card.appendChild(status);
-
-        const actions = document.createElement('div');
-        actions.className = 'fsg-actions';
-
-        const back = document.createElement('button');
-        back.className = 'fsg-back';
-        back.type = 'button';
-        back.textContent = copy.back;
-        back.addEventListener('click', () => {
-            backdrop.remove();
-            activeStatus = null;
-        });
-
-        const agree = document.createElement('button');
-        agree.className = 'fsg-agree';
-        agree.type = 'button';
-        agree.textContent = showNotice ? copy.agree : copy.retry;
-
-        agree.addEventListener('click', async () => {
-            if (showNotice) saveAcceptance(language);
-
-            agree.disabled = true;
-            back.disabled = true;
-            statusText.textContent = copy.waiting;
-            spinner.style.display = 'inline-block';
+            const selected = [
+                'ja',
+                'en',
+                'zh',
+                'ko'
+            ].includes(language)
+                ? language
+                : 'ja';
 
             try {
-                await startPreparation();
-                statusText.textContent = copy.ready;
-                window.location.href = 'home.html';
-            } catch (error) {
-                statusText.textContent = copy.error;
-                spinner.style.display = 'none';
-                agree.textContent = copy.retry;
-                agree.disabled = false;
-                back.disabled = false;
+                localStorage.setItem('language', selected);
+            } catch (_) {}
+
+            document.documentElement.lang = selected;
+
+            /*
+             * Already accepted:
+             * Skip the notice, but still make sure required data is ready.
+             */
+
+            if (accepted(selected)) {
+
+                if (prepared) {
+                    window.location.href = 'home.html';
+                } else {
+                    showDialog(selected, false);
+                }
+
+                return;
             }
-        });
 
-        actions.append(back, agree);
-        card.appendChild(actions);
-        backdrop.appendChild(card);
-        document.body.appendChild(backdrop);
-    }
+            /*
+             * First visit or updated notice:
+             * Show the notice.
+             */
 
-    function chooseLanguage(language) {
-        const selected = ['ja', 'en', 'zh', 'ko'].includes(language)
-            ? language
-            : 'ja';
-
-        try {
-            localStorage.setItem('language', selected);
-        } catch (_) {}
-
-        document.documentElement.lang = selected;
-
-        if (accepted(selected)) {
-            showDialog(selected, false);
-        } else {
             showDialog(selected, true);
         }
-    }
 
-    addStyles();
-    addIndicator();
+        /* =====================================================
+           Startup
+        ===================================================== */
 
-    // 言語選択画面を開いた直後からデータ読み込み開始
-    startPreparation().catch(() => {
-        updateIndicator('データの準備に失敗しました。選択後に再試行できます。');
-    });
+        addStyles();
 
-    // app-boot.js の後に言語選択動作を差し替える
-    document.addEventListener('DOMContentLoaded', () => {
-        window.selectLanguage = chooseLanguage;
-    }, { once: true });
+        addIndicator();
 
-})();
-</script>
+        /*
+         * Start preparing data immediately when index.html opens.
+         */
+
+        startPreparation().catch(() => {
+
+            updateIndicator(
+                'データの準備に失敗しました。言語選択後に再試行できます。'
+            );
+
+        });
+
+        /*
+         * app-boot.js is loaded with defer.
+         * Replace its direct navigation after deferred scripts run.
+         */
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            window.selectLanguage = chooseLanguage;
+
+        }, { once: true });
+
+    })();
+    </script>
+
 </body>
-
 </html>
