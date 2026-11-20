@@ -1,585 +1,399 @@
-<!DOCTYPE html>
-<html lang="ja">
+<script>
+(() => {
+    'use strict';
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    const VERSION = '2026-11-20-v4';
+    const CONSENT_KEY = 'fushimi_smart_guide_consent_version';
 
-    <title>Fushimi Inari Smart Guide</title>
-
-    <link rel="stylesheet" href="css/style.css">
-
-    <style>
-        /* =========================================================
-           Liquid Glass language screen
-           ========================================================= */
-
-        :root {
-            --lg-red: #c40018;
-            --lg-red-soft: rgba(196, 0, 24, 0.22);
-            --lg-white: rgba(255, 255, 255, 0.72);
-            --lg-white-soft: rgba(255, 255, 255, 0.18);
-            --lg-border: rgba(255, 255, 255, 0.42);
-            --lg-text: #19191b;
+    const TEXT = {
+        ja: {
+            preparing: '観光ガイドのデータを準備しています',
+            ready: '基本データの準備ができました',
+            title: 'ご利用前の注意事項',
+            notice: [
+                'このアプリは、伏見稲荷周辺の観光情報や参道ルートを案内する参考ツールです。',
+                '掲載情報やルートは、現地の状況と異なる場合があります。通行止め・立入制限・足元の状況を現地で確認し、神社や施設の案内・係員の指示を優先してください。',
+                '歩きスマホを避け、周囲の歩行者や車両に十分注意してください。',
+                '現在地機能を利用する場合、端末の位置情報を利用します。位置情報の精度は端末や周囲の環境によって異なります。',
+                '通信環境や契約によっては通信料が発生する場合があります。',
+                '本アプリの利用に関連して生じた事故や損害等について、制作チームは法令上認められる範囲で責任を負いません。安全を最優先に、ご自身の判断でご利用ください。'
+            ],
+            waiting: 'データを準備しています。しばらくお待ちください。',
+            agree: '同意して利用を開始',
+            back: '同意しない（戻る）',
+            loading: 'ガイドを準備しています',
+            retry: 'もう一度試す',
+            error: 'データを読み込めませんでした。通信環境を確認して再試行してください。'
+        },
+        en: {
+            preparing: 'Preparing the guide data',
+            ready: 'Basic data is ready',
+            title: 'Important Information Before Use',
+            notice: [
+                'This app provides tourist information and walking-route guidance around Fushimi Inari for reference.',
+                'Information and routes may differ from actual conditions. Check signs, closures, restricted areas and ground conditions. Follow instructions from shrine and facility staff.',
+                'Do not use your phone while walking. Watch out for pedestrians and vehicles.',
+                'The current-location feature uses your device location. Accuracy depends on your device and surroundings.',
+                'Mobile data charges may apply depending on your network and service plan.',
+                'To the extent permitted by applicable law, the project team is not responsible for accidents or damage arising from use of this app. Please put safety first and use your own judgment.'
+            ],
+            waiting: 'Please wait while the guide data is prepared.',
+            agree: 'Agree and Continue',
+            back: 'Do Not Agree (Back)',
+            loading: 'Preparing the Guide',
+            retry: 'Try Again',
+            error: 'The data could not be loaded. Check your connection and try again.'
+        },
+        zh: {
+            preparing: '正在准备观光指南数据',
+            ready: '基本数据已准备完成',
+            title: '使用前注意事项',
+            notice: [
+                '本应用提供伏见稻荷周边旅游信息和参道路线，仅供参考。',
+                '刊载的信息和路线可能与现场实际情况不同。请确认现场标识、封闭区域、禁止进入区域及路面状况，并遵从神社和设施工作人员的指示。',
+                '请勿边走边看手机，并注意周围行人和车辆。',
+                '使用当前位置功能时，应用会使用设备的位置信息。定位精度取决于设备和周围环境。',
+                '根据网络环境和通信套餐，使用本应用可能产生通信费用。',
+                '在法律允许的范围内，制作团队不对使用本应用所引起的事故或损失承担责任。请将安全放在首位，并自行判断是否使用相关信息。'
+            ],
+            waiting: '正在准备数据，请稍候。',
+            agree: '同意并开始使用',
+            back: '不同意（返回）',
+            loading: '正在准备观光指南',
+            retry: '重试',
+            error: '无法读取数据。请检查网络连接后重试。'
+        },
+        ko: {
+            preparing: '관광 안내 데이터를 준비하고 있습니다',
+            ready: '기본 데이터 준비가 완료되었습니다',
+            title: '이용 전 주의사항',
+            notice: [
+                '이 앱은 후시미이나리 주변의 관광 정보와 참배길 경로를 안내하는 참고용 도구입니다.',
+                '게시된 정보와 경로는 현장 상황에 따라 실제와 다를 수 있습니다. 통행 금지, 출입 제한 구역과 바닥 상태를 확인하고 신사 및 시설 직원의 안내를 따라 주세요.',
+                '걸으면서 휴대전화를 보지 말고 주변 사람과 차량에 주의해 주세요.',
+                '현재 위치 기능을 사용하면 기기의 위치 정보를 이용합니다. 정확도는 기기와 주변 환경에 따라 달라질 수 있습니다.',
+                '네트워크 환경과 요금제에 따라 데이터 통신 요금이 발생할 수 있습니다.',
+                '관련 법령이 허용하는 범위에서, 제작팀은 이 앱의 이용으로 발생한 사고나 손해에 대해 책임을 지지 않습니다. 안전을 최우선으로 하고 스스로 판단하여 이용해 주세요.'
+            ],
+            waiting: '데이터 준비가 끝날 때까지 잠시 기다려 주세요.',
+            agree: '동의하고 시작하기',
+            back: '동의하지 않음 (뒤로)',
+            loading: '관광 안내를 준비하고 있습니다',
+            retry: '다시 시도',
+            error: '데이터를 불러오지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.'
         }
+    };
 
-        * {
-            box-sizing: border-box;
-        }
+    let prepared = false;
+    let preparation = null;
+    let languageIndicator;
+    let activeStatus;
 
-        html,
-        body {
-            margin: 0;
-            min-height: 100%;
-        }
-
-        body.language-page {
-            min-height: 100vh;
-            overflow: hidden;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            position: relative;
-
-            font-family:
-                -apple-system,
-                BlinkMacSystemFont,
-                "SF Pro Display",
-                "SF Pro Text",
-                "Helvetica Neue",
-                Arial,
-                sans-serif;
-
-            color: var(--lg-text);
-            background:
-                radial-gradient(circle at 16% 18%, rgba(255, 86, 109, 0.34), transparent 25%),
-                radial-gradient(circle at 83% 14%, rgba(255, 179, 194, 0.42), transparent 27%),
-                radial-gradient(circle at 76% 83%, rgba(154, 38, 55, 0.24), transparent 28%),
-                linear-gradient(135deg, #f7f7f4 0%, #ececea 52%, #e4e4e1 100%);
-        }
-
-        /* Soft blurred light blobs behind the glass */
-        body.language-page::before,
-        body.language-page::after {
-            content: "";
-            position: fixed;
-            pointer-events: none;
-            border-radius: 999px;
-            filter: blur(18px);
-            mix-blend-mode: screen;
-        }
-
-        body.language-page::before {
-            width: 40vw;
-            height: 40vw;
-            min-width: 260px;
-            min-height: 260px;
-            left: -10vw;
-            top: 45%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0));
-            animation: floatLeft 11s ease-in-out infinite alternate;
-        }
-
-        body.language-page::after {
-            width: 34vw;
-            height: 34vw;
-            min-width: 240px;
-            min-height: 240px;
-            right: -8vw;
-            bottom: -8vw;
-            background: radial-gradient(circle, var(--lg-red-soft), rgba(255, 255, 255, 0));
-            animation: floatRight 13s ease-in-out infinite alternate;
-        }
-
-        .overlay {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-
-            background:
-                linear-gradient(
-                    115deg,
-                    rgba(255,255,255,0.48) 0%,
-                    rgba(255,255,255,0.10) 35%,
-                    rgba(255,255,255,0.30) 65%,
-                    rgba(255,255,255,0.10) 100%
-                );
-
-            backdrop-filter: blur(10px) saturate(1.08);
-            -webkit-backdrop-filter: blur(10px) saturate(1.08);
-        }
-
-        .language-box {
-            width: min(520px, 100%);
-            padding: 52px 42px 38px;
-            position: relative;
-            isolation: isolate;
-
-            border: 1px solid var(--lg-border);
-            border-radius: 34px;
-
-            background:
-                linear-gradient(
-                    145deg,
-                    rgba(255,255,255,0.66),
-                    rgba(255,255,255,0.28) 46%,
-                    rgba(255,255,255,0.40)
-                );
-
-            box-shadow:
-                0 35px 80px rgba(31, 31, 33, 0.16),
-                inset 0 1px 0 rgba(255,255,255,0.80),
-                inset 0 -1px 0 rgba(255,255,255,0.18);
-
-            backdrop-filter: blur(30px) saturate(1.35);
-            -webkit-backdrop-filter: blur(30px) saturate(1.35);
-
-            text-align: center;
-
-            animation:
-                glassIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both,
-                glassFloat 7s ease-in-out 1.1s infinite;
-        }
-
-        /* Glass reflection */
-        .language-box::before {
-            content: "";
-            position: absolute;
-            inset: 1px;
-            border-radius: 33px;
-            pointer-events: none;
-            z-index: -1;
-
-            background:
-                linear-gradient(
-                    155deg,
-                    rgba(255,255,255,0.58),
-                    rgba(255,255,255,0.00) 34%
-                );
-        }
-
-        .language-box::after {
-            content: "";
-            position: absolute;
-            left: 14%;
-            top: 12px;
-            width: 72%;
-            height: 1px;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.78);
-            filter: blur(0.2px);
-            pointer-events: none;
-        }
-
-        .language-box h1 {
-            width: 76px;
-            height: 76px;
-            margin: 0 auto 22px;
-
-            display: grid;
-            place-items: center;
-
-            border-radius: 24px;
-            border: 1px solid rgba(255,255,255,0.68);
-
-            background:
-                linear-gradient(
-                    145deg,
-                    rgba(255,255,255,0.72),
-                    rgba(255,255,255,0.22)
-                );
-
-            box-shadow:
-                0 15px 28px rgba(196, 0, 24, 0.13),
-                inset 0 1px 0 rgba(255,255,255,0.86);
-
-            color: var(--lg-red);
-            font-size: 34px;
-            line-height: 1;
-            text-shadow: 0 2px 12px rgba(196, 0, 24, 0.13);
-        }
-
-        .language-box h2 {
-            margin: 0 0 14px;
-
-            font-size: clamp(28px, 4vw, 39px);
-            line-height: 1.08;
-            letter-spacing: -0.04em;
-            font-weight: 700;
-        }
-
-        .language-box p {
-            margin: 0;
-            color: rgba(25, 25, 27, 0.68);
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        .language-box p + p {
-            margin-top: 2px;
-            font-size: 13px;
-            color: rgba(25, 25, 27, 0.48);
-        }
-
-        .language-box button {
-            width: 100%;
-            margin-top: 12px;
-            min-height: 56px;
-            padding: 0 22px;
-
-            border: 1px solid rgba(255,255,255,0.50);
-            border-radius: 18px;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    rgba(255,255,255,0.58),
-                    rgba(255,255,255,0.20)
-                );
-
-            color: #1b1b1d;
-            font: inherit;
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.70),
-                0 8px 20px rgba(31,31,33,0.06);
-
-            backdrop-filter: blur(18px) saturate(1.25);
-            -webkit-backdrop-filter: blur(18px) saturate(1.25);
-
-            cursor: pointer;
-            transition:
-                transform 0.22s ease,
-                box-shadow 0.22s ease,
-                background 0.22s ease,
-                border-color 0.22s ease;
-        }
-
-        .language-box button:hover {
-            transform: translateY(-2px) scale(1.012);
-
-            background:
-                linear-gradient(
-                    135deg,
-                    rgba(255,255,255,0.74),
-                    rgba(255,255,255,0.30)
-                );
-
-            border-color: rgba(255,255,255,0.74);
-
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.86),
-                0 14px 28px rgba(31,31,33,0.10);
-        }
-
-        .language-box button:active {
-            transform: translateY(0) scale(0.992);
-        }
-
-        .language-box button:first-of-type:hover {
-            box-shadow:
-                0 14px 28px rgba(196, 0, 24, 0.12),
-                inset 0 1px 0 rgba(255,255,255,0.86);
-        }
-
-        @keyframes glassIn {
-            from {
-                opacity: 0;
-                transform: translateY(22px) scale(0.965);
+    function addStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .fsg-preparation {
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:10px;
+                margin:18px auto 0;
+                min-height:24px;
+                color:rgba(25,25,27,.68);
+                font-size:12px;
+                line-height:1.5;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
+            .fsg-spinner {
+                width:17px;
+                height:17px;
+                flex:0 0 17px;
+                border:2px solid rgba(196,0,24,.16);
+                border-top-color:#c40018;
+                border-radius:50%;
+                animation:fsgSpin .75s linear infinite;
             }
+            @keyframes fsgSpin {
+                to { transform:rotate(360deg); }
+            }
+            .fsg-backdrop {
+                position:fixed;
+                inset:0;
+                z-index:10000;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                padding:18px;
+                background:rgba(18,18,20,.50);
+                backdrop-filter:blur(16px);
+                -webkit-backdrop-filter:blur(16px);
+            }
+            .fsg-card {
+                width:min(560px,100%);
+                max-height:88vh;
+                overflow-y:auto;
+                padding:30px 26px 24px;
+                border:1px solid rgba(255,255,255,.72);
+                border-radius:25px;
+                background:rgba(255,255,255,.96);
+                color:#19191b;
+                box-shadow:0 24px 70px rgba(0,0,0,.22);
+                font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+            }
+            .fsg-card h2 {
+                margin:0 0 20px;
+                font-size:23px;
+                line-height:1.4;
+                text-align:center;
+            }
+            .fsg-copy {
+                margin:0 0 13px;
+                font-size:14px;
+                line-height:1.8;
+                color:rgba(25,25,27,.82);
+            }
+            .fsg-status {
+                display:flex;
+                align-items:center;
+                gap:9px;
+                min-height:38px;
+                margin:18px 0 14px;
+                padding:10px 12px;
+                border-radius:12px;
+                background:rgba(196,0,24,.055);
+                font-size:12px;
+                line-height:1.5;
+            }
+            .fsg-actions {
+                display:grid;
+                grid-template-columns:1fr 1.25fr;
+                gap:10px;
+                margin-top:15px;
+            }
+            .fsg-actions button {
+                min-height:48px;
+                margin:0;
+                padding:9px 12px;
+                border:1px solid rgba(0,0,0,.08);
+                border-radius:13px;
+                font:inherit;
+                font-size:13px;
+                font-weight:650;
+                cursor:pointer;
+            }
+            .fsg-back {
+                color:#333;
+                background:#f0f0f0;
+            }
+            .fsg-agree {
+                color:white;
+                background:#c40018;
+                border-color:#c40018 !important;
+            }
+            .fsg-actions button:disabled {
+                opacity:.55;
+                cursor:wait;
+            }
+            @media(max-width:430px) {
+                .fsg-card { padding:25px 19px 20px; }
+                .fsg-actions { grid-template-columns:1fr; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function addIndicator() {
+        const box = document.querySelector('.language-box');
+        if (!box) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'fsg-preparation';
+        wrapper.setAttribute('role', 'status');
+
+        const spinner = document.createElement('span');
+        spinner.className = 'fsg-spinner';
+
+        languageIndicator = document.createElement('span');
+        languageIndicator.textContent = TEXT.ja.preparing;
+
+        wrapper.append(spinner, languageIndicator);
+        box.appendChild(wrapper);
+    }
+
+    function updateIndicator(message) {
+        if (languageIndicator) {
+            languageIndicator.textContent = message;
+        }
+    }
+
+    async function fetchJson(path) {
+        const response = await fetch(path, { cache: 'no-cache' });
+
+        if (!response.ok) {
+            throw new Error(path + ' HTTP ' + response.status);
         }
 
-        @keyframes glassFloat {
-            0%, 100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-5px);
-            }
+        const data = await response.json();
+
+        if (data === null || typeof data !== 'object') {
+            throw new Error('Invalid JSON: ' + path);
         }
 
-        @keyframes floatLeft {
-            from {
-                transform: translate3d(0, -4%, 0) scale(1);
+        return data;
+    }
+
+    function startPreparation() {
+        if (prepared) return Promise.resolve();
+
+        if (preparation) return preparation;
+
+        preparation = Promise.all([
+            fetchJson('./data/spots.json'),
+            fetchJson('./data/routes.json')
+        ]).then(([spots, routes]) => {
+            prepared = true;
+            window.FushimiStartupPrepared = { spots, routes };
+
+            updateIndicator(TEXT.ja.ready);
+
+            if (activeStatus) {
+                activeStatus.textContent = (TEXT[localStorage.getItem('language')] || TEXT.ja).ready;
             }
-            to {
-                transform: translate3d(5%, 4%, 0) scale(1.08);
-            }
+        }).catch(error => {
+            preparation = null;
+            console.error('[Fushimi] Preparation error:', error);
+            throw error;
+        });
+
+        return preparation;
+    }
+
+    function accepted(language) {
+        try {
+            return localStorage.getItem(CONSENT_KEY) === VERSION + ':' + language;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function saveAcceptance(language) {
+        try {
+            localStorage.setItem(CONSENT_KEY, VERSION + ':' + language);
+        } catch (error) {
+            console.warn('Consent could not be saved:', error);
+        }
+    }
+
+    function showDialog(language, showNotice) {
+        const copy = TEXT[language] || TEXT.ja;
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'fsg-backdrop';
+
+        const card = document.createElement('section');
+        card.className = 'fsg-card';
+        card.setAttribute('role', 'dialog');
+        card.setAttribute('aria-modal', 'true');
+
+        const heading = document.createElement('h2');
+        heading.textContent = showNotice ? copy.title : copy.loading;
+        card.appendChild(heading);
+
+        if (showNotice) {
+            copy.notice.forEach(message => {
+                const paragraph = document.createElement('p');
+                paragraph.className = 'fsg-copy';
+                paragraph.textContent = message;
+                card.appendChild(paragraph);
+            });
         }
 
-        @keyframes floatRight {
-            from {
-                transform: translate3d(0, 2%, 0) scale(1);
+        const status = document.createElement('div');
+        status.className = 'fsg-status';
+
+        const spinner = document.createElement('span');
+        spinner.className = 'fsg-spinner';
+
+        const statusText = document.createElement('span');
+        statusText.textContent = prepared ? copy.ready : copy.waiting;
+        activeStatus = statusText;
+
+        status.append(spinner, statusText);
+        card.appendChild(status);
+
+        const actions = document.createElement('div');
+        actions.className = 'fsg-actions';
+
+        const back = document.createElement('button');
+        back.className = 'fsg-back';
+        back.type = 'button';
+        back.textContent = copy.back;
+        back.addEventListener('click', () => {
+            backdrop.remove();
+            activeStatus = null;
+        });
+
+        const agree = document.createElement('button');
+        agree.className = 'fsg-agree';
+        agree.type = 'button';
+        agree.textContent = showNotice ? copy.agree : copy.retry;
+
+        agree.addEventListener('click', async () => {
+            if (showNotice) saveAcceptance(language);
+
+            agree.disabled = true;
+            back.disabled = true;
+            statusText.textContent = copy.waiting;
+            spinner.style.display = 'inline-block';
+
+            try {
+                await startPreparation();
+                statusText.textContent = copy.ready;
+                window.location.href = 'home.html';
+            } catch (error) {
+                statusText.textContent = copy.error;
+                spinner.style.display = 'none';
+                agree.textContent = copy.retry;
+                agree.disabled = false;
+                back.disabled = false;
             }
-            to {
-                transform: translate3d(-5%, -5%, 0) scale(1.10);
-            }
+        });
+
+        actions.append(back, agree);
+        card.appendChild(actions);
+        backdrop.appendChild(card);
+        document.body.appendChild(backdrop);
+    }
+
+    function chooseLanguage(language) {
+        const selected = ['ja', 'en', 'zh', 'ko'].includes(language)
+            ? language
+            : 'ja';
+
+        try {
+            localStorage.setItem('language', selected);
+        } catch (_) {}
+
+        document.documentElement.lang = selected;
+
+        if (accepted(selected)) {
+            showDialog(selected, false);
+        } else {
+            showDialog(selected, true);
         }
+    }
 
+    addStyles();
+    addIndicator();
 
-        /* =========================================================
-           Liquid Glass Cursor
-           ========================================================= */
+    // 言語選択画面を開いた直後からデータ読み込み開始
+    startPreparation().catch(() => {
+        updateIndicator('データの準備に失敗しました。選択後に再試行できます。');
+    });
 
-        body.language-page,
-        body.language-page button {
-            cursor: none;
-        }
+    // app-boot.js の後に言語選択動作を差し替える
+    document.addEventListener('DOMContentLoaded', () => {
+        window.selectLanguage = chooseLanguage;
+    }, { once: true });
 
-        .liquid-cursor {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 9999;
-
-            border: 1px solid rgba(255, 255, 255, 0.78);
-
-            background:
-                radial-gradient(
-                    circle at 30% 25%,
-                    rgba(255, 255, 255, 0.92),
-                    rgba(255, 255, 255, 0.26) 38%,
-                    rgba(255, 255, 255, 0.10) 70%,
-                    rgba(196, 0, 24, 0.10) 100%
-                );
-
-            box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.14),
-                0 8px 24px rgba(31, 31, 33, 0.14),
-                inset 0 1px 0 rgba(255, 255, 255, 0.88);
-
-            backdrop-filter: blur(10px) saturate(1.35);
-            -webkit-backdrop-filter: blur(10px) saturate(1.35);
-
-            transform: translate3d(-50%, -50%, 0) scale(1);
-            opacity: 0;
-            transition:
-                width 0.22s ease,
-                height 0.22s ease,
-                opacity 0.2s ease,
-                box-shadow 0.22s ease,
-                border-color 0.22s ease;
-            will-change: transform, width, height, opacity;
-        }
-
-        .liquid-cursor::before {
-            content: "";
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(196, 0, 24, 0.85);
-            box-shadow:
-                0 0 10px rgba(196, 0, 24, 0.38),
-                0 0 22px rgba(196, 0, 24, 0.20);
-        }
-
-        .liquid-cursor::after {
-            content: "";
-            position: absolute;
-            inset: -7px;
-            border-radius: 50%;
-            border: 1px solid rgba(196, 0, 24, 0.20);
-            opacity: 0.7;
-            transform: scale(0.88);
-            transition: transform 0.28s ease, opacity 0.28s ease;
-        }
-
-        .liquid-cursor.is-visible {
-            opacity: 1;
-        }
-
-        .liquid-cursor.is-hover {
-            width: 48px;
-            height: 48px;
-            border-color: rgba(255, 255, 255, 0.92);
-
-            box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.16),
-                0 12px 32px rgba(196, 0, 24, 0.12),
-                inset 0 1px 0 rgba(255, 255, 255, 0.94);
-        }
-
-        .liquid-cursor.is-hover::after {
-            transform: scale(1.04);
-            opacity: 1;
-        }
-
-        .liquid-cursor.is-down {
-            width: 27px;
-            height: 27px;
-        }
-
-        .cursor-ripple {
-            position: fixed;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 9998;
-
-            border: 1px solid rgba(196, 0, 24, 0.50);
-            box-shadow:
-                0 0 18px rgba(196, 0, 24, 0.16),
-                inset 0 0 10px rgba(255, 255, 255, 0.25);
-
-            transform: translate3d(-50%, -50%, 0) scale(1);
-            animation: cursorRipple 0.62s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        @keyframes cursorRipple {
-            0% {
-                opacity: 0.75;
-                transform: translate3d(-50%, -50%, 0) scale(0.7);
-            }
-            100% {
-                opacity: 0;
-                transform: translate3d(-50%, -50%, 0) scale(4.8);
-            }
-        }
-
-        @media (pointer: coarse), (max-width: 700px) {
-            body.language-page,
-            body.language-page button {
-                cursor: auto;
-            }
-
-            .liquid-cursor,
-            .cursor-ripple {
-                display: none;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .liquid-cursor,
-            .liquid-cursor::after {
-                transition: none;
-            }
-
-            .cursor-ripple {
-                display: none;
-            }
-        }
-
-        @media (max-width: 600px) {
-            body.language-page {
-                padding: 16px;
-            }
-
-            .language-box {
-                padding: 40px 22px 24px;
-                border-radius: 28px;
-            }
-
-            .language-box::before {
-                border-radius: 27px;
-            }
-
-            .language-box h1 {
-                width: 68px;
-                height: 68px;
-                border-radius: 21px;
-            }
-
-            .language-box h2 {
-                font-size: 29px;
-            }
-
-            .language-box button {
-                min-height: 54px;
-                border-radius: 17px;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            /* The panel itself stays still, but keep the gentle ambient light alive. */
-            .language-box {
-                animation: none;
-            }
-
-            body.language-page::before {
-                animation: floatLeft 11s ease-in-out infinite alternate !important;
-                animation-duration: 11s !important;
-                animation-iteration-count: infinite !important;
-            }
-
-            body.language-page::after {
-                animation: floatRight 13s ease-in-out infinite alternate !important;
-                animation-duration: 13s !important;
-                animation-iteration-count: infinite !important;
-            }
-
-            .language-box button {
-                transition: none;
-            }
-        }
-
-
-        /* V143: localized visitor welcome copy for the startup guide overlay. */
-
-
-    </style>
-</head>
-
-<body class="language-page">
-
-    <div class="liquid-cursor" aria-hidden="true"></div>
-
-    <div class="overlay"></div>
-
-    <div class="language-box">
-
-        <h1>⛩</h1>
-
-        <h2>Fushimi Inari Smart Guide</h2>
-
-        <p data-i18n="selectLanguage">
-            言語を選択してください
-        </p>
-
-        <p data-i18n="pleaseSelectLanguage">
-            Please Select Your Language
-        </p>
-
-        <button onclick="selectLanguage('ja')">
-            🇯🇵 日本語
-        </button>
-
-        <button onclick="selectLanguage('en')">
-            🇺🇸 English
-        </button>
-
-        <button onclick="selectLanguage('zh')">
-            🇨🇳 中文
-        </button>
-
-        <button onclick="selectLanguage('ko')">
-            🇰🇷 한국어
-        </button>
-
-    </div>
-
-
-
-    <script src="js/liquid-cursor.js?v=94" defer></script>
-
-    <script src="js/language.js?v=140" defer></script>
-    <script src="js/app-boot.js?v=144" defer></script>
-
-</body>
-
-</html>
+})();
+</script>
