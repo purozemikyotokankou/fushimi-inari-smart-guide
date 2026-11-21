@@ -90,37 +90,6 @@
         "image": "entrance.jpg"
     },
     {
-        "id": 10,
-        "name": "Vermillion-cafe",
-        "category": "飲食店",
-        "lat": 34.968415,
-        "lng": 135.774154,
-        "description": "伏見稲荷の緑に囲まれたカフェ。コーヒーやブランチ、スイーツを楽しめます。",
-        "time": "5分",
-        "image": "Vermillion.jpg",
-        "url": "https://www.vermillioncafe.com/"
-    },
-    {
-        "id": 11,
-        "name": "ちいかわ本舗",
-        "category": "飲食店",
-        "lat": 34.968005,
-        "lng": 135.771089,
-        "description": "「もぐもぐ（食べる）」と「和」をテーマにした、人気キャラクター「ちいかわ」の常設オフィシャルグッズショップ",
-        "time": "5分",
-        "image": "chiikawa.jpg"
-    },
-    {
-        "id": 12,
-        "name": "eight",
-        "category": "飲食店",
-        "lat": 34.968508,
-        "lng": 135.769422,
-        "description": "「eight（エイト）」は、伏見の名水と高加水・低温長時間発酵にこだわり、ハード系からスイーツ系まで毎日約50種類の焼き立てパンを届ける、京都・伏見稲荷の路地裏にある大人気ベーカリーです。",
-        "time": "5分",
-        "image": ""
-    },
-    {
         "id": 13,
         "name": "トイレ②",
         "category": "トイレ",
