@@ -263,5 +263,35 @@
         "time": "-",
         "image": "gyuukatu.jpg",
         "url": "https://gyukatsu-kyotokatsugyu.com/store/fushimiInari-taisha"
+    },
+    {
+        "id": 30,
+        "name": "稲福",
+        "category": "買う",
+        "lat": 34.96789175,
+        "lng": 135.77192347,
+        "description": "胡麻と牛蒡が香る名物いなり寿司や、秘伝のタレで香ばしく焼き上げるうずら・すずめの焼き鳥、温かい麺類や丼ものなど、参拝客に愛される味を提供しています。",
+        "time": "-",
+        "image": "inafuku.jpg"
+    },
+    {
+        "id": 31,
+        "name": "青山たばこ店",
+        "category": "飲食店",
+        "lat": 34.968299,
+        "lng": 135.7737586,
+        "description": "名物の甘酒やひやしあめ、コーヒーなどを提供し、店先のベンチで一息つける参拝客の憩いの場です。商品を購入すれば喫煙も可能で、祭具も取り扱っています。",
+        "time": "-",
+        "image": "aoyamatabako.jpg"
+    },
+    {
+        "id": 32,
+        "name": "Crosstop",
+        "category": "飲食店",
+        "lat": 34.96786586497146,
+        "lng": 135.77178532605924,
+        "description": "濃厚な抹茶やバニラのソフトクリームが人気で、千本鳥居の散策や稲荷山参拝のあとに甘いものでホッと一息つける休憩スポットです。",
+        "time": "-",
+        "image": "crosstop.jpg"
     }
 ]
