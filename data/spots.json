@@ -252,5 +252,16 @@
         "time": "-",
         "image": "chiikawa.jpg",
         "url": "https://www.chiikawamogumogu.jp/stores/fushimi/"
+    },
+    {
+        "id": 29,
+        "name": "牛カツ京都勝牛 伏見稲荷大社前店",
+        "category": "飲食店",
+        "lat": 34.96714070316016,
+        "lng": 135.7708382737469,
+        "description": "京都発祥の牛カツ専門店。厳選した牛肉を高温短時間で揚げ、外はサクサク中はミディアムレアの食感を実現。部位別の牛カツ膳や、だし醤油・山椒塩・京カレーつけ汁など多彩な薬味とたれで味わうスタイルが人気です。",
+        "time": "-",
+        "image": "gyuukatu.jpg",
+        "url": "https://gyukatsu-kyotokatsugyu.com/store/fushimiInari-taisha"
     }
 ]
