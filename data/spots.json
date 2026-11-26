@@ -231,5 +231,26 @@
         "time": "-",
         "image": "kamiyainariten.jpg",
         "url": "https://kami-ya.jp/"
+    },
+    {
+        "id": 27,
+        "name": "Vermillion - cafe",
+        "category": "飲食店",
+        "lat": 34.96842989171823,
+        "lng": 135.77414605809747,
+        "description": "本格的なコーヒーや軽食を提供する緑に囲まれたカフェ。ビーガン向けメニューもある。水辺の景色を楽しめる。",
+        "time": "-",
+        "image": "Vermillion.jpg"
+    },
+    {
+        "id": 28,
+        "name": "ちいかわもぐもぐ本舗 伏見店",
+        "category": "買う",
+        "lat": 34.967978136188485,
+        "lng": 135.77106780053307,
+        "description": "伏見稲荷大社の参道にある『ちいかわ』と「食べる」がテーマの和風ショップです。キツネ姿の限定ぬいぐるみや京都らしいお菓子、フォトスポットが楽しめます。",
+        "time": "-",
+        "image": "chiikawa.jpg",
+        "url": "https://www.chiikawamogumogu.jp/stores/fushimi/"
     }
 ]
