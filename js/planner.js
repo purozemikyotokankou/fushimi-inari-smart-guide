@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V159-INITIAL-MAP-ZOOM";
-    console.log("[Fushimi Inari Smart Guide] planner.js V159-INITIAL-MAP-ZOOM loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V212-HOME-CTA-AUTO-NAV";
+    console.log("[Fushimi Inari Smart Guide] planner.js V212-HOME-CTA-AUTO-NAV loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -228,6 +228,14 @@ document.addEventListener("DOMContentLoaded", function () {
     let navigationActive = false;
     let navigationLegs = [];
     let navigationLegIndex = 0;
+    let navigationFollowEnabled = true;
+    let navigationLastFollowAt = 0;
+    let navigationLastGpsAt = 0;
+    let navigationLastGpsAccuracy = Infinity;
+    let navigationSensorEnabled = false;
+    let navigationEstimatedSteps = 0;
+    let navigationLastHeading = null;
+    let navigationPdrProgressMeters = null;
 
 
     // ============================================================
@@ -714,24 +722,59 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     };
 
+    function getSpotI18nText(spot, field, language) {
+        const entries = spot && spot.i18n && typeof spot.i18n === "object" ? spot.i18n : null;
+        if (!entries) return "";
+        const candidates = language === "zh" ? ["zh", "zh-CN", "zh-TW"] : [language];
+        for (const key of candidates) {
+            const entry = entries[key];
+            const text = entry && entry[field];
+            if (text !== null && text !== undefined && String(text).trim()) return String(text);
+        }
+        return "";
+    }
+
     function getLocalizedValue(value) {
         if (value === null || value === undefined) return "";
 
         const language = getCurrentLanguage();
+        if (language === "ja") {
+            if (typeof value === "object") return String(value.ja ?? value.en ?? value.zh ?? value.ko ?? value.name ?? Object.values(value)[0] ?? "");
+            return String(value);
+        }
 
         if (typeof value === "object") {
-            // JSONに個別翻訳が用意されていれば必ずそれを優先する。
-            const localized = value[language];
+            // Supports either {ja,en,zh,ko} values or a complete spot object.
+            if (value.i18n && typeof value.i18n === "object") {
+                const fields = ["name", "description", "time", "address", "access"];
+                for (const field of fields) {
+                    const localized = getSpotI18nText(value, field, language);
+                    if (localized) return localized;
+                }
+            }
+            const localized = value[language] ?? (language === "zh" ? value["zh-CN"] : undefined);
             if (localized !== null && localized !== undefined && String(localized).trim()) {
                 return String(localized);
             }
-
-            // 翻訳が未登録の言語は、まず日本語（または最初の値）を辞書照合する。
             const fallback = value.ja || value.en || value.zh || value.ko || Object.values(value)[0] || "";
             return translateSpotText(String(fallback), language) || String(fallback);
         }
 
         const text = String(value);
+        // Most existing rendering code passes spot.name / spot.description as
+        // plain strings. Resolve those strings against the current canonical
+        // spots array so every popup, card, share panel and route label uses i18n.
+        if (Array.isArray(spots)) {
+            const fields = ["name", "description", "time", "address", "access"];
+            for (const spot of spots) {
+                for (const field of fields) {
+                    if (spot && spot[field] !== null && spot[field] !== undefined && String(spot[field]) === text) {
+                        const localized = getSpotI18nText(spot, field, language);
+                        if (localized) return localized;
+                    }
+                }
+            }
+        }
         return translateSpotText(text, language) || text;
     }
 
@@ -1404,7 +1447,8 @@ document.addEventListener("DOMContentLoaded", function () {
             const language = String(getCurrentLanguage() || "ja").toLowerCase().slice(0, 2);
             return ({ ja: "買う", en: "Shop", zh: "购物", ko: "쇼핑" })[language] || "買う";
         }
-        return getCategoryLabel(spot?.category);
+        const spotCategoryTranslation = getSpotI18nText(spot, "category", getCurrentLanguage());
+        return spotCategoryTranslation || getCategoryLabel(spot?.category);
     }
 
     function getCategoryLabel(
@@ -2575,6 +2619,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
             </div>
 
+            <div class="planner-v11-maneuver" id="plannerV11Maneuver" data-direction="straight">
+                <span class="planner-v11-maneuver-icon" id="plannerV11ManeuverIcon" aria-hidden="true">↑</span>
+                <div class="planner-v11-maneuver-copy">
+                    <span class="planner-v11-maneuver-label">次の案内</span>
+                    <strong class="planner-v11-maneuver-text" id="plannerV11ManeuverText">ルートに沿って進んでください</strong>
+                    <span class="planner-v11-maneuver-distance" id="plannerV11ManeuverDistance">目的地までの距離を計算しています</span>
+                </div>
+            </div>
+
             <h3
                 class="planner-v11-nav-title"
                 id="plannerV11NavTitle"
@@ -2587,6 +2640,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 id="plannerV11NavMeta"
             ></div>
 
+            <div class="planner-v11-nav-utility-row">
+                <span class="planner-v11-sensor-status" id="plannerV11SensorStatus" role="status" hidden aria-hidden="true"></span>
+                <a class="planner-v11-crowd-link" id="plannerV11CrowdLink" href="https://ja.kyoto.travel/comfort/fushimi/" target="_blank" rel="noopener noreferrer">京都市公式・混雑予報 ↗</a>
+            </div>
+
             <div
                 class="planner-v11-nav-actions"
                 id="plannerV11NavActions"
@@ -2598,6 +2656,24 @@ document.addEventListener("DOMContentLoaded", function () {
                     id="plannerV11StartButton"
                 >
                     現在地からナビ開始
+                </button>
+
+                <button
+                    type="button"
+                    class="planner-v11-button"
+                    id="plannerV11SensorButton"
+                    disabled
+                >
+                    GPSが弱いとき：センサー測位をON
+                </button>
+
+                <button
+                    type="button"
+                    class="planner-v11-button"
+                    id="plannerV11FollowButton"
+                    hidden
+                >
+                    現在地へ戻る
                 </button>
 
                 <button
@@ -2664,6 +2740,14 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById(
             "plannerV11Arrival"
         );
+
+    const navManeuver = document.getElementById("plannerV11Maneuver");
+    const navManeuverIcon = document.getElementById("plannerV11ManeuverIcon");
+    const navManeuverText = document.getElementById("plannerV11ManeuverText");
+    const navManeuverDistance = document.getElementById("plannerV11ManeuverDistance");
+    const navSensorStatus = document.getElementById("plannerV11SensorStatus");
+    const navSensorButton = document.getElementById("plannerV11SensorButton");
+    const navFollowButton = document.getElementById("plannerV11FollowButton");
 
     // ============================================================
     // アイコン
@@ -2952,14 +3036,36 @@ document.addEventListener("DOMContentLoaded", function () {
     function getStationOfficialTimetableLinks(spot) {
         if (!isRailStationSpot(spot)) return [];
         const icon = getIconType(spot);
-        const nameValue = spot.name && typeof spot.name === "object" ? Object.values(spot.name).join(" ") : String(spot.name || "");
-        const isKeihan = icon === "station-keihan" || String(spot?.id) === "7" || /京阪|keihan|伏見稲荷|fushimi.?inari/i.test(nameValue);
-        if (isKeihan) {
+        const nameValue = spot.name && typeof spot.name === "object"
+            ? Object.values(spot.name).join(" ")
+            : String(spot.name || "");
+        const stationId = String(spot?.id ?? "");
+
+        // 龍谷大前深草（KH33）は伏見稲荷（KH34）と別駅。
+        // 駅IDを最優先し、駅名にも対応させる。
+        const isRyukoku = stationId === "15" || /龍谷大前深草|りゅうこくだいまえふかくさ|ryukoku.?daimae.?fukakusa/i.test(nameValue);
+        if (isRyukoku) {
+            return [{
+                label: "京阪電車 龍谷大前深草駅の公式時刻表（方面・平日／土休日）",
+                url: "https://www.keihan.co.jp/traffic/station/150/info.html"
+            }];
+        }
+
+        const isFushimiInari = stationId === "7" || /伏見稲荷|fushimi.?inari/i.test(nameValue);
+        if (isFushimiInari) {
             return [{
                 label: "京阪電車 伏見稲荷駅の公式時刻表（方面・平日／土休日）",
                 url: "https://www.keihan.co.jp/traffic/station/151/info.html"
             }];
         }
+
+        if (icon === "station-keihan" || /京阪|keihan/i.test(nameValue)) {
+            return [{
+                label: "京阪電車 公式駅情報・時刻表",
+                url: "https://www.keihan.co.jp/traffic/station/"
+            }];
+        }
+
         return [
             {
                 label: "JR公式時刻表（京都方面）",
@@ -3971,7 +4077,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const category = getSpotDisplayCategoryLabel(spot);
         const categoryIconFile = getCategoryBarIconFile(spot);
         const categoryIconColor = getMarkerAccentColor(spot);
-        const time = spot.time || "-";
+        const time = getLocalizedValue(spot.time) || "-";
         const url = getSafeURL(spot.url);
         const selected = isSpotSelected(spot);
 
@@ -4113,7 +4219,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const name = getLocalizedValue(spot.name);
             const description = getLocalizedValue(spot.description);
             const category = getSpotDisplayCategoryLabel(spot);
-            const time = spot.time || "-";
+            const time = getLocalizedValue(spot.time) || "-";
             const image = spot.image || "";
             const url = getSafeURL(spot.url);
             const selected = isSpotSelected(spot);
@@ -4389,7 +4495,7 @@ document.addEventListener("DOMContentLoaded", function () {
         savedSpotsList.innerHTML = saved.map(function (spot) {
             const id = escapeHTML(String(spot.id));
             const name = escapeHTML(getLocalizedValue(spot.name) || String(spot.id));
-            const category = escapeHTML(getCategoryLabel(spot.category));
+            const category = escapeHTML(getSpotDisplayCategoryLabel(spot));
             return `<article class="saved-spot-item">
                 <div class="saved-spot-copy"><strong>${name}</strong><span>${category}</span></div>
                 <div class="saved-spot-item-actions">
@@ -4571,7 +4677,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const name = getLocalizedValue(spot.name);
         const description = getLocalizedValue(spot.description) || "説明はまだ登録されていません。";
         const category = getSpotDisplayCategoryLabel(spot);
-        const time = spot.time || "";
+        const time = getLocalizedValue(spot.time) || "";
         const url = getSafeURL(spot.url);
         const image = typeof spot.image === "string" ? spot.image.trim() : "";
         const imageHtml = image
@@ -4896,7 +5002,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         submitButton?.addEventListener("click", async function () {
             if (errorNode) { errorNode.hidden = true; errorNode.textContent = ""; }
-            const startSpot = state.originMode === "spot" ? spots.find(item => String(item.id) === String(state.startSpotId || "")) : null;
+            // Always use the visitor's live location as the route origin.
+            state.originMode = "current";
+            state.startSpotId = "";
+            const startSpot = null;
             if (state.originMode === "spot" && !startSpot) {
                 if (errorNode) { errorNode.textContent = text("chooseStartError"); errorNode.hidden = false; }
                 return;
@@ -4908,14 +5017,31 @@ document.addEventListener("DOMContentLoaded", function () {
             submitButton.disabled = true;
             submitButton.innerHTML = `<span aria-hidden="true">◌</span><span>${escapeHTML(text("loading"))}</span>`;
             try {
-                await createRoute({
+                // Request both motion and orientation permissions directly from
+                // the search tap, before network awaits consume user activation.
+                let sensorResult = { granted: false, reason: "unavailable" };
+                if (window.FushimiPDR?.requestPermission) {
+                    setSensorStatus("歩行・方角センサーの利用許可を確認しています…");
+                    try { sensorResult = await window.FushimiPDR.requestPermission(); }
+                    catch (sensorError) { console.warn("センサー許可を取得できませんでした:", sensorError); }
+                }
+                const routeCreated = await createRoute({
                     destinationSpot: state.destinationSpot,
-                    originMode: state.originMode,
-                    startSpot: startSpot || null,
+                    originMode: "current",
+                    startSpot: null,
                     travelMode: state.travelMode,
                     routeMode: state.routeMode || "shortest",
                     viaSpotIds: state.viaSpotIds.slice()
                 });
+                if (routeCreated) {
+                    if (sensorResult?.granted) {
+                        startPdrTracking();
+                        setSensorStatus("歩行・方角センサー ON · GPSと常時併用中");
+                    } else {
+                        setSensorStatus("センサーは利用できないためGPSで案内します");
+                    }
+                    startNavigation();
+                }
             } finally {
                 if (submitButton.isConnected) {
                     submitButton.disabled = false;
@@ -7435,6 +7561,187 @@ document.addEventListener("DOMContentLoaded", function () {
             ).join("");
     }
 
+    function setNavigationModeClass(active) {
+        document.body.classList.toggle("is-navigation-active", Boolean(active));
+        const engine = window.FushimiMapEngine;
+        if (active && typeof engine?.setNavigationMode === "function") {
+            engine.setNavigationMode();
+        }
+    }
+
+    function followNavigationLocation(location, force = false) {
+        if (!navigationActive || !navigationFollowEnabled || !location) return;
+        const now = Date.now();
+        if (!force && now - navigationLastFollowAt < 1100) return;
+        navigationLastFollowAt = now;
+        const mapElement = document.getElementById("map");
+        const rect = mapElement?.getBoundingClientRect();
+        const targetPoint = rect
+            ? { x: rect.width * 0.5, y: rect.height * 0.66 }
+            : undefined;
+        const engine = window.FushimiMapEngine;
+        if (typeof engine?.followLocation === "function") {
+            engine.followLocation({
+                lat: location.lat,
+                lng: location.lng,
+                zoom: Math.max(17, Math.min(19, Number(engine.getZoom?.() || 18))),
+                duration: force ? 750 : 520,
+                targetPoint
+            });
+        } else if (typeof map?.panTo === "function") {
+            map.panTo([location.lat, location.lng], { animate: true, duration: 0.5 });
+        }
+    }
+
+    function setSensorStatus(message) {
+        if (navSensorStatus && message) navSensorStatus.textContent = message;
+    }
+
+    function getPdrPathParts(leg) {
+        const source = Array.isArray(leg?.paths) && leg.paths.length
+            ? leg.paths
+            : (Array.isArray(leg?.coordinates) ? [leg.coordinates] : []);
+        if (!source.length) return [];
+        const multi = Array.isArray(source[0]) && Array.isArray(source[0][0]);
+        return (multi ? source : [source]).filter(path => Array.isArray(path) && path.length >= 2);
+    }
+
+    function advancePdrAlongRoute(location, stepMeters) {
+        const leg = navigationLegs[navigationLegIndex];
+        if (!leg || !location) return null;
+        const paths = getPdrPathParts(leg);
+        if (!paths.length) return null;
+
+        const cosLat = Math.max(0.05, Math.cos(location.lat * Math.PI / 180));
+        let best = null;
+        paths.forEach((path, pathIndex) => {
+            let cumulative = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i];
+                const b = path[i + 1];
+                const ax = (Number(a[1]) - location.lng) * 111320 * cosLat;
+                const ay = (Number(a[0]) - location.lat) * 111320;
+                const bx = (Number(b[1]) - location.lng) * 111320 * cosLat;
+                const by = (Number(b[0]) - location.lat) * 111320;
+                const dx = bx - ax;
+                const dy = by - ay;
+                const lengthSq = dx * dx + dy * dy;
+                const t = lengthSq > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq)) : 0;
+                const px = ax + dx * t;
+                const py = ay + dy * t;
+                const distance = Math.hypot(px, py);
+                const segmentLength = map.distance(a, b);
+                const progress = cumulative + segmentLength * t;
+                const notTooFarBehind = navigationPdrProgressMeters === null || progress >= navigationPdrProgressMeters - 8;
+                const notTooFarAhead = navigationPdrProgressMeters === null || progress <= navigationPdrProgressMeters + 30;
+                if (notTooFarBehind && notTooFarAhead && (!best || distance < best.distance)) {
+                    best = { path, pathIndex, segmentIndex: i, t, distance, progress };
+                }
+                cumulative += segmentLength;
+            }
+        });
+        if (!best || best.distance > 75) return null;
+
+        const path = best.path;
+        const startPoint = path[best.segmentIndex];
+        const nextPoint = path[best.segmentIndex + 1];
+        let lat = Number(startPoint[0]) + (Number(nextPoint[0]) - Number(startPoint[0])) * best.t;
+        let lng = Number(startPoint[1]) + (Number(nextPoint[1]) - Number(startPoint[1])) * best.t;
+        let remaining = Math.max(0.25, Number(stepMeters) || 0.7);
+        let heading = null;
+        let progress = best.progress;
+
+        for (let i = best.segmentIndex; i < path.length - 1; i++) {
+            const a = i === best.segmentIndex ? [lat, lng] : path[i];
+            const b = path[i + 1];
+            const segmentLength = map.distance(a, b);
+            if (segmentLength <= 0.01) continue;
+            if (remaining <= segmentLength) {
+                const ratio = remaining / segmentLength;
+                lat = Number(a[0]) + (Number(b[0]) - Number(a[0])) * ratio;
+                lng = Number(a[1]) + (Number(b[1]) - Number(a[1])) * ratio;
+                const y = Math.sin((Number(b[1]) - Number(a[1])) * Math.PI / 180) * Math.cos(Number(b[0]) * Math.PI / 180);
+                const x = Math.cos(Number(a[0]) * Math.PI / 180) * Math.sin(Number(b[0]) * Math.PI / 180) - Math.sin(Number(a[0]) * Math.PI / 180) * Math.cos(Number(b[0]) * Math.PI / 180) * Math.cos((Number(b[1]) - Number(a[1])) * Math.PI / 180);
+                heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+                navigationPdrProgressMeters = progress + remaining;
+                return { lat, lng, heading, routeDistance: best.distance };
+            }
+            remaining -= segmentLength;
+            progress += segmentLength;
+            lat = Number(b[0]);
+            lng = Number(b[1]);
+        }
+        navigationPdrProgressMeters = progress;
+        const finalPoint = path[path.length - 1];
+        return { lat: Number(finalPoint[0]), lng: Number(finalPoint[1]), heading: navigationLastHeading, routeDistance: best.distance };
+    }
+
+    function handlePdrStep(stepLength, heading) {
+        if (!navigationActive || !currentLocation) return;
+        const gpsFreshAndAccurate = Date.now() - navigationLastGpsAt < 6500 && navigationLastGpsAccuracy <= 35;
+        if (gpsFreshAndAccurate) return;
+        const next = advancePdrAlongRoute(currentLocation, stepLength);
+        if (!next) {
+            setSensorStatus("参道ルートを検出できません。GPSの回復を待っています");
+            return;
+        }
+        navigationEstimatedSteps += 1;
+        const effectiveHeading = Number.isFinite(heading) ? heading : next.heading;
+        if (Number.isFinite(effectiveHeading)) navigationLastHeading = effectiveHeading;
+        const estimated = {
+            lat: next.lat,
+            lng: next.lng,
+            heading: Number.isFinite(effectiveHeading) ? effectiveHeading : undefined,
+            source: "sensor"
+        };
+        setCurrentLocation(estimated, false);
+        updateNavigationByLocation(estimated);
+        followNavigationLocation(estimated);
+        setSensorStatus("GPSが不安定なため、歩行・方角センサーで位置を推定中");
+    }
+
+    function startPdrTracking() {
+        if (!window.FushimiPDR?.isActive?.()) return false;
+        navigationSensorEnabled = true;
+        navigationEstimatedSteps = 0;
+        window.FushimiPDR.start({
+            onStep: handlePdrStep,
+            onHeading: function (heading) {
+                navigationLastHeading = heading;
+                const direction = document.querySelector(".planner-v11-current-location");
+                if (direction && currentLocation?.source === "sensor") {
+                    direction.style.setProperty("--current-heading", `${heading}deg`);
+                    direction.classList.add("has-heading");
+                }
+            },
+            onStatus: function (status, detail) {
+                if (status === "unsupported" || status === "denied") {
+                    navigationSensorEnabled = false;
+                }
+                if (detail) setSensorStatus(detail);
+            }
+        });
+        return true;
+    }
+
+    function stopPdrTracking() {
+        navigationSensorEnabled = false;
+        if (window.FushimiPDR?.stop) window.FushimiPDR.stop();
+        navigationEstimatedSteps = 0;
+        navigationLastHeading = null;
+        if (navSensorButton) {
+            navSensorButton.disabled = !navigationActive;
+            navSensorButton.textContent = "GPSが弱いとき：センサー測位をON";
+            navSensorButton.classList.remove("is-enabled");
+        }
+    }
+
+    window.addEventListener("fushimi:map-user-moved", function () {
+        if (!navigationActive) return;
+        navigationFollowEnabled = false;
+        if (navFollowButton) navFollowButton.hidden = false;
+    });
+
     function updateNavPanelForRoute() {
 
         if (
@@ -7653,7 +7960,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!selectedSpots.length) {
             alert("まずスポットを1か所以上選択してください。");
-            return;
+            return false;
         }
 
         const explicitOriginMode = routeOptions?.originMode || null;
@@ -7664,7 +7971,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const requestedViaIds = Array.isArray(routeOptions?.viaSpotIds) ? routeOptions.viaSpotIds.map(String) : [];
         if (explicitOriginMode === "spot" && !explicitStartSpot) {
             alert(routeSetupText("selectStartError"));
-            return;
+            return false;
         }
 
         if (routeLine) {
@@ -7684,7 +7991,7 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch (error) {
                 console.warn("現在地を取得できませんでした。", error);
                 alert(routeSetupText("noOrigin"));
-                return;
+                return false;
             }
         } else if (!explicitOriginMode) {
             try {
@@ -7726,7 +8033,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         if (!routeTargets.length) {
             alert("経由地と到着地を確認してください。");
-            return;
+            return false;
         }
 
         const routePaths = [];
@@ -7788,12 +8095,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 "徒歩ルートを作成できませんでした。\n" +
                 (error?.message || "参道データの接続を確認してください。")
             );
-            return;
+            return false;
         }
 
         if (!routePaths.length) {
             alert("ルートを作成できませんでした。参道データを確認してください。");
-            return;
+            return false;
         }
 
         // 経路検索の全区間を、出発地から到着地まで一本の連続した座標列へ統合する。
@@ -7811,7 +8118,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 `案内線を一本につなげられません。区間 ${stitchedJourney.partIndex + 1} の接続に約${gap}mの隙間があります。\n` +
                 "不自然な直線や別の区間を光らせないため、ルート表示を中止しました。参道データの接続を確認してください。"
             );
-            return;
+            return false;
         }
 
         const completeJourneyPath = stitchedJourney.path;
@@ -7902,6 +8209,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (routeOptions?.destinationSpot) hideSpotDetail();
         setFoodCategorySwitcherOpen(false);
         setPlannerSheetState("collapsed");
+        return true;
     }
 
     if (createRouteBtn) {
@@ -7921,127 +8229,85 @@ document.addEventListener("DOMContentLoaded", function () {
     // ============================================================
 
     function startNavigation() {
-
-        if (
-            selectedSpots.length ===
-            0
-        ) {
-
-            alert(
-                "先にスポットを選択してルートを作成してください。"
-            );
-
+        if (selectedSpots.length === 0) {
+            alert("先にスポットを選択してルートを作成してください。");
+            return;
+        }
+        if (navigationActive) return;
+        if (!navigator.geolocation && !currentLocation) {
+            alert("現在地を取得できません。位置情報を許可するか、先に現在地を取得してください。");
             return;
         }
 
-        if (
-            navigationActive
-        ) {
-            return;
-        }
-
-        if (
-            !navigator.geolocation
-        ) {
-
-            alert(
-                "このブラウザでは現在地ナビを利用できません。"
-            );
-
-            return;
-        }
-
-        navigationActive =
-            true;
-
+        navigationActive = true;
+        navigationFollowEnabled = true;
+        navigationLastFollowAt = 0;
+        navigationLastGpsAt = 0;
+        navigationLastGpsAccuracy = Infinity;
+        navigationLegIndex = 0;
         setPlannerSheetState("collapsed");
-
-        navigationLegIndex =
-            0;
-
+        setNavigationModeClass(true);
         showNavCard();
-
-        if (navStatus) {
-
-            navStatus.textContent =
-                "ナビ中";
-        }
-
+        if (navStatus) navStatus.textContent = "ナビ中";
         if (navStartButton) {
-
-            navStartButton.textContent =
-                "ナビゲーション中";
-
-            navStartButton.disabled =
-                true;
-
-            navStartButton.style.opacity =
-                ".65";
+            navStartButton.textContent = "ナビゲーション中";
+            navStartButton.disabled = true;
+            navStartButton.style.opacity = ".65";
         }
+        if (navStopButton) navStopButton.disabled = false;
+        if (navSensorButton) navSensorButton.disabled = false;
+        if (navFollowButton) navFollowButton.hidden = true;
+        if (navManeuver) navManeuver.dataset.direction = "straight";
+        if (navManeuverText) navManeuverText.textContent = "参道に沿って進んでください";
+        if (navManeuverIcon) navManeuverIcon.textContent = "↑";
+        setSensorStatus(window.FushimiPDR?.isActive?.() ? "歩行・方角センサー ON · GPSと常時併用中" : "GPSで現在地を確認しています");
 
-        if (navStopButton) {
+        if (currentLocation) followNavigationLocation(currentLocation, true);
 
-            navStopButton.disabled =
-                false;
-        }
-
-        navigationWatchId =
-            navigator.geolocation.watchPosition(
-
+        if (navigator.geolocation) {
+            navigationWatchId = navigator.geolocation.watchPosition(
                 function (position) {
-
-                    const value =
-                        {
-
-                            lat:
-                                position.coords.latitude,
-
-                            lng:
-                                position.coords.longitude,
-
-                            accuracy:
-                                Number(
-                                    position.coords.accuracy ||
-                                    0
-                                )
-                        };
-
-                    setCurrentLocation(
-                        value,
-                        false
-                    );
-
-                    updateNavigationByLocation(
-                        value
-                    );
-                },
-
-                function (error) {
-
-                    console.error(
-                        "ナビ位置情報エラー:",
-                        error
-                    );
-
-                    if (navStatus) {
-
-                        navStatus.textContent =
-                            "位置情報エラー";
+                    const value = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: Number(position.coords.accuracy || 0),
+                        heading: Number.isFinite(position.coords.heading) ? position.coords.heading : undefined,
+                        source: "gps"
+                    };
+                    navigationLastGpsAt = Date.now();
+                    navigationLastGpsAccuracy = value.accuracy || Infinity;
+                    if (value.accuracy <= 35) {
+                        navigationEstimatedSteps = 0;
+                        navigationPdrProgressMeters = null;
+                        if (window.FushimiPDR?.isActive?.()) {
+                            setSensorStatus("GPS測位中 · センサーは位置補助として待機中");
+                        } else {
+                            setSensorStatus("GPS測位中 · 現在地を自動追従しています");
+                        }
+                    } else if (navigationSensorEnabled) {
+                        setSensorStatus("GPS精度が低下中 · センサーで補助します");
+                    } else {
+                        setSensorStatus(`GPS精度が低下しています（約${Math.round(value.accuracy)}m）`);
+                    }
+                    const keepSensorEstimate = value.accuracy > 35 && navigationSensorEnabled && currentLocation?.source === "sensor";
+                    if (!keepSensorEstimate) {
+                        setCurrentLocation(value, false);
+                        updateNavigationByLocation(value);
+                        followNavigationLocation(value);
                     }
                 },
-
-                {
-
-                    enableHighAccuracy:
-                        true,
-
-                    timeout:
-                        12000,
-
-                    maximumAge:
-                        5000
-                }
+                function (error) {
+                    console.warn("ナビ位置情報エラー:", error);
+                    if (navigationSensorEnabled && window.FushimiPDR?.isActive?.()) {
+                        setSensorStatus("GPSを取得できません。歩行センサーによる推定を試みています");
+                    } else {
+                        setSensorStatus("GPS位置情報を取得できません。センサー測位を有効にできます");
+                        if (navStatus) navStatus.textContent = "現在地を取得できません";
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 2500 }
             );
+        }
     }
 
     function clearRouteVisuals() {
@@ -8062,6 +8328,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function stopNavigation() {
 
         navigationActive = false;
+        setNavigationModeClass(false);
+        stopPdrTracking();
+        navigationFollowEnabled = true;
+
+        if (navFollowButton) navFollowButton.hidden = true;
+        if (navSensorButton) navSensorButton.disabled = false;
 
         if (navigationWatchId !== null) {
             try {
@@ -8171,6 +8443,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 80
             );
 
+        if (navManeuverText) navManeuverText.textContent = "参道に沿って進んでください";
+        if (navManeuverIcon) navManeuverIcon.textContent = "↑";
+        if (navManeuverDistance) navManeuverDistance.textContent = `次の目的地まで ${Math.round(legDistance * 1000)} m`;
+        if (navManeuver) navManeuver.dataset.direction = "straight";
+
         setNavMeta(
             [
                 `${legDistance.toFixed(2)} km`,
@@ -8191,6 +8468,57 @@ document.addEventListener("DOMContentLoaded", function () {
                         : "一般道路"
             ]
         );
+    }
+
+    function getBearingDegrees(a, b) {
+        const lat1 = Number(a[0]) * Math.PI / 180;
+        const lat2 = Number(b[0]) * Math.PI / 180;
+        const dLng = (Number(b[1]) - Number(a[1])) * Math.PI / 180;
+        const y = Math.sin(dLng) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) -
+            Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    function getNextTurnInstruction(location, leg) {
+        const paths = getPdrPathParts(leg);
+        const cosLat = Math.max(0.05, Math.cos(Number(location.lat) * Math.PI / 180));
+        let best = null;
+        paths.forEach(function (path) {
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i], b = path[i + 1];
+                const ax = (Number(a[1]) - location.lng) * 111320 * cosLat;
+                const ay = (Number(a[0]) - location.lat) * 111320;
+                const bx = (Number(b[1]) - location.lng) * 111320 * cosLat;
+                const by = (Number(b[0]) - location.lat) * 111320;
+                const dx = bx - ax, dy = by - ay;
+                const lengthSq = dx * dx + dy * dy;
+                const t = lengthSq > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq)) : 0;
+                const distance = Math.hypot(ax + dx * t, ay + dy * t);
+                if (!best || distance < best.distance) best = { path, segmentIndex: i, t, distance };
+            }
+        });
+        if (!best || best.distance > 100) return null;
+
+        const path = best.path;
+        const segmentStart = path[best.segmentIndex];
+        const segmentEnd = path[best.segmentIndex + 1];
+        const projected = [
+            Number(segmentStart[0]) + (Number(segmentEnd[0]) - Number(segmentStart[0])) * best.t,
+            Number(segmentStart[1]) + (Number(segmentEnd[1]) - Number(segmentStart[1])) * best.t
+        ];
+        let distanceAhead = map.distance(projected, segmentEnd);
+        for (let vertexIndex = best.segmentIndex + 1; vertexIndex < path.length - 1; vertexIndex++) {
+            const before = getBearingDegrees(path[vertexIndex - 1], path[vertexIndex]);
+            const after = getBearingDegrees(path[vertexIndex], path[vertexIndex + 1]);
+            const delta = ((after - before + 540) % 360) - 180;
+            if (distanceAhead >= 12 && distanceAhead <= 300 && Math.abs(delta) >= 32 && Math.abs(delta) <= 150) {
+                const direction = delta > 0 ? "right" : "left";
+                return { direction, distance: Math.round(distanceAhead), icon: direction === "right" ? "↱" : "↰" };
+            }
+            distanceAhead += map.distance(path[vertexIndex], path[vertexIndex + 1]);
+        }
+        return null;
     }
 
     function updateNavigationByLocation(
@@ -8266,31 +8594,46 @@ document.addEventListener("DOMContentLoaded", function () {
                 )} m`;
         }
 
-        const remainingMinutes =
-            Math.ceil(
-                remainingMeters /
-                80
-            );
+        const remainingMinutes = Math.ceil(remainingMeters / 80);
+        const arrivalAt = new Date(Date.now() + remainingMinutes * 60000);
+        const arrivalLabel = arrivalAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+        const nextTurn = getNextTurnInstruction(location, leg);
+        let maneuverText = "参道に沿って進んでください";
+        let maneuverIcon = "↑";
+        let maneuverDirection = "straight";
+        let maneuverDistance = `目的地まで ${Math.round(remainingMeters)} m`;
 
-        setNavMeta(
-            [
-                `${Math.round(
-                    remainingMeters
-                )} m`,
+        if (remainingMeters <= 25) {
+            maneuverText = "まもなく次の目的地です";
+            maneuverIcon = "◎";
+            maneuverDirection = "arrived";
+            maneuverDistance = `目的地まで ${Math.round(remainingMeters)} m`;
+        } else if (nextTurn) {
+            maneuverText = `約${nextTurn.distance} m先を${nextTurn.direction === "right" ? "右" : "左"}へ`;
+            maneuverIcon = nextTurn.icon;
+            maneuverDirection = nextTurn.direction;
+            maneuverDistance = `曲がるまで ${nextTurn.distance} m · 目的地まで ${Math.round(remainingMeters)} m`;
+        }
 
-                formatTime(
-                    remainingMinutes
-                ),
+        if (navManeuverText) navManeuverText.textContent = maneuverText;
+        if (navManeuverIcon) navManeuverIcon.textContent = maneuverIcon;
+        if (navManeuverDistance) navManeuverDistance.textContent = `${maneuverDistance} · 約${remainingMinutes}分`;
+        if (navManeuver) navManeuver.dataset.direction = maneuverDirection;
 
-                `${navigationLegIndex + 1}/${navigationLegs.length}`
-            ]
-        );
+        if (navStatus) navStatus.textContent = `ナビ中 · 残り ${Math.round(remainingMeters)} m · 到着 ${arrivalLabel}`;
+        setNavMeta([
+            `${Math.round(remainingMeters)} m`,
+            `約${formatTime(remainingMinutes)}`,
+            `到着 ${arrivalLabel}`
+        ]);
 
+        const arrivalThreshold = location.source === "sensor" ? 18 : 35;
         if (
-            remainingToTarget <= 35
+            remainingToTarget <= arrivalThreshold
         ) {
 
             navigationLegIndex += 1;
+            navigationPdrProgressMeters = null;
 
             if (
                 navigationLegIndex >=
@@ -8341,6 +8684,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         navigationActive =
             false;
+        setNavigationModeClass(false);
+        stopPdrTracking();
+        if (navFollowButton) navFollowButton.hidden = true;
 
         if (
             navigationWatchId !==
@@ -8459,6 +8805,39 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
+    if (navSensorButton) {
+        navSensorButton.addEventListener("click", async function () {
+            if (!navigationActive) {
+                setSensorStatus("センサー測位はナビ開始後に有効化できます");
+                return;
+            }
+            if (!window.FushimiPDR?.requestPermission) {
+                setSensorStatus("このブラウザではセンサー測位を利用できません");
+                return;
+            }
+            navSensorButton.disabled = true;
+            setSensorStatus("センサーの利用許可を確認しています…");
+            const result = await window.FushimiPDR.requestPermission();
+            if (result?.granted) {
+                startPdrTracking();
+                navSensorButton.textContent = "センサー測位 ON · 補助中";
+                navSensorButton.classList.add("is-enabled");
+                setSensorStatus("センサー測位 ON。端末を歩く向きに持ってください。GPSが弱い場所で歩行・方角を使って位置を補助します");
+            } else {
+                navSensorButton.disabled = false;
+                setSensorStatus("許可されなかったためGPSで案内します");
+            }
+        });
+    }
+
+    if (navFollowButton) {
+        navFollowButton.addEventListener("click", function () {
+            navigationFollowEnabled = true;
+            navFollowButton.hidden = true;
+            if (currentLocation) followNavigationLocation(currentLocation, true);
+        });
+    }
+
     if (navStopButton) {
 
         navStopButton.addEventListener(
@@ -8517,9 +8896,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
                                 html:
                                     `
-                                        <div
-                                            class="planner-v11-current-location"
-                                        ></div>
+                                        <div class="planner-v11-current-location${Number.isFinite(value.heading) ? " has-heading" : ""}" style="--current-heading:${Number.isFinite(value.heading) ? value.heading : 0}deg">
+                                            <span class="planner-v11-current-direction" aria-hidden="true"></span>
+                                        </div>
                                     `,
 
                                 iconSize:
@@ -8544,13 +8923,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 map
             )
             .bindPopup(
-                `現在地${
-                    value.accuracy
-                        ? `（精度 約${Math.round(
-                            value.accuracy
-                        )}m）`
-                        : ""
-                }`
+                value.source === "sensor"
+                    ? "現在地（センサーによる推定位置です）"
+                    : "現在地"
             );
 
         if (
@@ -8570,7 +8945,10 @@ document.addEventListener("DOMContentLoaded", function () {
             );
         }
 
-        updateNavPanelForRoute();
+        if (value.source === "sensor") {
+            setSensorStatus("センサー推定位置 · GPSの回復待ち");
+        }
+        if (!navigationActive) updateNavPanelForRoute();
     }
 
     if (locationBtn) {

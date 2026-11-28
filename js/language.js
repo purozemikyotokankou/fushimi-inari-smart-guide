@@ -13,6 +13,15 @@ const translations = {
 
     ja: {
 
+        mapSources: "データ出典",
+        mapSourcesTitle: "地図・データの出典",
+        mapSourceBase: "地図データ：",
+        mapSourceTerrain: "3D地形データ：",
+        mapSourceWeather: "天気・日の出／日の入り：",
+        mapSourceWeatherNote: "気象データを画面の環境色演出に利用しています。",
+        mapSourceRoutes: "一部の徒歩ルート計算：",
+        mapSourceFallback: "2D代替地図：",
+
         // 共通
         home: "ホーム",
         map: "観光マップ",
@@ -69,11 +78,22 @@ const translations = {
         routeInfo: "ルート情報",
         numberOfSpots: "スポット数",
         estimatedTime: "所要時間",
-        saveRoute: "ルートを保存"
+        saveRoute: "ルートを保存",
+        mapZoomIn: "地図を拡大",
+        mapZoomOut: "地図を縮小",
     },
 
 
     en: {
+
+        mapSources: "Data sources",
+        mapSourcesTitle: "Map and data sources",
+        mapSourceBase: "Basemap:",
+        mapSourceTerrain: "3D terrain:",
+        mapSourceWeather: "Weather and sunrise/sunset:",
+        mapSourceWeatherNote: "Weather data is used to adapt the map's ambient color effects.",
+        mapSourceRoutes: "Some walking-route calculations:",
+        mapSourceFallback: "2D fallback map:",
 
         // Common
         home: "Home",
@@ -131,11 +151,22 @@ const translations = {
         routeInfo: "Route Information",
         numberOfSpots: "Number of Spots",
         estimatedTime: "Estimated Time",
-        saveRoute: "Save Route"
+        saveRoute: "Save Route",
+        mapZoomIn: "Zoom in",
+        mapZoomOut: "Zoom out",
     },
 
 
     zh: {
+
+        mapSources: "数据来源",
+        mapSourcesTitle: "地图与数据来源",
+        mapSourceBase: "基础地图：",
+        mapSourceTerrain: "3D地形：",
+        mapSourceWeather: "天气与日出／日落：",
+        mapSourceWeatherNote: "天气数据用于调整地图环境色彩效果。",
+        mapSourceRoutes: "部分步行路线计算：",
+        mapSourceFallback: "2D备用地图：",
 
         // 通用
         home: "首页",
@@ -193,11 +224,22 @@ const translations = {
         routeInfo: "路线信息",
         numberOfSpots: "景点数量",
         estimatedTime: "预计时间",
-        saveRoute: "保存路线"
+        saveRoute: "保存路线",
+        mapZoomIn: "放大地图",
+        mapZoomOut: "缩小地图",
     },
 
 
     ko: {
+
+        mapSources: "데이터 출처",
+        mapSourcesTitle: "지도 및 데이터 출처",
+        mapSourceBase: "기본 지도:",
+        mapSourceTerrain: "3D 지형:",
+        mapSourceWeather: "날씨 및 일출／일몰:",
+        mapSourceWeatherNote: "날씨 데이터는 지도 주변 색상 효과를 조정하는 데 사용됩니다.",
+        mapSourceRoutes: "일부 도보 경로 계산:",
+        mapSourceFallback: "2D 대체 지도:",
 
         // 공통
         home: "홈",
@@ -255,7 +297,9 @@ const translations = {
         routeInfo: "루트 정보",
         numberOfSpots: "관광지 수",
         estimatedTime: "예상 소요 시간",
-        saveRoute: "루트 저장"
+        saveRoute: "루트 저장",
+        mapZoomIn: "지도 확대",
+        mapZoomOut: "지도 축소",
     }
 
 };
@@ -327,6 +371,14 @@ function applyLanguage() {
 
         element.placeholder = t(key);
 
+    });
+
+    // Accessible control labels and hover titles.
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(function(element) {
+        element.setAttribute("aria-label", t(element.getAttribute("data-i18n-aria-label")));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function(element) {
+        element.setAttribute("title", t(element.getAttribute("data-i18n-title")));
     });
 
 
