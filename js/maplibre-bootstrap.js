@@ -79,7 +79,7 @@
                 "js/language.js?v=204-popup-pane-gesture-fix",
                 "js/map-engine-maplibre.js?v=215-auto-angle-rounded-buildings",
                 "js/navigation-pdr.js?v=212-cluster-hidden",
-                "js/planner.js?v=213-clean-status",
+                "js/planner.js?v=216-dom-ready-map-boot",
                 "js/planner-weather.js?v=138",
                 "js/planner-ambient-light.js?v=138"
             ];

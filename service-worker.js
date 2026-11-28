@@ -1,9 +1,9 @@
-/* Fushimi Inari Smart Guide — offline support (v215 adaptive camera and MapLibre 6 cache) */
+/* Fushimi Inari Smart Guide — offline support (v216 dynamic planner startup fix) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v215';
+const CACHE_NAME = 'fushimi-smart-guide-v216';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 215;
+const WORKER_VERSION = 216;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',

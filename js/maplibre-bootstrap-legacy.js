@@ -7,9 +7,9 @@
         "https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js",
         "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
         "js/language.js?v=204-popup-pane-gesture-fix",
-        "js/map-engine-maplibre.js?v=215-auto-angle-rounded-buildings",
+        "js/map-engine-maplibre.js?v=216-dom-ready-map-boot",
         "js/navigation-pdr.js?v=212-cluster-hidden",
-        "js/planner.js?v=213-clean-status",
+        "js/planner.js?v=216-dom-ready-map-boot",
         "js/planner-weather.js?v=138",
         "js/planner-ambient-light.js?v=138"
     ];

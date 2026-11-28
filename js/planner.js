@@ -1,11 +1,12 @@
-document.addEventListener("DOMContentLoaded", function () {
+(function () {
+    function initializePlanner() {
 
     // ============================================================
     // BUILD MARKER — V11.2
     // この文字列がConsoleに出れば、このplanner.jsが実行されています。
     // ============================================================
-    window.__FUSHIMI_PLANNER_BUILD__ = "V212-HOME-CTA-AUTO-NAV";
-    console.log("[Fushimi Inari Smart Guide] planner.js V212-HOME-CTA-AUTO-NAV loaded");
+    window.__FUSHIMI_PLANNER_BUILD__ = "V216-DOM-READY-MAP-BOOT";
+    console.log("[Fushimi Inari Smart Guide] planner.js V216-DOM-READY-MAP-BOOT loaded");
 
     // ============================================================
     // 伏見稲荷スマートガイド / planner.js V11 ALL-IN-ONE
@@ -9338,4 +9339,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateInfo();
 
-});
+    }
+
+    // V216: The bootstrap loads this file dynamically, which can happen after
+    // DOMContentLoaded has already fired. Start immediately in that case.
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initializePlanner, { once: true });
+    } else {
+        initializePlanner();
+    }
+})();
