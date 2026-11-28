@@ -1,4 +1,4 @@
-/* Fushimi Inari Smart Guide — MapLibre 3D map bridge (v204 popup-pane input fix)
+/* Fushimi Inari Smart Guide — MapLibre 3D map bridge (v215 area-aware camera)
  * MapLibre owns the base-map camera; one shared pointer/wheel controller handles drag and pinch.
  * Existing Leaflet vector panes are projected onto the same camera plane with a
  * projective transform. Visible spot pins use one isolated proxy per marker; the
@@ -16,8 +16,17 @@
     const MAX_LEAFLET_ZOOM = 24;
     const MAX_MAPLIBRE_ZOOM = MAX_LEAFLET_ZOOM - LEAFLET_ZOOM_OFFSET;
     const DEFAULT_ZOOM = 17;
-    // 3D表示は常時ON。角度を固定し、表示切替時のカメラ移動をなくす。
-    const FIXED_PITCH = 54;
+    // 3Dカメラは場所に応じて自動調整する。
+    // MapLibreは0°が真上で、数字が大きいほど斜め方向から見る。
+    // 山道では視界を確保するため54°、入口・建物密集地では62〜64°にする。
+    const DEFAULT_PITCH = 54;
+    const MIN_AUTO_PITCH = 54;
+    const MAX_AUTO_PITCH = 64;
+    const AUTO_PITCH_DURATION_MS = 650;
+    const AUTO_PITCH_DEBOUNCE_MS = 240;
+    // 駅・参道商店街・楼門側のスポットが集まる入口エリアの概略範囲。
+    // data/spots.jsonの入口・駅・飲食店・買物スポット分布を基にした表示用判定領域。
+    const ENTRANCE_ZONE = { south: 34.9657, north: 34.9701, west: 135.7687, east: 135.7758 };
     const TERRAIN_SOURCE_ID = "fushimi-terrain-dem";
     const HILLSHADE_LAYER_ID = "fushimi-terrain-hillshade";
     const TERRAIN_TILE_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
@@ -44,6 +53,8 @@
     let markerProjectionMatrix = null;
     let statusHideTimer = 0;
     let suppressClickUntil = 0;
+    let autoPitchTimer = 0;
+    let autoPitchLastEvaluationAt = 0;
 
     // Route geometry is rendered by MapLibre itself so it follows the DEM surface.
     // Leaflet keeps a hidden copy only for its existing bounds / navigation logic.
@@ -719,7 +730,7 @@
         try {
             const styleLayers = mapLibreMap.getStyle().layers || [];
             const firstLabel = styleLayers.find((layer) => layer.type === "symbol" && layer.layout && layer.layout["text-field"]);
-            mapLibreMap.addLayer({
+            const buildingLayer = {
                 id: "fushimi-3d-buildings",
                 type: "fill-extrusion",
                 source: sourceId,
@@ -740,13 +751,115 @@
                     "fill-extrusion-opacity": 0.86,
                     "fill-extrusion-vertical-gradient": true
                 }
-            }, firstLabel ? firstLabel.id : undefined);
-            console.info("[Fushimi Map Test] 3D building extrusion layer added.");
+            };
+            // MapLibre GL JS >= 6.2.0 can round the visible corners of extruded buildings.
+            // This softens the 3D silhouette; it does not rewrite the source building footprint.
+            if (window.FUSHIMI_MAPLIBRE_ROUNDED_CORNERS === true) {
+                buildingLayer.layout = { "fill-extrusion-rounded-corner-distance": 1.8 };
+            }
+            mapLibreMap.addLayer(buildingLayer, firstLabel ? firstLabel.id : undefined);
+            console.info("[Fushimi Map] 3D buildings added.", {
+                roundedCorners: window.FUSHIMI_MAPLIBRE_ROUNDED_CORNERS === true,
+                pitchRange: [MIN_AUTO_PITCH, MAX_AUTO_PITCH]
+            });
         } catch (error) {
             console.warn("[Fushimi Map Test] 3D buildings are unavailable in this style:", error);
         } finally {
             isAdding3DBuildings = false;
         }
+    }
+
+    function isInEntranceZone(center) {
+        if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return false;
+        return center.lat >= ENTRANCE_ZONE.south && center.lat <= ENTRANCE_ZONE.north &&
+            center.lng >= ENTRANCE_ZONE.west && center.lng <= ENTRANCE_ZONE.east;
+    }
+
+    function getVisibleBuildingStats() {
+        if (!mapLibreMap || !mapLibreMap.isStyleLoaded() || !mapLibreMap.getLayer("fushimi-3d-buildings")) {
+            return { count: 0, tallCount: 0 };
+        }
+        try {
+            const canvas = mapLibreMap.getCanvas();
+            const width = canvas.clientWidth || canvas.width || 0;
+            const height = canvas.clientHeight || canvas.height || 0;
+            if (width < 80 || height < 80) return { count: 0, tallCount: 0 };
+            // 画面の中央寄りだけを数える。端に少し映った建物で角度が切り替わらないようにする。
+            const bounds = [
+                [Math.round(width * 0.28), Math.round(height * 0.24)],
+                [Math.round(width * 0.72), Math.round(height * 0.76)]
+            ];
+            const features = mapLibreMap.queryRenderedFeatures(bounds, { layers: ["fushimi-3d-buildings"] }) || [];
+            const buildingKeys = new Set();
+            let tallCount = 0;
+            features.forEach((feature, index) => {
+                const props = feature?.properties || {};
+                const key = feature?.id != null ? `feature:${feature.id}` :
+                    (props.osm_id != null ? `osm:${props.osm_id}` :
+                    (props.id != null ? `id:${props.id}` : `rendered:${index}`));
+                buildingKeys.add(key);
+                const heightValue = Number(props.render_height);
+                if (Number.isFinite(heightValue) && heightValue >= 9) tallCount += 1;
+            });
+            return { count: buildingKeys.size, tallCount };
+        } catch (error) {
+            console.debug("[Fushimi Map] Building-density pitch check skipped:", error);
+            return { count: 0, tallCount: 0 };
+        }
+    }
+
+    function getAutomaticPitchTarget() {
+        if (!mapLibreMap) return DEFAULT_PITCH;
+        const zoom = mapLibreMap.getZoom();
+        // 広域表示や山道では、地形と参道を見渡せる標準角度を保つ。
+        if (!Number.isFinite(zoom) || zoom < 14.5) return DEFAULT_PITCH;
+
+        const center = mapLibreMap.getCenter();
+        const entranceArea = isInEntranceZone(center);
+        const buildingStats = zoom >= 15 ? getVisibleBuildingStats() : { count: 0, tallCount: 0 };
+
+        // 64°付近で建物の見える数が少し変わっても、62°↔64°を往復しないように閾値を分ける。
+        const alreadySteep = mapLibreMap.getPitch() >= 63;
+        const thresholdFor64 = alreadySteep ? 10 : 14;
+        const tallThresholdFor64 = alreadySteep ? 3 : 5;
+        const denseBuildings = buildingStats.count >= thresholdFor64 || buildingStats.tallCount >= tallThresholdFor64;
+
+        // 入口付近はスポット・建物が集中するため、まず62°。
+        // 画面中央に高い建物や多数の建物が見える場合は最大64°まで上げる。
+        if (entranceArea) return denseBuildings ? MAX_AUTO_PITCH : 62;
+
+        // 入口エリア外でも、実際に3D建物が密集して見える場所だけ角度を上げる。
+        if (denseBuildings) return MAX_AUTO_PITCH;
+        if (buildingStats.count >= 7) return 62;
+        return DEFAULT_PITCH;
+    }
+
+    function scheduleAutomaticPitch(delay = AUTO_PITCH_DEBOUNCE_MS) {
+        if (!mapLibreMap) return;
+        if (autoPitchTimer) window.clearTimeout(autoPitchTimer);
+        autoPitchTimer = window.setTimeout(() => {
+            autoPitchTimer = 0;
+            if (!mapLibreMap || !mapLibreMap.isStyleLoaded()) return;
+            // ピン・ルート投影とユーザーのパン操作が落ち着いてから角度を更新する。
+            if (typeof mapLibreMap.isMoving === "function" && mapLibreMap.isMoving()) {
+                scheduleAutomaticPitch(220);
+                return;
+            }
+            const now = Date.now();
+            if (now - autoPitchLastEvaluationAt < 180) return;
+            autoPitchLastEvaluationAt = now;
+            const targetPitch = Math.max(MIN_AUTO_PITCH, Math.min(MAX_AUTO_PITCH, getAutomaticPitchTarget()));
+            if (Math.abs(mapLibreMap.getPitch() - targetPitch) < 0.6) return;
+
+            programmaticCameraMove = true;
+            mapLibreMap.easeTo({
+                pitch: targetPitch,
+                duration: AUTO_PITCH_DURATION_MS,
+                essential: true
+            });
+            mapLibreMap.once("moveend", function () { programmaticCameraMove = false; });
+            window.setTimeout(function () { programmaticCameraMove = false; }, AUTO_PITCH_DURATION_MS + 350);
+        }, Math.max(0, Number(delay) || 0));
     }
 
     function addTerrainSourcesIfNeeded() {
@@ -1098,7 +1211,7 @@
 
     // MapLibreの地図操作を常時有効にする。
     // 地図の表示範囲を固定せず、パン・ズームはユーザーに任せる。
-    // 3Dの初期角度(54度)と北向きは維持する。
+    // 3D角度は場所に応じて54〜64度で自動調整し、北向きは維持する。
     function enableFreeMapMovement() {
         if (!mapLibreMap) return;
         try { mapLibreMap.setMaxBounds(null); } catch (_) {}
@@ -1189,10 +1302,10 @@
                 scrollZoom: true,
                 doubleClickZoom: true,
                 touchZoomRotate: true,
-                pitch: FIXED_PITCH,
+                pitch: DEFAULT_PITCH,
                 bearing: 0,
-                minPitch: FIXED_PITCH,
-                maxPitch: FIXED_PITCH,
+                minPitch: MIN_AUTO_PITCH,
+                maxPitch: MAX_AUTO_PITCH,
                 dragRotate: false,
                 pitchWithRotate: false,
                 touchPitch: false,
@@ -1232,7 +1345,7 @@
                 scheduleOverlayProjection();
             }
 
-            // 3D角度と北向きを固定。ピンチズーム・ドラッグ移動は引き続き使用可能。
+            // 3D角度は場所に応じて自動調整。ピンチズーム・ドラッグ移動は引き続き使用可能。
             enableFreeMapMovement();
 
             mapLibreMap.on("load", function () {
@@ -1258,6 +1371,7 @@
             });
             mapLibreMap.on("moveend", function () {
                 mapRoot?.classList.remove("is-camera-moving");
+                scheduleAutomaticPitch();
             });
             mapLibreMap.on("dragstart", notifyUserMapGesture);
             mapLibreMap.on("rotatestart", notifyUserMapGesture);
@@ -1267,7 +1381,11 @@
             mapLibreMap.on("render", scheduleOverlayProjection);
             mapLibreMap.on("resize", scheduleOverlayProjection);
             mapLibreMap.on("terrain", scheduleOverlayProjection);
-            mapLibreMap.on("idle", scheduleOverlayProjection);
+            mapLibreMap.on("idle", function () {
+                scheduleOverlayProjection();
+                // 建物タイルがそろった後にも密集度を判定し、必要なら64°へ調整する。
+                scheduleAutomaticPitch(120);
+            });
 
             return mapLibreMap;
         } catch (error) {
@@ -1489,7 +1607,6 @@
             center: coordinate,
             zoom: Number.isFinite(location.zoom) ? location.zoom - LEAFLET_ZOOM_OFFSET : mapLibreMap.getZoom(),
             offset: getCameraOffsetForPoint(location.targetPoint),
-            pitch: FIXED_PITCH,
             bearing: 0,
             duration,
             essential: true
@@ -1501,14 +1618,28 @@
     }
 
     function setNavigationMode() {
-        // 案内開始・終了時もカメラ角度を変えない（酔い防止）。
+        // ナビの開始・終了でも、表示中のエリアに合わせた角度を維持する。
         if (!mapLibreMap) return;
-        if (Math.abs(mapLibreMap.getPitch() - FIXED_PITCH) > 0.1 || Math.abs(mapLibreMap.getBearing()) > 0.1) {
+        if (Math.abs(mapLibreMap.getBearing()) > 0.1) {
             programmaticCameraMove = true;
-            mapLibreMap.jumpTo({ pitch: FIXED_PITCH, bearing: 0 });
-            programmaticCameraMove = false;
-            scheduleOverlayProjection();
+            mapLibreMap.easeTo({ bearing: 0, duration: 350, essential: true });
+            mapLibreMap.once("moveend", function () { programmaticCameraMove = false; });
         }
+        scheduleAutomaticPitch(80);
+    }
+
+    function setPitch(value) {
+        if (!mapLibreMap) return false;
+        const requested = Number(value);
+        if (!Number.isFinite(requested)) {
+            scheduleAutomaticPitch(0);
+            return true;
+        }
+        const pitch = Math.max(MIN_AUTO_PITCH, Math.min(MAX_AUTO_PITCH, requested));
+        programmaticCameraMove = true;
+        mapLibreMap.easeTo({ pitch, duration: 450, essential: true });
+        mapLibreMap.once("moveend", function () { programmaticCameraMove = false; });
+        return true;
     }
 
     window.FushimiMapEngine = {
@@ -1527,7 +1658,7 @@
         fitBounds,
         followLocation,
         setNavigationMode,
-        // 互換用API。外部から角度変更を要求されても固定角度を維持する。
-        setPitch: function () { setNavigationMode(); }
+        // 互換用API。数値指定なら54〜64°へ設定し、引数なしなら自動角度へ戻す。
+        setPitch
     };
 })();

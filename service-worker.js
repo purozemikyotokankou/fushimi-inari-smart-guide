@@ -1,13 +1,17 @@
-/* Fushimi Inari Smart Guide — offline support (v213 loading progress and source credits) */
+/* Fushimi Inari Smart Guide — offline support (v215 adaptive camera and MapLibre 6 cache) */
 'use strict';
 
-const CACHE_NAME = 'fushimi-smart-guide-v213';
+const CACHE_NAME = 'fushimi-smart-guide-v215';
 const CACHE_PREFIX = 'fushimi-smart-guide-';
-const WORKER_VERSION = 213;
+const WORKER_VERSION = 215;
 const VIDEO_PATH = '/videos/fushimi.mp4';
 const CDN_ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/maplibre-gl@6.20.0/dist/maplibre-gl.mjs',
+  'https://unpkg.com/maplibre-gl@6.20.0/dist/maplibre-gl-worker.mjs',
+  'https://unpkg.com/maplibre-gl@6.20.0/dist/maplibre-gl-shared.mjs',
+  'https://unpkg.com/maplibre-gl@6.20.0/dist/maplibre-gl.css',
   'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js',
   'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css'
 ];
@@ -64,13 +68,13 @@ const PRELOAD_CORE = [
   './index.html', './home.html', './planner.html',
   './css/style.css', './css/planner.css',
   './js/language.js', './js/home-ui.js', './js/home-boot.js',
-  './js/planner.js', './js/map-engine-maplibre.js', './js/spots.js', './js/language.js', './js/navigation-pdr.js', './js/planner-weather.js', './js/planner-ambient-light.js',
+  './js/planner.js', './js/map-engine-maplibre.js', './js/maplibre-bootstrap.js', './js/maplibre-bootstrap-legacy.js', './js/spots.js', './js/navigation-pdr.js', './js/planner-weather.js', './js/planner-ambient-light.js',
   './js/liquid-cursor.js', './js/app-boot.js',
   './service-worker.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js',
-  'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css'
+  'https://unpkg.com/maplibre-gl@6.20.0/dist/maplibre-gl.mjs',
+  'https://unpkg.com/maplibre-gl@6.20.0/dist/maplibre-gl.css'
 ];
 const PRELOAD_DATA = ['./data/spots.json', './data/routes.json'];
 const PRELOAD_ICONS = [
@@ -107,7 +111,7 @@ async function cacheOne(path, { refresh = false, imageLimit = 0 } = {}) {
     const request = new Request(url, {
       method: 'GET',
       cache: refresh ? 'reload' : 'default',
-      ...(external ? { mode: 'no-cors' } : {})
+      ...(external ? { mode: /\.mjs(?:$|\?)/i.test(url) ? 'cors' : 'no-cors' } : {})
     });
     const response = await fetch(request);
     if (!response || (!response.ok && response.type !== 'opaque')) return !!cached;
