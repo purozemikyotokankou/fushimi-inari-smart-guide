@@ -6732,3 +6732,1219 @@ body.planner-page .liquid-cursor {
   .spot-quick-palette,
   .spot-quick-palette-choice { transition-duration: 1ms !important; }
 }
+
+/* ============================================================
+   V162 — SMOOTHER MAP MARKERS + MAP-APP STYLE WALKING GUIDANCE
+   Preserve the existing SVG icons and category colors. The expensive
+   backdrop blur on every marker label is removed to reduce repaint work.
+============================================================ */
+.leaflet-marker-pane .leaflet-marker-icon.planner-custom-div-icon {
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  will-change: transform;
+}
+.custom-map-marker .marker-pin {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.marker-name-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(255, 255, 255, .88) !important;
+  box-shadow: 0 2px 6px rgba(24, 43, 29, .13), inset 0 1px 0 rgba(255, 255, 255, .82) !important;
+}
+
+/* The navigation card expands naturally when a turn instruction is shown. */
+.planner-v11-nav-card {
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 12px 14px !important;
+}
+.planner-v11-maneuver[hidden],
+#plannerV11FollowButton[hidden] {
+  display: none !important;
+}
+.planner-v11-maneuver {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  margin: 7px 0 9px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, .88);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,248,239,.88));
+  box-shadow: 0 5px 14px rgba(0,0,0,.09), inset 0 1px 0 rgba(255,255,255,.98);
+  color: #222;
+}
+.planner-v11-maneuver-label {
+  color: #737980;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.planner-v11-maneuver-text {
+  color: #20242a;
+  font-size: clamp(18px, 2.4vw, 23px);
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: -.025em;
+}
+.planner-v11-maneuver-distance {
+  color: #626970;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+.planner-v11-maneuver[data-direction="left"] .planner-v11-maneuver-text,
+.planner-v11-maneuver[data-direction="right"] .planner-v11-maneuver-text,
+.planner-v11-maneuver[data-direction="uturn"] .planner-v11-maneuver-text {
+  color: #b53b14;
+}
+.planner-v11-maneuver[data-direction="offroute"] {
+  border-color: rgba(196, 0, 24, .34);
+  background: rgba(255, 241, 242, .96);
+}
+.planner-v11-maneuver[data-direction="offroute"] .planner-v11-maneuver-text {
+  color: #b00020;
+}
+.planner-v11-nav-actions {
+  flex-wrap: wrap !important;
+}
+.planner-v11-nav-actions .planner-v11-button {
+  min-height: 36px !important;
+}
+@media (max-width: 820px) {
+  .planner-v11-nav-card {
+    max-height: none !important;
+    padding: 10px 11px !important;
+  }
+  .planner-v11-maneuver {
+    margin: 6px 0 8px;
+    padding: 9px 11px;
+  }
+  .planner-v11-maneuver-text {
+    font-size: 19px;
+  }
+}
+
+
+/* ============================================================
+   V183 — MapLibre 3D basemap + clean marker repaint
+   Leaflet is retained only for existing SVG pins, paths and popups.
+============================================================ */
+#map {
+    position: absolute !important;
+    isolation: isolate;
+    overflow: hidden !important;
+    background: #e9edf0 !important;
+}
+#maplibreBase {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    background: #e9edf0;
+    touch-action: none;
+}
+#maplibreBase .maplibregl-canvas-container,
+#maplibreBase .maplibregl-canvas {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+#maplibreBase .maplibregl-canvas { display: block; outline: none; }
+#map.maplibre-active .leaflet-container,
+#map.maplibre-active.leaflet-container { background: transparent !important; }
+#map.maplibre-active .leaflet-tile-pane,
+#map.maplibre-active .leaflet-control-zoom,
+#map.maplibre-active .leaflet-control-attribution { display: none !important; }
+/* Pass background gestures through to MapLibre; pins remain interactive. */
+#map.maplibre-active .leaflet-map-pane { z-index: 400 !important; pointer-events: none !important; }
+#map.maplibre-active .leaflet-marker-icon { pointer-events: auto !important; }
+/* Prevent original Leaflet nodes from painting underneath the dedicated proxy pins. */
+#map.maplibre-active .leaflet-pane .leaflet-marker-icon,
+#map.maplibre-active .leaflet-pane .leaflet-marker-shadow {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+#map.maplibre-active .leaflet-marker-shadow,
+#map.maplibre-active .leaflet-interactive { pointer-events: none !important; }
+/* V204 FIX: the popup pane itself fills the map. It must not intercept
+   background gestures; only an actual popup card should receive pointer input. */
+#map.maplibre-active .leaflet-popup-pane { pointer-events: none !important; }
+#map.maplibre-active .leaflet-popup-pane .leaflet-popup,
+#map.maplibre-active .leaflet-popup { pointer-events: auto !important; }
+#map.maplibre-active .leaflet-marker-icon {
+    /* Avoid persistent GPU marker textures that can leave trails while panning. */
+    will-change: auto !important;
+    backface-visibility: visible !important;
+    -webkit-backface-visibility: visible !important;
+    transition: none !important;
+}
+#maplibreBase .maplibregl-ctrl-bottom-right {
+    z-index: 900 !important;
+    right: 8px !important;
+    bottom: 8px !important;
+}
+#maplibreBase .maplibregl-ctrl-attrib {
+    max-width: min(70vw, 420px);
+    border-radius: 9px 0 0 0;
+    background: rgba(255,255,255,.78) !important;
+    color: #45505a;
+    font-size: 9px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+/* V191 — TORII JOURNEY loading overlay.
+   Repeating torii gates travel from the distant vanishing point toward the viewer.
+   The bar is intentionally indeterminate because remote map/DEM tile progress is not a reliable percentage.
+*/
+.maplibre-status {
+    position: absolute;
+    z-index: 2400;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%) scale(1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: min(88vw, 360px);
+    min-height: 250px;
+    box-sizing: border-box;
+    padding: 16px 18px 20px;
+    border: 0;
+    border-radius: 28px;
+    background: radial-gradient(ellipse at 50% 43%, rgba(255,255,255,.94) 0%, rgba(255,255,255,.75) 47%, rgba(255,255,255,.24) 76%, rgba(255,255,255,0) 100%);
+    color: #32383e;
+    box-shadow: none;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity .28s ease, transform .34s cubic-bezier(.2,.75,.25,1);
+}
+.maplibre-status[hidden],
+.maplibre-status button[hidden] { display: none !important; }
+.maplibre-status.is-leaving {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(.96);
+}
+.maplibre-loading-scene {
+    position: relative;
+    display: block;
+    width: min(100%, 320px);
+    height: 196px;
+    flex: 0 0 auto;
+    overflow: hidden;
+    isolation: isolate;
+    perspective: 620px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%);
+}
+.maplibre-torii-tunnel {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 42%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.34) 43%, rgba(255,255,255,0) 73%);
+}
+.maplibre-torii-tunnel::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    left: 50%;
+    bottom: -18%;
+    width: 82%;
+    height: 76%;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(229,112,78,0), rgba(229,112,78,.08));
+    clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%);
+}
+.maplibre-torii-gate {
+    position: absolute;
+    z-index: 1;
+    top: 35%;
+    left: 50%;
+    display: block;
+    width: 184px;
+    height: 132px;
+    color: #d64a32;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.16);
+    transform-origin: 50% 50%;
+    animation: fushimi-torii-approach 3.6s linear infinite;
+    animation-delay: calc(var(--gate-index, 0) * -.60s);
+    filter: drop-shadow(0 4px 5px rgba(128,46,28,.10));
+    will-change: transform, opacity, top;
+}
+.maplibre-torii-gate svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: currentColor;
+}
+@keyframes fushimi-torii-approach {
+    0%   { top: 31%; opacity: 0; transform: translate(-50%, -50%) scale(.13); }
+    10%  { opacity: .18; }
+    42%  { top: 45%; opacity: .58; transform: translate(-50%, -50%) scale(.47); }
+    72%  { top: 68%; opacity: .94; transform: translate(-50%, -50%) scale(.88); }
+    100% { top: 116%; opacity: 0; transform: translate(-50%, -50%) scale(1.42); }
+}
+.maplibre-loading-progress {
+    display: block;
+    width: min(76%, 258px);
+    height: 7px;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(218,105,69,.16);
+    box-shadow: inset 0 1px 2px rgba(115,54,34,.08), 0 1px 0 rgba(255,255,255,.7);
+}
+.maplibre-loading-progress-track {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
+}
+.maplibre-loading-progress-track > span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #d8462d 0%, #f2683d 55%, #ff9a60 100%);
+    box-shadow: 0 0 9px rgba(224,83,47,.20);
+    transform: none;
+    animation: none !important;
+    transition: width .34s cubic-bezier(.22,.72,.28,1);
+}
+.maplibre-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: min(70vw, 360px);
+    flex: 0 0 auto;
+}
+.maplibre-progress-row .maplibre-loading-progress {
+    width: auto !important;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.maplibre-loading-progress-label {
+    min-width: 3.2em;
+    color: #754438;
+    font: 850 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    text-shadow: 0 1px 0 rgba(255,255,255,.78);
+}
+.maplibre-status.is-error .maplibre-progress-row { display: none; }
+.maplibre-status:not(.is-error) #maplibreStatusText {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0,0,0,0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+.maplibre-status.is-error {
+    width: min(88%, 360px);
+    min-height: 86px;
+    height: auto;
+    padding: 17px 20px;
+    border: 1px solid rgba(255,255,255,.94);
+    border-radius: 18px;
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 12px 34px rgba(20,30,40,.16), inset 0 1px 0 #fff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.6;
+    pointer-events: auto;
+    backdrop-filter: blur(15px) saturate(1.1);
+    -webkit-backdrop-filter: blur(15px) saturate(1.1);
+}
+.maplibre-status.is-error .maplibre-loading-scene,
+.maplibre-status.is-error .maplibre-loading-progress { display: none; }
+.maplibre-status.is-error #maplibreStatusText {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+.maplibre-status button {
+    min-height: 36px;
+    padding: 7px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: #30343a;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+}
+@media (max-width: 520px) {
+    .maplibre-status { min-height: 222px; padding: 12px 12px 17px; }
+    .maplibre-loading-scene { height: 174px; }
+    .maplibre-torii-gate { width: 166px; height: 120px; }
+    .maplibre-loading-progress { width: 78%; height: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .maplibre-status { transition-duration: 1ms !important; }
+    .maplibre-torii-gate { animation: none; opacity: .45; top: 50%; transform: translate(-50%,-50%) scale(.52); }
+    .maplibre-torii-gate:nth-child(2) { opacity:.62; transform:translate(-50%,-50%) scale(.68); }
+    .maplibre-torii-gate:nth-child(3) { opacity:.85; transform:translate(-50%,-50%) scale(.88); }
+    .maplibre-torii-gate:nth-child(n+4) { display:none; }
+    .maplibre-loading-progress-track > span { animation:none !important; transform:none !important; }
+}
+.maplibre-camera-control {
+    position: absolute;
+    z-index: 960;
+    top: 104px;
+    left: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.maplibre-camera-button {
+    width: 46px;
+    height: 42px;
+    border: 1px solid rgba(255,255,255,.92);
+    border-radius: 14px;
+    background: rgba(255,255,255,.88);
+    color: #27312c;
+    box-shadow: 0 7px 19px rgba(20,30,24,.12), inset 0 1px 0 white;
+    font: 800 13px/1 system-ui, sans-serif;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.maplibre-terrain-button {
+    min-width: 62px;
+    height: 42px;
+    padding: 0 9px;
+    border: 1px solid rgba(255,255,255,.92);
+    border-radius: 14px;
+    background: rgba(255,255,255,.88);
+    color: #27312c;
+    box-shadow: 0 7px 19px rgba(20,30,24,.12), inset 0 1px 0 white;
+    font: 800 11px/1 system-ui, sans-serif;
+    letter-spacing: -.02em;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: auto;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.maplibre-terrain-button[aria-pressed="true"] {
+    background: rgba(39,49,44,.94);
+    color: #fff;
+    border-color: rgba(255,255,255,.76);
+}
+.maplibre-terrain-button:disabled {
+    opacity: .68;
+    cursor: progress;
+}
+
+.maplibre-camera-hint {
+    padding: 7px 10px;
+    border: 1px solid rgba(255,255,255,.86);
+    border-radius: 999px;
+    background: rgba(255,255,255,.76);
+    color: #515b55;
+    font: 650 10px/1.2 system-ui, sans-serif;
+    box-shadow: 0 5px 14px rgba(20,30,24,.08);
+    pointer-events: none;
+}
+@media (max-width: 700px) {
+    .maplibre-camera-control { top: calc(100px + env(safe-area-inset-top)); left: 10px; }
+    .maplibre-camera-button { width: 42px; height: 39px; border-radius: 12px; }
+    .maplibre-terrain-button { min-width: 54px; height: 39px; border-radius: 12px; padding: 0 7px; font-size: 10px; }
+    .maplibre-camera-hint { display: none; }
+    #maplibreBase .maplibregl-ctrl-bottom-right { right: 4px !important; bottom: 4px !important; }
+    #maplibreBase .maplibregl-ctrl-attrib { font-size: 8px; }
+}
+
+/* Keep spot pins light while the 3D camera is moving; restore their full glass
+   treatment as soon as movement stops. The SVG artwork and category colors stay unchanged. */
+#map.is-camera-moving .leaflet-marker-icon {
+    transition: none !important;
+    animation: none !important;
+    will-change: auto !important;
+    backface-visibility: visible !important;
+    -webkit-backface-visibility: visible !important;
+}
+#map.is-camera-moving .custom-map-marker .marker-pin {
+    box-shadow: 0 0 0 1px rgba(255,255,255,.74) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transition: none !important;
+}
+#map.is-camera-moving .custom-map-marker .icon-image {
+    filter: none !important;
+    transition: none !important;
+}
+#map.is-camera-moving .custom-map-marker .marker-accent,
+#map.is-camera-moving .marker-name-glass {
+    transition: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+
+/* ============================================================
+   V184 — isolated marker renderer
+   The original Leaflet marker nodes are hidden; visible pins are single
+   non-composited proxies positioned from MapLibre's current camera.
+============================================================ */
+.fushimi-marker-overlay {
+  position:absolute !important;
+  inset:0 !important;
+  z-index:680 !important;
+  overflow:visible !important;
+  pointer-events:none !important;
+  transform:none !important;
+  contain:layout style;
+}
+.fushimi-marker-overlay .fushimi-marker-proxy {
+  position:absolute !important;
+  pointer-events:auto !important;
+  transition:none !important;
+  animation:none !important;
+  will-change:auto !important;
+  transform:none !important;
+  -webkit-transform:none !important;
+  backface-visibility:visible !important;
+  -webkit-backface-visibility:visible !important;
+}
+.fushimi-marker-overlay .fushimi-marker-proxy[aria-hidden="true"] {
+  pointer-events:none !important;
+}
+
+
+/* ============================================================
+   V185 — 3D-first initial reveal
+   Keep the vector map and its marker proxies hidden until the first
+   terrain-backed MapLibre frame is ready. This removes the visible
+   flat-map -> 3D transition during startup.
+============================================================ */
+#maplibreBase .maplibregl-canvas-container {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity .24s ease;
+}
+#maplibreBase.is-maplibre-3d-ready .maplibregl-canvas-container {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+#maplibreBase:not(.is-maplibre-3d-ready) .maplibregl-control-container {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+#maplibreBase.is-maplibre-3d-ready .maplibregl-control-container {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+#map.maplibre-active:not(.is-maplibre-3d-ready) .fushimi-marker-overlay {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+#map.maplibre-active.is-maplibre-3d-ready .fushimi-marker-overlay {
+    opacity: 1 !important;
+    /* The overlay covers the entire map. Keep its empty area transparent to
+       pointer input; only .fushimi-marker-proxy children may receive taps. */
+    pointer-events: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    #maplibreBase .maplibregl-canvas-container {
+        transition: none !important;
+    }
+}
+
+
+/* V188 — make the 3D map itself the active pan surface (no camera boundary). */
+#maplibreBase.is-maplibre-3d-ready .maplibregl-canvas-container,
+#maplibreBase.is-maplibre-3d-ready .maplibregl-canvas {
+    pointer-events: auto !important;
+    cursor: grab;
+}
+#maplibreBase.is-maplibre-3d-ready .maplibregl-canvas:active { cursor: grabbing; }
+#map.maplibre-active .fushimi-marker-overlay {
+    pointer-events: none !important;
+}
+#map.maplibre-active .fushimi-marker-overlay .fushimi-marker-proxy {
+    pointer-events: auto !important;
+}
+
+
+/* V190 — 地図の固定範囲をなくし、MapLibreキャンバスに直接ジェスチャーを渡す。 */
+#maplibreBase {
+    z-index: 1 !important;
+    pointer-events: auto !important;
+    touch-action: none !important;
+}
+#maplibreBase .maplibregl-canvas-container,
+#maplibreBase .maplibregl-canvas {
+    pointer-events: auto !important;
+    touch-action: none !important;
+}
+#map.maplibre-active .leaflet-map-pane {
+    pointer-events: none !important;
+}
+#map.maplibre-active .fushimi-marker-overlay {
+    pointer-events: none !important;
+}
+#map.maplibre-active .fushimi-marker-overlay .fushimi-marker-proxy {
+    pointer-events: auto !important;
+}
+
+
+/* V191 — one-finger / mouse pan is handled on the whole map surface, including pin hit areas. */
+#map { touch-action: none !important; }
+#map.is-manual-map-dragging,
+#map.is-manual-map-dragging * { cursor: grabbing !important; }
+
+
+/* ============================================================
+   V192 — TORII JOURNEY blended into the live map.
+   Keep the map visible beneath a soft atmospheric veil; remove
+   the isolated floating-card appearance from the loading scene.
+============================================================ */
+#map .maplibre-status:not(.is-error) {
+    inset: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 1.2vh, 12px);
+    padding: clamp(14px, 4vh, 36px) 16px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #49352f;
+    text-align: center;
+    pointer-events: none;
+    overflow: hidden;
+    isolation: isolate;
+    opacity: 1;
+    transition: opacity .42s ease !important;
+}
+#map .maplibre-status:not(.is-error)::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 50% 48%, rgba(255,250,240,.12) 0%, rgba(255,250,240,.08) 38%, rgba(249,246,238,.20) 100%),
+        linear-gradient(180deg, rgba(246,244,236,.30) 0%, rgba(255,250,241,.15) 46%, rgba(244,241,233,.30) 100%);
+    -webkit-backdrop-filter: blur(1.15px) saturate(.88);
+    backdrop-filter: blur(1.15px) saturate(.88);
+}
+#map .maplibre-status:not(.is-error).is-leaving {
+    inset: 0 !important;
+    transform: none !important;
+    opacity: 0 !important;
+}
+#map .maplibre-status:not(.is-error) > * {
+    position: relative;
+    z-index: 1;
+}
+#map .maplibre-status:not(.is-error) .maplibre-loading-scene {
+    width: min(92vw, 510px);
+    height: clamp(205px, 38vh, 310px);
+    flex: 0 1 auto;
+    overflow: hidden;
+    perspective: 760px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 8%, #000 86%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 8%, #000 86%, transparent 100%);
+    filter: drop-shadow(0 12px 22px rgba(91,54,40,.08));
+}
+#map .maplibre-status:not(.is-error) .maplibre-torii-tunnel {
+    background:
+        radial-gradient(ellipse at 50% 47%, rgba(255,250,239,.30) 0%, rgba(255,250,239,.14) 39%, rgba(255,250,239,0) 74%);
+}
+#map .maplibre-status:not(.is-error) .maplibre-torii-tunnel::before {
+    bottom: -20%;
+    width: 88%;
+    height: 78%;
+    background: linear-gradient(180deg, rgba(220,103,70,0) 0%, rgba(220,103,70,.045) 48%, rgba(220,103,70,.12) 100%);
+}
+#map .maplibre-status:not(.is-error) .maplibre-torii-tunnel::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    left: 50%;
+    bottom: -4%;
+    width: 70%;
+    height: 32%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(255,244,225,.30), rgba(255,244,225,0) 72%);
+    pointer-events: none;
+}
+#map .maplibre-status:not(.is-error) .maplibre-torii-gate {
+    width: clamp(150px, 34vw, 218px);
+    height: auto;
+    aspect-ratio: 140 / 100;
+    color: #d74b32;
+    filter: drop-shadow(0 5px 7px rgba(91,35,24,.14));
+}
+#map .maplibre-status:not(.is-error) .maplibre-loading-progress {
+    width: min(56vw, 340px);
+    height: 6px;
+    margin-top: clamp(0px, .7vh, 7px);
+    border: 1px solid rgba(255,255,255,.42);
+    background: rgba(255,255,255,.40);
+    box-shadow: 0 2px 10px rgba(78,55,39,.08), inset 0 1px 2px rgba(92,63,43,.08);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+#map .maplibre-status:not(.is-error) .maplibre-loading-progress-track > span {
+    background: linear-gradient(90deg, #c94730 0%, #e45d39 52%, #f39a61 100%);
+    box-shadow: 0 0 10px rgba(219,88,51,.22);
+}
+#map .maplibre-status.is-error {
+    inset: 50% auto auto 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(88%, 360px) !important;
+    height: auto !important;
+    min-height: 86px !important;
+    max-width: 360px !important;
+    padding: 17px 20px !important;
+    border: 1px solid rgba(255,255,255,.94) !important;
+    border-radius: 18px !important;
+    background: rgba(255,255,255,.92) !important;
+    box-shadow: 0 12px 34px rgba(20,30,40,.16), inset 0 1px 0 #fff !important;
+    -webkit-backdrop-filter: blur(15px) saturate(1.1) !important;
+    backdrop-filter: blur(15px) saturate(1.1) !important;
+    pointer-events: auto !important;
+}
+#map .maplibre-status.is-error::before { display: none; }
+@media (max-width: 520px) {
+    #map .maplibre-status:not(.is-error) {
+        gap: 7px;
+        padding: max(12px, env(safe-area-inset-top)) 10px max(16px, env(safe-area-inset-bottom)) !important;
+    }
+    #map .maplibre-status:not(.is-error) .maplibre-loading-scene {
+        width: min(96vw, 430px);
+        height: clamp(180px, 32vh, 250px);
+    }
+    #map .maplibre-status:not(.is-error) .maplibre-torii-gate {
+        width: clamp(136px, 42vw, 180px);
+    }
+    #map .maplibre-status:not(.is-error) .maplibre-loading-progress {
+        width: min(70vw, 300px);
+        height: 6px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    #map .maplibre-status:not(.is-error) .maplibre-torii-gate {
+        animation-duration: 8s;
+    }
+    #map .maplibre-status:not(.is-error) .maplibre-loading-progress-track > span {
+        transition: none !important;
+    }
+}
+
+
+/* V192 — show a subdued map preview underneath the loading atmosphere.
+   Once the 3D terrain frame is ready, return to the crisp interactive map. */
+#maplibreBase .maplibregl-canvas-container {
+    opacity: .44 !important;
+    pointer-events: none !important;
+    filter: blur(1.6px) saturate(.76) brightness(1.045);
+    transform: scale(1.012);
+    transition: opacity .48s ease, filter .58s ease, transform .58s ease !important;
+}
+#maplibreBase.is-maplibre-3d-ready .maplibregl-canvas-container {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    filter: none;
+    transform: none;
+}
+
+
+/* V197 — map-app-like current position direction indicator (GPS course / PDR heading). */
+.planner-v11-current-location {
+    position: relative !important;
+    overflow: visible !important;
+}
+.planner-v11-current-direction {
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: -10px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 11px solid #287cc7;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.34));
+    transform: translateX(-50%) rotate(var(--current-heading, 0deg));
+    transform-origin: 50% 20px;
+    pointer-events: none;
+}
+.planner-v11-current-location.has-heading .planner-v11-current-direction {
+    display: block;
+}
+
+/* V195 — improved navigation hierarchy, sensor status and official crowd links. */
+.planner-v11-nav-card {
+    max-height: min(40vh, 340px) !important;
+    overflow-y: auto !important;
+    padding: 13px 15px !important;
+    border: 1px solid rgba(255,255,255,.82) !important;
+    background: rgba(249,250,249,.91) !important;
+    box-shadow: 0 12px 34px rgba(19,29,24,.22), inset 0 1px 0 rgba(255,255,255,.96) !important;
+    backdrop-filter: blur(22px) saturate(1.3) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(1.3) !important;
+}
+.planner-v11-nav-top { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:8px !important; }
+.planner-v11-nav-status { font-weight:800 !important; }
+.planner-v11-maneuver { display:grid !important; grid-template-columns:42px minmax(0,1fr) !important; align-items:center !important; gap:10px !important; }
+.planner-v11-maneuver-copy { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
+.planner-v11-maneuver-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:14px; background:rgba(196,0,24,.10); color:#bd1f24; font-size:29px; line-height:1; font-weight:900; }
+.planner-v11-maneuver[data-direction="offroute"] .planner-v11-maneuver-icon { background:#b00020; color:#fff; }
+.planner-v11-maneuver[data-direction="arrived"] .planner-v11-maneuver-icon { background:#167c4b; color:#fff; }
+.planner-v11-nav-title { margin:6px 0 0 !important; font-size:16px !important; font-weight:850 !important; }
+.planner-v11-nav-meta { display:flex !important; flex-wrap:wrap !important; gap:6px !important; }
+.planner-v11-nav-chip { padding:6px 9px !important; border-radius:999px !important; background:rgba(35,48,40,.07) !important; font-weight:750 !important; }
+.planner-v11-nav-actions { display:flex !important; flex-wrap:wrap !important; gap:7px !important; }
+.planner-v11-nav-actions .planner-v11-button { min-height:40px !important; padding:8px 11px !important; border-radius:12px !important; font-size:11px !important; }
+.planner-v11-reroute-button { background:#b20c22 !important; color:#fff !important; border-color:#b20c22 !important; }
+.planner-v11-reroute-button:disabled { opacity:.55 !important; }
+#plannerV11RerouteButton[hidden], #plannerV11FollowButton[hidden], #plannerV11Maneuver[hidden] { display:none !important; }
+@media (max-width:820px) {
+    .planner-v11-map-panel { left:7px !important; right:7px !important; bottom:calc(105px + env(safe-area-inset-bottom)) !important; }
+    .planner-v11-nav-card { width:100% !important; max-height:min(43vh,360px) !important; padding:10px 11px !important; border-radius:19px !important; }
+    .planner-v11-nav-actions .planner-v11-button { min-height:38px !important; font-size:10px !important; }
+}
+
+
+/* V196 — map data credits: accessible, expandable and kept clear of the bottom sheet. */
+.planner-data-credits {
+  position: absolute;
+  z-index: 1650;
+  left: 12px;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  max-width: min(420px, calc(100vw - 24px));
+  color: #39443e;
+  font: 650 10px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  pointer-events: auto;
+}
+.planner-weather-credit {
+  position: absolute;
+  z-index: 1650;
+  left: 103px;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.9);
+  border-radius: 999px;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 5px 16px rgba(25,35,29,.10);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  color: #315c83;
+  font: 650 9px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+.planner-data-credits > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  border: 1px solid rgba(255,255,255,.92);
+  border-radius: 999px;
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 5px 16px rgba(25,35,29,.12), inset 0 1px 0 rgba(255,255,255,.98);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  color: #4b5a50;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.planner-data-credits > summary::-webkit-details-marker { display: none; }
+.planner-data-credits > summary:focus-visible { outline: 2px solid #b83e36; outline-offset: 2px; }
+.planner-data-credits-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 7px);
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(72vh, 620px);
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,.94);
+  border-radius: 15px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 10px 28px rgba(20,30,24,.17), inset 0 1px 0 rgba(255,255,255,.98);
+  backdrop-filter: blur(18px) saturate(1.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  color: #38443c;
+}
+.planner-data-credits-panel h2 { margin: 0 0 8px; font-size: 11px; line-height: 1.35; font-weight: 850; }
+.planner-data-credits-panel ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.planner-data-credits-panel li { font-size: 10px; line-height: 1.55; overflow-wrap: anywhere; }
+.planner-data-credits-panel li strong { display: block; margin-bottom: 2px; color: #29382f; font-size: 10.5px; }
+.planner-data-credits-panel li small { display: block; margin-top: 2px; color: #5e6962; font-size: 9px; line-height: 1.5; }
+.planner-data-credits-panel code { font: 700 9px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.planner-data-credits-panel a { color: #315c83; text-decoration: underline; text-underline-offset: 2px; }
+.planner-workspace.planner-sheet-expanded .planner-data-credits,
+.planner-workspace.planner-sheet-expanded .planner-weather-credit { opacity: 0; pointer-events: none; }
+@media (max-width: 580px) {
+  .planner-data-credits { left: 8px; bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .planner-weather-credit { left: 98px; bottom: calc(96px + env(safe-area-inset-bottom)); padding: 5px 7px; font-size: 8px; }
+  .planner-data-credits-panel { max-height: min(68vh, 560px); padding: 12px 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .planner-data-credits, .planner-data-credits-panel { transition: none !important; } }
+
+
+/* V200 — MapLibre owns map gestures; marker drags are forwarded by the marker proxy. */
+#map, #maplibreBase, #maplibreBase .maplibregl-canvas-container, #maplibreBase .maplibregl-canvas {
+  pointer-events: auto !important;
+  touch-action: none !important;
+  overscroll-behavior: contain;
+}
+#map .fushimi-marker-overlay { pointer-events: none !important; }
+#map .fushimi-marker-overlay .fushimi-marker-proxy {
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
+
+/* V201 — centralized map input: one-finger pan, two-finger pinch, wheel zoom. */
+#map, #maplibreBase, #maplibreBase .maplibregl-canvas-container,
+#maplibreBase .maplibregl-canvas, #map .fushimi-marker-overlay .fushimi-marker-proxy {
+  touch-action: none !important;
+}
+#maplibreBase .maplibregl-canvas-container, #maplibreBase .maplibregl-canvas {
+  pointer-events: auto !important;
+}
+#map .fushimi-marker-overlay .fushimi-marker-proxy {
+  pointer-events: auto !important;
+}
+
+/* V203 — keep MapLibre's native canvas as the only blank-map gesture target. */
+#maplibreBase .maplibregl-canvas-container,
+#maplibreBase .maplibregl-canvas {
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+#maplibreBase.is-maplibre-3d-ready .maplibregl-canvas-container {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  filter: none !important;
+  transform: none !important;
+}
+#maplibreBase .maplibregl-control-container {
+  pointer-events: none !important;
+}
+#maplibreBase .maplibregl-control-container .maplibregl-ctrl {
+  pointer-events: auto !important;
+}
+#map .fushimi-marker-overlay { pointer-events: none !important; }
+#map .fushimi-marker-overlay .fushimi-marker-proxy {
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
+
+/* V204 — the full-size Leaflet popup pane is transparent to map gestures. */
+#map.maplibre-active .leaflet-popup-pane {
+  pointer-events: none !important;
+}
+#map.maplibre-active .leaflet-popup-pane > .leaflet-popup,
+#map.maplibre-active .leaflet-popup-pane .leaflet-popup {
+  pointer-events: auto !important;
+}
+
+
+/* V205 — fixed-display state: transparent marker layer, clickable pin children. */
+#map.maplibre-active.is-maplibre-3d-ready .fushimi-marker-overlay {
+  pointer-events: none !important;
+}
+#map.maplibre-active.is-maplibre-3d-ready .fushimi-marker-overlay .fushimi-marker-proxy {
+  pointer-events: auto !important;
+}
+
+
+/* ============================================================
+   V206 — immersive turn-by-turn navigation mode
+   Keeps the V205 MapLibre pointer pass-through rules untouched.
+============================================================ */
+body.is-navigation-active .planner-site-header,
+body.is-navigation-active .planner-spot-panel,
+body.is-navigation-active .planner-map-title,
+body.is-navigation-active .planner-top-actions,
+body.is-navigation-active .planner-location-dock,
+body.is-navigation-active .planner-map-hint,
+body.is-navigation-active .planner-data-credits,
+body.is-navigation-active .planner-weather-credit,
+body.is-navigation-active .map-search-popover {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(8px) !important;
+  transition: opacity .22s ease, transform .22s ease, visibility .22s ease !important;
+}
+body.is-navigation-active .planner-page {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+body.is-navigation-active .planner-v11-map-panel {
+  position: absolute !important;
+  z-index: 2450 !important;
+  top: max(10px, env(safe-area-inset-top)) !important;
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  width: min(610px, calc(100% - 24px)) !important;
+  transform: translateX(-50%) !important;
+  pointer-events: none !important;
+}
+body.is-navigation-active .planner-v11-nav-card {
+  width: 100% !important;
+  max-height: min(44vh, 390px) !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  padding: 16px 18px 14px !important;
+  border: 1px solid rgba(255,255,255,.94) !important;
+  border-radius: 23px !important;
+  background: rgba(250,251,249,.94) !important;
+  box-shadow: 0 16px 42px rgba(10,18,16,.25), inset 0 1px 0 #fff !important;
+  -webkit-backdrop-filter: blur(26px) saturate(1.3) !important;
+  backdrop-filter: blur(26px) saturate(1.3) !important;
+  pointer-events: auto !important;
+}
+body.is-navigation-active .planner-v11-nav-top { align-items:center !important; }
+body.is-navigation-active .planner-v11-nav-kicker {
+  font-size: 10px !important;
+  letter-spacing: .1em !important;
+  font-weight: 850 !important;
+}
+body.is-navigation-active .planner-v11-nav-status {
+  border-radius: 999px !important;
+  padding: 5px 9px !important;
+  background: rgba(35,126,83,.11) !important;
+  color: #177447 !important;
+  font-size: 10px !important;
+  white-space: nowrap !important;
+}
+body.is-navigation-active .planner-v11-maneuver {
+  display: grid !important;
+  grid-template-columns: 54px minmax(0,1fr) !important;
+  align-items: center !important;
+  gap: 13px !important;
+  margin: 12px 0 10px !important;
+  padding: 14px 15px !important;
+  border: 1px solid rgba(180,40,28,.10) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #fff 0%, #fff8f2 100%) !important;
+  box-shadow: 0 7px 20px rgba(37,35,26,.08), inset 0 1px 0 #fff !important;
+}
+body.is-navigation-active .planner-v11-maneuver-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 17px !important;
+  background: #c32622 !important;
+  color: #fff !important;
+  font-size: 35px !important;
+  line-height: 1 !important;
+  box-shadow: 0 5px 13px rgba(195,38,34,.24) !important;
+}
+body.is-navigation-active .planner-v11-maneuver-copy { min-width: 0 !important; }
+body.is-navigation-active .planner-v11-maneuver-label {
+  color: #7b7771 !important;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+  letter-spacing: .12em !important;
+}
+body.is-navigation-active .planner-v11-maneuver-text {
+  display: block !important;
+  color: #202521 !important;
+  font-size: clamp(19px, 2.4vw, 25px) !important;
+  line-height: 1.22 !important;
+  font-weight: 900 !important;
+}
+body.is-navigation-active .planner-v11-maneuver-distance {
+  color: #606a63 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+body.is-navigation-active .planner-v11-nav-title {
+  margin: 5px 0 0 !important;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+}
+body.is-navigation-active .planner-v11-nav-meta { gap: 7px !important; margin-top: 8px !important; }
+body.is-navigation-active .planner-v11-nav-chip {
+  padding: 6px 9px !important;
+  border-radius: 999px !important;
+  background: rgba(40,51,44,.075) !important;
+  color: #3f4942 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+.planner-v11-nav-utility-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 7px 12px !important;
+  margin-top: 9px !important;
+}
+.planner-v11-sensor-status[hidden] { display: none !important; }
+.planner-v11-sensor-status {
+  min-width: 0 !important;
+  color: #647067 !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+}
+.planner-v11-crowd-link {
+  color: #245c85 !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+  white-space: nowrap !important;
+}
+body.is-navigation-active .planner-v11-nav-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-top: 12px !important;
+}
+body.is-navigation-active .planner-v11-nav-actions .planner-v11-button {
+  min-height: 40px !important;
+  flex: 1 1 auto !important;
+  padding: 9px 12px !important;
+  border-radius: 13px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+body.is-navigation-active #plannerV11SensorButton.is-enabled {
+  border-color: rgba(31,130,83,.28) !important;
+  background: rgba(31,130,83,.10) !important;
+  color: #176b43 !important;
+}
+body.is-navigation-active #plannerV11StopButton { flex: 0 0 auto !important; }
+body.is-navigation-active .planner-v11-arrival { margin-top: 12px !important; }
+body.is-navigation-active .planner-v11-current-location.has-heading .planner-v11-current-direction { display: block !important; }
+@media (max-width: 820px) {
+  body.is-navigation-active .planner-v11-map-panel {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    width: calc(100% - 16px) !important;
+  }
+  body.is-navigation-active .planner-v11-nav-card {
+    max-height: min(47vh, 410px) !important;
+    padding: 12px 13px 11px !important;
+    border-radius: 20px !important;
+  }
+  body.is-navigation-active .planner-v11-maneuver {
+    grid-template-columns: 46px minmax(0,1fr) !important;
+    gap: 10px !important;
+    margin: 9px 0 8px !important;
+    padding: 10px 11px !important;
+    border-radius: 15px !important;
+  }
+  body.is-navigation-active .planner-v11-maneuver-icon {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 14px !important;
+    font-size: 30px !important;
+  }
+  body.is-navigation-active .planner-v11-maneuver-text { font-size: 19px !important; }
+  body.is-navigation-active .planner-v11-nav-actions .planner-v11-button { min-height: 38px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.is-navigation-active .planner-site-header,
+  body.is-navigation-active .planner-spot-panel,
+  body.is-navigation-active .planner-top-actions,
+  body.is-navigation-active .planner-location-dock { transition: none !important; }
+}
+
+body.is-navigation-active #plannerV11StartButton { display: none !important; }
+
+
+/* V209 — clearer, app-like turn-by-turn navigation */
+body.is-navigation-active .planner-v11-map-panel {
+  width: min(520px, calc(100% - 28px)) !important;
+  top: max(12px, env(safe-area-inset-top)) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+body.is-navigation-active .planner-v11-nav-card {
+  border: 1px solid rgba(255,255,255,.86) !important;
+  border-radius: 24px !important;
+  padding: 17px 18px 15px !important;
+  background: rgba(255,255,255,.97) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,.23), inset 0 1px 0 #fff !important;
+}
+body.is-navigation-active .planner-v11-nav-status { font-size: 11px !important; font-weight: 900 !important; }
+body.is-navigation-active .planner-v11-maneuver { min-height: 92px !important; grid-template-columns: 62px minmax(0,1fr) !important; }
+body.is-navigation-active .planner-v11-maneuver-icon { width: 62px !important; height: 62px !important; font-size: 38px !important; }
+body.is-navigation-active .planner-v11-maneuver-text { font-size: clamp(20px, 2.5vw, 27px) !important; }
+body.is-navigation-active .planner-v11-maneuver-distance { font-size: 12px !important; line-height: 1.45 !important; }
+body.is-navigation-active .planner-v11-nav-chip { font-size: 12px !important; padding: 7px 11px !important; }
+body.is-navigation-active #plannerV11SensorButton { min-height: 46px !important; font-size: 12px !important; }
+@media (max-width: 820px) {
+  body.is-navigation-active .planner-v11-map-panel { width: calc(100% - 16px) !important; }
+  body.is-navigation-active .planner-v11-nav-card { padding: 13px 13px 12px !important; border-radius: 20px !important; }
+  body.is-navigation-active .planner-v11-maneuver { min-height: 78px !important; grid-template-columns: 52px minmax(0,1fr) !important; }
+  body.is-navigation-active .planner-v11-maneuver-icon { width: 52px !important; height: 52px !important; font-size: 32px !important; }
+  body.is-navigation-active .planner-v11-maneuver-text { font-size: 20px !important; }
+}
+
+/* V212 — mobile route setup fills the screen; search stays reachable without scrolling. */
+@media (max-width: 820px) {
+  .map-spot-detail.is-route-mode { position:fixed !important; inset:0 !important; left:0 !important; right:0 !important; top:0 !important; bottom:0 !important; width:100vw !important; height:100dvh !important; max-height:100dvh !important; min-height:100dvh !important; margin:0 !important; padding:0 !important; border-radius:0 !important; transform:none !important; z-index:100000 !important; background:rgba(250,251,250,.97) !important; backdrop-filter:blur(22px) saturate(145%) !important; -webkit-backdrop-filter:blur(22px) saturate(145%) !important; }
+  .map-spot-detail.is-route-mode .map-spot-detail-content { height:100% !important; max-height:100% !important; min-height:0 !important; box-sizing:border-box !important; overflow-y:auto !important; padding:calc(14px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom)) !important; }
+  .map-route-builder { min-height:100% !important; gap:clamp(8px,1.4dvh,12px) !important; padding-bottom:4px !important; }
+  .map-route-builder-header { padding-top:30px !important; }
+  .map-route-endpoints { padding:8px 10px !important; }
+  .map-route-endpoint { min-height:52px !important; }
+  .map-route-endpoint-connector { height:20px !important; }
+  .map-route-origin-picker h3, .map-route-mode-section h3 { margin-bottom:5px !important; }
+  .map-route-origin-mode button, .map-route-mode-option { min-height:38px !important; }
+  .map-route-builder-actions { position:sticky !important; bottom:calc(-12px - env(safe-area-inset-bottom)) !important; z-index:5 !important; margin-top:auto !important; padding:10px 0 calc(8px + env(safe-area-inset-bottom)) !important; background:linear-gradient(to bottom,rgba(250,251,250,.82),#fafbfa 22%) !important; }
+  .map-route-builder-submit { min-height:54px !important; font-size:15px !important; border-radius:15px !important; }
+  .map-route-origin-picker { display:none !important; }
+}
+#plannerV11StartButton, #plannerV11SensorButton { display:none !important; }
