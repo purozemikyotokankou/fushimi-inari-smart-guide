@@ -5,26 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#f5f5f7">
     <title>伏見稲荷スマートガイド</title>
-    <!-- V117: restore the previously working CARTO tile setup; no tile bounds clipping. -->
+    <!-- V204: Leaflet popup pane no longer blocks MapLibre gestures; GPS-only navigation. -->
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/planner.css?v=161-spot-quick-palette">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="//tiles.openfreemap.org">
+    <link rel="stylesheet" href="css/planner.css?v=213-progress-credits">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style id="fushimi-adaptive-light-styles">
-/* V82 — same adaptive edge-light look, anchored to the screen edge above Leaflet tiles. */
+/* V165 — adaptive edge-light look filters the MapLibre vector canvas. */
 #map {
     --fushimi-night-level: 0;
     --fushimi-map-brightness: 1;
     --fushimi-map-saturation: 1;
 }
-#map .leaflet-tile-pane {
+#maplibreBase canvas {
     filter: brightness(var(--fushimi-map-brightness, 1)) saturate(var(--fushimi-map-saturation, 1));
     transition: filter 26s linear;
 }
 #fushimiAdaptiveLight {
     position: absolute !important;
     inset: 0 !important;
-    z-index: 650 !important; /* stable screen-edge layer above Leaflet's map pane; transparent + pointer-events:none */
+    z-index: 650 !important; /* screen-edge ambient light layer; transparent + pointer-events:none */
     display: block !important;
     visibility: visible !important;
     overflow: hidden;
@@ -102,7 +106,7 @@
     #fushimiAdaptiveLight .fushimi-adaptive-light-source { width: 78vw; height: 205px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    #map .leaflet-tile-pane,
+    #maplibreBase canvas,
     #fushimiAdaptiveLight::before,
     #fushimiAdaptiveLight::after,
     #fushimiAdaptiveLight .fushimi-adaptive-light-source { transition-duration: 1ms !important; }
@@ -140,7 +144,110 @@
                     <h1>観光マップ</h1>
                 </div>
 
-                <div id="map" aria-label="伏見稲荷の地図"></div>
+                <div id="map" aria-label="伏見稲荷の地図">
+                    <div id="maplibreBase" aria-label="伏見稲荷の3Dベースマップ"></div>
+                    <div id="maplibreStatus" class="maplibre-status" role="status" aria-live="polite" aria-label="伏見稲荷の地図を読み込んでいます" hidden>
+                        <div class="maplibre-loading-scene" aria-hidden="true">
+                            <div class="maplibre-torii-tunnel">
+                            <span class="maplibre-torii-gate" style="--gate-index:0"><svg viewBox="0 0 140 100" aria-hidden="true" focusable="false"><path d="M5 22 Q70 1 135 22 L130 34 Q70 16 10 34 Z"/><path d="M12 29 H128 V38 H12 Z"/><path d="M24 36 H37 V88 H24 Z"/><path d="M103 36 H116 V88 H103 Z"/><path d="M19 82 H42 V91 H19 Z"/><path d="M98 82 H121 V91 H98 Z"/></svg></span>
+                            <span class="maplibre-torii-gate" style="--gate-index:1"><svg viewBox="0 0 140 100" aria-hidden="true" focusable="false"><path d="M5 22 Q70 1 135 22 L130 34 Q70 16 10 34 Z"/><path d="M12 29 H128 V38 H12 Z"/><path d="M24 36 H37 V88 H24 Z"/><path d="M103 36 H116 V88 H103 Z"/><path d="M19 82 H42 V91 H19 Z"/><path d="M98 82 H121 V91 H98 Z"/></svg></span>
+                            <span class="maplibre-torii-gate" style="--gate-index:2"><svg viewBox="0 0 140 100" aria-hidden="true" focusable="false"><path d="M5 22 Q70 1 135 22 L130 34 Q70 16 10 34 Z"/><path d="M12 29 H128 V38 H12 Z"/><path d="M24 36 H37 V88 H24 Z"/><path d="M103 36 H116 V88 H103 Z"/><path d="M19 82 H42 V91 H19 Z"/><path d="M98 82 H121 V91 H98 Z"/></svg></span>
+                            <span class="maplibre-torii-gate" style="--gate-index:3"><svg viewBox="0 0 140 100" aria-hidden="true" focusable="false"><path d="M5 22 Q70 1 135 22 L130 34 Q70 16 10 34 Z"/><path d="M12 29 H128 V38 H12 Z"/><path d="M24 36 H37 V88 H24 Z"/><path d="M103 36 H116 V88 H103 Z"/><path d="M19 82 H42 V91 H19 Z"/><path d="M98 82 H121 V91 H98 Z"/></svg></span>
+                            <span class="maplibre-torii-gate" style="--gate-index:4"><svg viewBox="0 0 140 100" aria-hidden="true" focusable="false"><path d="M5 22 Q70 1 135 22 L130 34 Q70 16 10 34 Z"/><path d="M12 29 H128 V38 H12 Z"/><path d="M24 36 H37 V88 H24 Z"/><path d="M103 36 H116 V88 H103 Z"/><path d="M19 82 H42 V91 H19 Z"/><path d="M98 82 H121 V91 H98 Z"/></svg></span>
+                            <span class="maplibre-torii-gate" style="--gate-index:5"><svg viewBox="0 0 140 100" aria-hidden="true" focusable="false"><path d="M5 22 Q70 1 135 22 L130 34 Q70 16 10 34 Z"/><path d="M12 29 H128 V38 H12 Z"/><path d="M24 36 H37 V88 H24 Z"/><path d="M103 36 H116 V88 H103 Z"/><path d="M19 82 H42 V91 H19 Z"/><path d="M98 82 H121 V91 H98 Z"/></svg></span>
+                            </div>
+                        </div>
+                        <div class="maplibre-progress-row">
+                            <div class="maplibre-loading-progress" role="progressbar" aria-label="地図の準備状況" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                <span class="maplibre-loading-progress-track"><span id="maplibreProgressFill"></span></span>
+                            </div>
+                            <span class="maplibre-loading-progress-label" id="maplibreProgressLabel" aria-hidden="true">0%</span>
+                        </div>
+                        <span id="maplibreStatusText">地図を準備しています…</span>
+                        <button type="button" id="maplibreRetry" hidden>再読み込み</button>
+                    </div>
+                </div>
+
+                <details class="planner-data-credits" aria-label="地図・データの出典">
+                    <summary><span aria-hidden="true">ⓘ</span> <span data-i18n="mapSources">データ出典</span></summary>
+                    <div class="planner-data-credits-panel">
+                        <h2 data-i18n="mapSourcesTitle">地図・データの出典</h2>
+                        <ul class="planner-data-source-list">
+                            <li>
+                                <strong>3Dベースマップ：</strong>
+                                <a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> ·
+                                <a href="https://openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> ·
+                                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors（ODbL）</a>
+                                <small>地図の道路・地名・建物などの基礎データ。表示スタイルはOpenFreeMap Positronです。</small>
+                            </li>
+                            <li>
+                                <strong>3D標高・地形データ：</strong>
+                                <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener noreferrer">Mapzen Terrain Tiles on AWS</a> ·
+                                <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener noreferrer">Tilezen / 地形データの出典・帰属表記</a>
+                                <small>アプリの標高タイルURLはAWSのTerrariumタイルです。提供元の説明ではSRTM、GMTED2010などの標高データを利用しています。</small>
+                            </li>
+                            <li>
+                                <strong>2D代替地図・スポット一覧地図：</strong>
+                                <a href="https://carto.com/attribution/" target="_blank" rel="noopener noreferrer">CARTO</a> ·
+                                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>
+                                <small>3D地図が利用できない場合のCARTO Positronと、スポット一覧ページのOpenStreetMapタイルに関する表記です。</small>
+                            </li>
+                            <li>
+                                <strong>天気・日の出／日の入り：</strong>
+                                <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo API</a> ·
+                                <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">データライセンス：CC BY 4.0</a>
+                                <small>現在天気と日の出・日の入り時刻を、地図上部の環境色演出に利用します。</small>
+                            </li>
+                            <li>
+                                <strong>伏見稲荷周辺のスポット・参道データ：</strong>
+                                <code>data/spots.json</code> · <code>data/routes.json</code>
+                                <small>プロジェクト内で管理している編集データです。個々のスポット情報・写真・参道データの原典や更新日を記録する欄は現行JSONにないため、項目ごとの出典はここでは特定できません。</small>
+                            </li>
+                            <li>
+                                <strong>一般道路の徒歩ルート補助：</strong>
+                                <a href="https://project-osrm.org/" target="_blank" rel="noopener noreferrer">OSRM</a> ·
+                                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors（ODbL）</a>
+                                <small>伏見稲荷エリア外などで、アプリ内の参道データを補う場合にOSRMの公開ルーティングサービスを利用します。</small>
+                            </li>
+                            <li>
+                                <strong>現在地・端末センサー：</strong>
+                                <a href="https://developer.mozilla.org/docs/Web/API/Geolocation_API" target="_blank" rel="noopener noreferrer">Geolocation API</a> ·
+                                <a href="https://developer.mozilla.org/docs/Web/API/DeviceMotionEvent" target="_blank" rel="noopener noreferrer">DeviceMotionEvent</a> ·
+                                <a href="https://developer.mozilla.org/docs/Web/API/DeviceOrientationEvent" target="_blank" rel="noopener noreferrer">DeviceOrientationEvent</a>
+                                <small>端末・ブラウザ標準の位置情報、歩行・方位センサー機能を使用します。利用可否と精度は端末・ブラウザの仕様に依存します。</small>
+                            </li>
+                            <li>
+                                <strong>駅の時刻表（外部公式ページへのリンク）：</strong>
+                                <a href="https://www.keihan.co.jp/traffic/station/150/info.html" target="_blank" rel="noopener noreferrer">京阪・龍谷大前深草駅</a> ·
+                                <a href="https://www.keihan.co.jp/traffic/station/151/info.html" target="_blank" rel="noopener noreferrer">京阪・伏見稲荷駅</a> ·
+                                <a href="https://timetable.jr-odekake.net/" target="_blank" rel="noopener noreferrer">JR西日本（JRおでかけネット）</a>
+                                <small>時刻表データをアプリ内に取り込むのではなく、各鉄道会社の公式ページを開きます。</small>
+                            </li>
+                            <li>
+                                <strong>伏見稲荷の混雑予報（外部公式ページへのリンク）：</strong>
+                                <a href="https://ja.kyoto.travel/comfort/fushimi/" target="_blank" rel="noopener noreferrer">京都市観光協会・観光快適度</a>
+                                <small>アプリ内に混雑データを取り込まず、公式ページを別画面で開きます。</small>
+                            </li>
+                            <li>
+                                <strong>共有用QRコード生成：</strong>
+                                <a href="https://api.qrserver.com/" target="_blank" rel="noopener noreferrer">QRServer API</a>
+                                <small>スポット共有用QR画像の生成に利用します。</small>
+                            </li>
+                            <li>
+                                <strong>地図表示ライブラリ・配信CDN：</strong>
+                                <a href="https://maplibre.org/" target="_blank" rel="noopener noreferrer">MapLibre GL JS</a> ·
+                                <a href="https://leafletjs.com/" target="_blank" rel="noopener noreferrer">Leaflet</a> ·
+                                <a href="https://unpkg.com/" target="_blank" rel="noopener noreferrer">UNPKG</a>
+                                <small>地図の描画・既存スポットレイヤー表示に使うソフトウェアです（地理データの提供元とは別です）。</small>
+                            </li>
+                            <li>
+                                <strong>画像・動画・アイコン等のローカル素材：</strong>
+                                <code>images/</code> · <code>videos/</code>
+                                <small>素材ごとの撮影者・権利者・出典は現行データに記録されていないものがあります。公開前に素材単位で利用許諾とクレジットを確認してください。</small>
+                            </li>
+                        </ul>
+                    </div>
+                </details>
 
                 <div class="planner-top-actions" aria-label="Map actions">
                     <button type="button" id="openMapSearchBtn" class="map-action-tile map-search-action" aria-label="スポットを検索" aria-expanded="false" aria-controls="mapSearchPopover">
@@ -165,7 +272,6 @@
                         <span class="map-action-label">現在地</span>
                     </button>
                 </div>
-
                 <div class="planner-map-hint" aria-hidden="true">地図を動かしてスポットを探せます</div>
             </div>
         </section>
@@ -336,10 +442,12 @@
     </div>
 </main>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js" defer></script>
-<script src="js/language.js?v=138" defer></script>
-<script src="js/carto-config.js?v=113-carto-official-endpoint" defer></script>
-<script src="js/planner.js?v=161-spot-quick-palette" defer></script>
+<script src="https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="js/language.js?v=204-popup-pane-gesture-fix" defer></script>
+<script src="js/map-engine-maplibre.js?v=213-progress" defer></script>
+<script src="js/navigation-pdr.js?v=212-cluster-hidden" defer></script>
+<script src="js/planner.js?v=213-clean-status" defer></script>
 <script src="js/planner-weather.js?v=138" defer></script>
 <script src="js/planner-ambient-light.js?v=138" defer></script>
 <script>
